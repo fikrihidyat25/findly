@@ -12,9 +12,11 @@
   
   --color-primary: #30AFFF;
   --color-primary-hover: #2196e8;
+  --color-primary-active: #1a85d6;
   --color-blue-50: #eff8ff;
+  --color-blue-100: #e0f2fe;
   
-  --radius-box: 5px;
+  --radius-box: 8px;
 }
 
 body {
