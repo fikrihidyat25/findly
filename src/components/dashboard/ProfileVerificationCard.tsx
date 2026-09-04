@@ -28,17 +28,19 @@ export default function ProfileVerificationCard() {
             BS
           </div>
 
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-sm text-gray-900">Budi Santoso</span>
-              <span className="text-[11px] text-gray-400 font-normal">· Mahasiswa</span>
+          <div className="space-y-1 min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-bold text-sm text-gray-900 leading-tight">Budi Santoso</span>
+              <span className="inline-flex items-center text-[10px] font-semibold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded-md border border-sky-100">
+                Mahasiswa
+              </span>
             </div>
             <p className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
-              <GraduationCap size={13} className="text-[#30AFFF]" />
-              <span>Universitas ABC</span>
+              <GraduationCap size={13} className="text-[#30AFFF] shrink-0" />
+              <span className="truncate">Universitas Bung Hatta</span>
             </p>
-            <p className="text-[11px] text-gray-500">
-              Fakultas Ilmu Komputer
+            <p className="text-[11px] text-gray-500 truncate">
+              Fakultas Teknologi Industri
             </p>
             <p className="text-[11px] font-mono text-gray-400 pt-0.5">
               NIM: <span className="tracking-widest">•••••</span>5678

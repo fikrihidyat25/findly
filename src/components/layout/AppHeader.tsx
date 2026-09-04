@@ -50,12 +50,8 @@ export default function AppHeader({
             value={searchQuery}
             onChange={(e) => onSearchChange?.(e.target.value)}
             placeholder="Cari barang hilang atau ditemukan..."
-            className="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white pl-10 pr-12 py-2 rounded-xl text-xs sm:text-sm text-gray-800 placeholder-gray-400 border border-gray-200/80 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all shadow-2xs"
+            className="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white pl-10 pr-4 py-2 rounded-xl text-xs sm:text-sm text-gray-800 placeholder-gray-400 border border-gray-200/80 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all shadow-2xs"
           />
-          <div className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0.5 text-[10px] font-semibold text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded shadow-2xs">
-            <span>⌘</span>
-            <span>K</span>
-          </div>
         </div>
       </div>
 
@@ -103,7 +99,7 @@ export default function AppHeader({
                 </span>
               </div>
               <span className="text-[11px] text-gray-400 leading-none mt-1">
-                Student
+                Mahasiswa
               </span>
             </div>
 

@@ -1,12 +1,17 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, ShieldCheck, Users, Menu } from 'lucide-react';
+import { Search, ShieldCheck, Users, Menu, X, ArrowRight } from 'lucide-react';
 
 export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-white font-sans flex flex-col selection:bg-[#30AFFF]/20 selection:text-[#30AFFF]">
       {/* Header / Navbar */}
-      <header className="w-full max-w-[1300px] mx-auto px-6 sm:px-10 lg:px-12 py-5 flex items-center justify-between">
+      <header className="w-full max-w-[1300px] mx-auto px-6 sm:px-10 lg:px-12 py-5 flex items-center justify-between relative z-30">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-[#30AFFF] text-white font-bold flex items-center justify-center text-base shadow-sm">
@@ -25,11 +30,11 @@ export default function LandingPage() {
               Find Items
             </Link>
           </div>
-          <Link href="/report" className="text-gray-600 hover:text-gray-900 transition-colors">
-            Report Items
+          <Link href="/lost/new" className="text-gray-600 hover:text-gray-900 transition-colors">
+            Saya Kehilangan
           </Link>
-          <Link href="/about" className="text-gray-600 hover:text-gray-900 transition-colors">
-            About Us
+          <Link href="/found/new" className="text-gray-600 hover:text-gray-900 transition-colors">
+            Saya Menemukan
           </Link>
         </nav>
 
@@ -50,7 +55,12 @@ export default function LandingPage() {
         </div>
 
         {/* Mobile menu button */}
-        <button className="md:hidden text-gray-600 p-1" aria-label="Menu">
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(true)}
+          className="md:hidden flex items-center justify-center p-2 rounded-xl text-gray-700 hover:text-[#30AFFF] hover:bg-[#EFF8FF] transition-colors cursor-pointer min-w-[42px] min-h-[42px]"
+          aria-label="Buka Menu"
+        >
           <Menu size={24} />
         </button>
       </header>
@@ -212,6 +222,106 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Mobile Drawer Backdrop */}
+      <div
+        onClick={() => setMobileMenuOpen(false)}
+        className={`fixed inset-0 bg-black/50 backdrop-blur-xs z-[100] md:hidden transition-opacity duration-300 ${
+          mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        aria-hidden="true"
+      />
+
+      {/* Mobile Drawer Panel */}
+      <div
+        className={`fixed inset-y-0 right-0 w-72 max-w-[85vw] bg-white z-[101] p-6 flex flex-col justify-between shadow-2xl md:hidden transform transition-transform duration-300 ease-in-out ${
+          mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu Navigasi Mobile"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+            <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#30AFFF] text-white font-bold flex items-center justify-center text-base shadow-sm">
+                F
+              </div>
+              <span className="font-bold text-xl text-gray-900 tracking-tight">Findly</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+              aria-label="Tutup menu"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <nav className="space-y-1">
+            <Link
+              href="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3.5 py-2.5 rounded-xl text-sm font-semibold text-gray-900 hover:bg-gray-50 transition-colors"
+            >
+              Beranda
+            </Link>
+            <Link
+              href="/find"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3.5 py-2.5 rounded-xl text-sm font-semibold text-[#30AFFF] bg-[#EFF8FF] transition-colors"
+            >
+              Cari Barang (Find Items)
+            </Link>
+            <Link
+              href="/lost/new"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3.5 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Saya Kehilangan Barang
+            </Link>
+            <Link
+              href="/found/new"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3.5 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Saya Menemukan Barang
+            </Link>
+            <Link
+              href="/claims"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3.5 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Klaim Saya
+            </Link>
+            <Link
+              href="/dashboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3.5 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Dashboard
+            </Link>
+          </nav>
+        </div>
+
+        <div className="space-y-2.5 pt-6 border-t border-gray-100">
+          <Link
+            href="/login"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block w-full text-center py-2.5 px-4 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Masuk
+          </Link>
+          <Link
+            href="/register"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block w-full text-center py-2.5 px-4 rounded-xl bg-[#30AFFF] hover:bg-[#2196e8] text-white text-sm font-semibold transition-colors shadow-sm"
+          >
+            Daftar Akun Baru
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

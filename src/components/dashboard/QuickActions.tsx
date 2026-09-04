@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { PackageMinus, Search, ArrowRight, Sparkles } from 'lucide-react';
+import { PackageMinus, Search, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
 
 export default function QuickActions() {
   return (
@@ -11,17 +11,21 @@ export default function QuickActions() {
         href="/lost/new"
         className="group relative overflow-hidden bg-white p-5 sm:p-6 rounded-2xl border border-rose-100/80 hover:border-rose-200 shadow-2xs hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4"
       >
-        <div className="flex items-center gap-4">
-          <div className="w-13 h-13 rounded-2xl bg-rose-50/90 text-rose-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300 border border-rose-100/60 shadow-2xs">
-            <PackageMinus size={24} className="stroke-[1.8]" />
+        <div className="flex items-start gap-4 min-w-0 flex-1">
+          <div className="w-12 h-12 rounded-2xl bg-rose-50/90 text-rose-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300 border border-rose-100/60 shadow-2xs mt-0.5">
+            <PackageMinus size={22} className="stroke-[1.8]" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-sm sm:text-base text-gray-900 group-hover:text-rose-600 transition-colors">
-                Saya Kehilangan Barang
-              </h3>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/60 shrink-0">
+                <AlertCircle size={10} />
+                Lapor Cepat
+              </span>
             </div>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed max-w-xs">
+            <h3 className="font-bold text-sm sm:text-base text-gray-900 group-hover:text-rose-600 transition-colors leading-snug">
+              Saya Kehilangan Barang
+            </h3>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed line-clamp-2">
               Laporkan barang yang hilang agar lebih mudah ditemukan oleh civitas kampus.
             </p>
           </div>
@@ -37,21 +41,21 @@ export default function QuickActions() {
         href="/found/new"
         className="group relative overflow-hidden bg-white p-5 sm:p-6 rounded-2xl border border-emerald-100/80 hover:border-emerald-200 shadow-2xs hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4"
       >
-        <div className="flex items-center gap-4">
-          <div className="w-13 h-13 rounded-2xl bg-emerald-50/90 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300 border border-emerald-100/60 shadow-2xs">
-            <Search size={24} className="stroke-[1.8]" />
+        <div className="flex items-start gap-4 min-w-0 flex-1">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50/90 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300 border border-emerald-100/60 shadow-2xs mt-0.5">
+            <Search size={22} className="stroke-[1.8]" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-sm sm:text-base text-gray-900 group-hover:text-emerald-600 transition-colors">
-                Saya Menemukan Barang
-              </h3>
-              <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 shrink-0">
                 <Sparkles size={10} />
                 Bantu Sesama
               </span>
             </div>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed max-w-xs">
+            <h3 className="font-bold text-sm sm:text-base text-gray-900 group-hover:text-emerald-600 transition-colors leading-snug">
+              Saya Menemukan Barang
+            </h3>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed line-clamp-2">
               Laporkan barang yang Anda temukan agar pemilik aslinya bisa segera mengambilnya.
             </p>
           </div>

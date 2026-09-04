@@ -315,9 +315,11 @@ export default function FindItemsPage() {
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
                       {item.category}
                     </span>
-                    <h3 className="font-bold text-sm sm:text-base text-gray-900 group-hover:text-[#30AFFF] transition-colors line-clamp-1 mt-0.5">
-                      {item.title}
-                    </h3>
+                    <Link href={`/find/${item.id}`}>
+                      <h3 className="font-bold text-sm sm:text-base text-gray-900 group-hover:text-[#30AFFF] transition-colors line-clamp-1 mt-0.5 hover:underline decoration-[#30AFFF]">
+                        {item.title}
+                      </h3>
+                    </Link>
                     <p className="text-xs text-gray-500 line-clamp-2 mt-1 leading-relaxed">
                       {item.description}
                     </p>

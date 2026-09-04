@@ -47,6 +47,7 @@ export default function ClaimSubmissionForm({
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Form Fields - Step 1
   const [reason, setReason] = useState('');
@@ -207,38 +208,46 @@ export default function ClaimSubmissionForm({
 
       {/* Stepper (3 Steps) */}
       <div className="py-2">
-        <div className="flex items-center justify-between max-w-xl mx-auto relative">
-          {/* Connector Line */}
-          <div className="absolute top-4 left-6 right-6 h-[2px] bg-gray-200 -z-0" />
-          <div
-            className="absolute top-4 left-6 h-[2px] bg-[#30AFFF] transition-all duration-300 -z-0"
-            style={{ width: `${((currentStep - 1) / (claimSteps.length - 1)) * 100}%` }}
-          />
-
-          {claimSteps.map((step) => {
+        <div className="flex items-start justify-between max-w-xl mx-auto">
+          {claimSteps.map((step, idx) => {
             const isCompleted = currentStep > step.num;
             const isCurrent = currentStep === step.num;
+            const isLast = idx === claimSteps.length - 1;
 
             return (
-              <div key={step.num} className="flex flex-col items-center relative z-10">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs ${
-                    isCurrent
-                      ? 'bg-[#30AFFF] text-white ring-4 ring-sky-100 scale-110'
-                      : isCompleted
-                      ? 'bg-[#30AFFF] text-white'
-                      : 'bg-white text-gray-400 border border-gray-300'
-                  }`}
-                >
-                  {isCompleted ? <Check size={14} className="stroke-[2.5]" /> : step.num}
+              <div key={step.num} className={`flex items-start ${isLast ? 'flex-none' : 'flex-1'}`}>
+                {/* Step Circle & Label */}
+                <div className="flex flex-col items-center shrink-0 relative">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs z-10 ${
+                      isCurrent
+                        ? 'bg-[#30AFFF] text-white ring-4 ring-[#30AFFF]/20 scale-110'
+                        : isCompleted
+                        ? 'bg-[#30AFFF] text-white'
+                        : 'bg-white text-gray-400 border border-gray-300'
+                    }`}
+                  >
+                    {isCompleted ? <Check size={14} className="stroke-[2.5]" /> : step.num}
+                  </div>
+                  <span
+                    className={`text-[11px] sm:text-xs font-semibold mt-2 text-center whitespace-nowrap ${
+                      isCurrent ? 'text-gray-900 font-bold' : isCompleted ? 'text-[#30AFFF]' : 'text-gray-400'
+                    }`}
+                  >
+                    {step.label}
+                  </span>
                 </div>
-                <span
-                  className={`text-[11px] sm:text-xs font-semibold mt-2 text-center whitespace-nowrap ${
-                    isCurrent ? 'text-gray-900 font-bold' : isCompleted ? 'text-[#30AFFF]' : 'text-gray-400'
-                  }`}
-                >
-                  {step.label}
-                </span>
+
+                {/* Connector Line (Only between steps, NEVER after the last step) */}
+                {!isLast && (
+                  <div className="flex-1 h-[2px] mx-2 sm:mx-3 mt-4 bg-gray-200 relative overflow-hidden rounded-full">
+                    <div
+                      className={`h-full bg-[#30AFFF] transition-all duration-300 ${
+                        currentStep > step.num ? 'w-full' : 'w-0'
+                      }`}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}
@@ -594,13 +603,14 @@ export default function ClaimSubmissionForm({
               </div>
             </div>
 
-            <Link
-              href="/find"
-              className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-[#30AFFF]/50 text-[#30AFFF] hover:bg-[#EFF8FF] text-xs font-semibold transition-all shadow-2xs"
+            <button
+              type="button"
+              onClick={() => setShowDetailModal(true)}
+              className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-[#30AFFF]/50 text-[#30AFFF] hover:bg-[#EFF8FF] text-xs font-semibold transition-all shadow-2xs cursor-pointer"
             >
               <Eye size={13} />
               <span>Lihat detail Barang</span>
-            </Link>
+            </button>
           </div>
 
           {/* Widget 2: Proses Klaim Timeline */}
@@ -709,6 +719,108 @@ export default function ClaimSubmissionForm({
           </div>
         </div>
       </div>
+
+      {/* Modal Detail Barang */}
+      {showDetailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 p-6 space-y-5">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="bg-emerald-50 text-emerald-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                  Ditemukan
+                </span>
+                <span className="text-xs text-gray-500 font-medium">
+                  {initialItem.category}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDetailModal(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+                aria-label="Tutup modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Item Primary Info */}
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100/80 shadow-2xs">
+                <Briefcase size={30} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 leading-snug">
+                  {initialItem.name}
+                </h3>
+                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
+                  <MapPin size={13} className="text-[#30AFFF] shrink-0" />
+                  <span>{initialItem.location}</span>
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
+                  <Calendar size={13} className="shrink-0" />
+                  <span>Ditemukan pada: {initialItem.foundDate}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Finder Verification Box */}
+            <div className="p-4 bg-[#EFF8FF] rounded-2xl border border-[#BFDBFE]/60 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-[#0284C7] font-semibold text-xs">
+                <CheckCircle2 size={15} className="text-emerald-600" />
+                <span>Pelapor / Penemu: Satpam Perpustakaan (Bpk. Joko)</span>
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Barang saat ini disimpan dan dijaga aman di Pos Satpam Utama Perpustakaan Lantai 1.
+              </p>
+            </div>
+
+            {/* Public Description */}
+            <div className="space-y-1.5 text-xs">
+              <span className="font-bold text-gray-800 block">Keterangan Publik Penemu:</span>
+              <p className="text-gray-600 bg-gray-50/80 p-3.5 rounded-2xl border border-gray-100 leading-relaxed text-xs">
+                Ditemukan tas ransel Nike warna kuning dengan aksen abu-abu di bawah meja baca lantai 2. Kondisi masih sangat baik dan bersih. Terdapat botol minum di saku samping. Barang berharga di kantong kecil sengaja tidak kami sebutkan untuk verifikasi pemilik sah.
+              </p>
+            </div>
+
+            {/* Safe Notice */}
+            <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 leading-relaxed">
+              <ShieldAlert size={17} className="text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>Privasi & Keamanan:</strong> Jangan membagikan informasi sensitif pribadi seperti PIN kartu atau sandi. Cukup jelaskan ciri fisik atau isi unik yang membuktikan Anda pemilik asli pada form klaim.
+              </span>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDetailModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  Tutup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDetailModal(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-xs font-semibold text-white transition-colors shadow-sm cursor-pointer"
+                >
+                  Lanjutkan Form Klaim
+                </button>
+              </div>
+              <Link
+                href="/find/1"
+                target="_blank"
+                className="block text-center text-[11px] font-medium text-[#30AFFF] hover:underline"
+              >
+                Buka detail di halaman penuh (tab baru) →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

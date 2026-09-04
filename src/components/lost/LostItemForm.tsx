@@ -220,38 +220,46 @@ export default function LostItemForm() {
 
       {/* Stepper Progress Bar */}
       <div className="py-2">
-        <div className="flex items-center justify-between max-w-2xl mx-auto relative">
-          {/* Connector Line */}
-          <div className="absolute top-4 left-6 right-6 h-[2px] bg-gray-200 -z-0" />
-          <div
-            className="absolute top-4 left-6 h-[2px] bg-rose-500 transition-all duration-300 -z-0"
-            style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
-          />
-
-          {steps.map((step) => {
+        <div className="flex items-start justify-between max-w-2xl mx-auto">
+          {steps.map((step, idx) => {
             const isCompleted = currentStep > step.num;
             const isCurrent = currentStep === step.num;
+            const isLast = idx === steps.length - 1;
 
             return (
-              <div key={step.num} className="flex flex-col items-center relative z-10">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs ${
-                    isCurrent
-                      ? 'bg-rose-500 text-white ring-4 ring-rose-100 scale-110'
-                      : isCompleted
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-white text-gray-400 border border-gray-300'
-                  }`}
-                >
-                  {isCompleted ? <Check size={14} className="stroke-[2.5]" /> : step.num}
+              <div key={step.num} className={`flex items-start ${isLast ? 'flex-none' : 'flex-1'}`}>
+                {/* Step Circle & Label */}
+                <div className="flex flex-col items-center shrink-0 relative">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs z-10 ${
+                      isCurrent
+                        ? 'bg-rose-500 text-white ring-4 ring-rose-100 scale-110'
+                        : isCompleted
+                        ? 'bg-rose-500 text-white'
+                        : 'bg-white text-gray-400 border border-gray-300'
+                    }`}
+                  >
+                    {isCompleted ? <Check size={14} className="stroke-[2.5]" /> : step.num}
+                  </div>
+                  <span
+                    className={`text-[11px] sm:text-xs font-semibold mt-2 text-center whitespace-nowrap ${
+                      isCurrent ? 'text-gray-900 font-bold' : isCompleted ? 'text-rose-600' : 'text-gray-400'
+                    }`}
+                  >
+                    {step.label}
+                  </span>
                 </div>
-                <span
-                  className={`text-[11px] sm:text-xs font-semibold mt-2 text-center whitespace-nowrap ${
-                    isCurrent ? 'text-gray-900 font-bold' : isCompleted ? 'text-rose-600' : 'text-gray-400'
-                  }`}
-                >
-                  {step.label}
-                </span>
+
+                {/* Connector Line (Only between steps, NEVER after the last step) */}
+                {!isLast && (
+                  <div className="flex-1 h-[2px] mx-2 sm:mx-3 mt-4 bg-gray-200 relative overflow-hidden rounded-full">
+                    <div
+                      className={`h-full bg-rose-500 transition-all duration-300 ${
+                        currentStep > step.num ? 'w-full' : 'w-0'
+                      }`}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}

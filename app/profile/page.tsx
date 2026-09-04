@@ -54,8 +54,8 @@ export default function ProfilePage() {
             </div>
 
             <Link
-              href="/settings"
-              className="px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-700 transition-all self-stretch sm:self-auto text-center"
+              href="/profile/edit"
+              className="px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-700 transition-all self-stretch sm:self-auto text-center cursor-pointer hover:border-[#30AFFF] hover:text-[#30AFFF]"
             >
               Edit Profil
             </Link>

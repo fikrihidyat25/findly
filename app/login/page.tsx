@@ -51,19 +51,26 @@ export default function LoginPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
         },
       });
       if (error) {
-        console.warn('OAuth bypassed for development:', error.message);
-        router.push('/dashboard');
+        if (error.message.includes('not enabled') || error.message.includes('Unsupported provider')) {
+          setErrorMessage('Google OAuth belum diaktifkan di dashboard Supabase. Silakan gunakan email dan password Anda di bawah.');
+        } else {
+          setErrorMessage(`Google login error: ${error.message}`);
+        }
+        setIsLoading(false);
+        return;
+      }
+      if (data?.url) {
+        window.location.href = data.url;
       }
     } catch {
-      router.push('/dashboard');
-    } finally {
+      setErrorMessage('Terjadi kesalahan saat menghubungi layanan Google.');
       setIsLoading(false);
     }
   };
