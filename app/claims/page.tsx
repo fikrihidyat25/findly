@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/src/components/layout/AppLayout';
 import {
@@ -10,14 +10,19 @@ import {
   MessageSquare,
   CheckCircle2,
   AlertCircle,
-  ArrowRight,
   Briefcase,
   Wallet,
   Smartphone,
+  CreditCard,
+  KeyRound,
+  BookOpen,
   Plus,
+  LogIn,
+  UserPlus,
 } from 'lucide-react';
+import { createClient } from '@/src/lib/supabase/client';
 
-interface ClaimRecord {
+interface ClaimItem {
   id: string;
   itemName: string;
   itemCategory: string;
@@ -25,7 +30,7 @@ interface ClaimRecord {
   counterpartRole: string;
   location: string;
   date: string;
-  status: 'PENDING' | 'VERIFYING' | 'APPROVED' | 'RESOLVED';
+  status: string;
   statusLabel: string;
   statusColor: {
     bg: string;
@@ -35,55 +40,168 @@ interface ClaimRecord {
   icon: any;
 }
 
-const MY_OUTGOING_CLAIMS: ClaimRecord[] = [
-  {
-    id: 'claim-1',
-    itemName: 'Tas Ransel Kuning Nike',
-    itemCategory: 'Tas & Ransel',
-    counterpartName: 'Megawati',
-    counterpartRole: 'Mahasiswa · Univ ABC',
-    location: 'Perpustakaan Pusat, Lantai 2',
-    date: '01 Sep 2026',
-    status: 'VERIFYING',
-    statusLabel: 'Sedang Verifikasi Chat',
-    statusColor: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
-    icon: Briefcase,
-  },
-  {
-    id: 'claim-2',
-    itemName: 'Dompet Kulit Hitam Baellerry',
-    itemCategory: 'Dompet & Aksesoris',
-    counterpartName: 'Ahmad Satpam',
-    counterpartRole: 'Staff Keamanan Kampus',
-    location: 'Pos Satpam Utama',
-    date: '28 Agu 2026',
-    status: 'RESOLVED',
-    statusLabel: 'Selesai & Dikembalikan',
-    statusColor: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-    icon: Wallet,
-  },
-];
+function getCategoryIcon(cat: string) {
+  const lower = (cat || '').toLowerCase();
+  if (lower.includes('elektronik') || lower.includes('hp') || lower.includes('gadget') || lower.includes('laptop')) {
+    return Smartphone;
+  }
+  if (lower.includes('dompet') || lower.includes('aksesoris')) {
+    return Wallet;
+  }
+  if (lower.includes('tas') || lower.includes('ransel')) {
+    return Briefcase;
+  }
+  if (lower.includes('dokumen') || lower.includes('kartu') || lower.includes('ktm')) {
+    return CreditCard;
+  }
+  if (lower.includes('kunci') || lower.includes('kendaraan') || lower.includes('motor')) {
+    return KeyRound;
+  }
+  if (lower.includes('buku') || lower.includes('tulis')) {
+    return BookOpen;
+  }
+  return Briefcase;
+}
 
-const MY_INCOMING_CLAIMS: ClaimRecord[] = [
-  {
-    id: 'claim-3',
-    itemName: 'Kartu Tanda Mahasiswa (KTM)',
-    itemCategory: 'Dokumen & Kartu',
-    counterpartName: 'Rian Pratama',
-    counterpartRole: 'Mahasiswa · Teknik Elektro',
-    location: 'Masjid Kampus Baitul Ilmi',
-    date: '31 Agu 2026',
-    status: 'PENDING',
-    statusLabel: 'Menunggu Tanggapan Anda',
-    statusColor: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-    icon: Smartphone,
-  },
-];
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'MENUNGGU':
+      return {
+        label: 'Menunggu Respon Penemu',
+        color: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+      };
+    case 'DIVERIFIKASI':
+      return {
+        label: 'Sedang Verifikasi Chat',
+        color: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+      };
+    case 'JADWAL_DIBUAT':
+      return {
+        label: 'Jadwal Serah Terima Dibuat',
+        color: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+      };
+    case 'SELESAI':
+      return {
+        label: 'Selesai & Dikembalikan',
+        color: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+      };
+    case 'DITOLAK':
+      return {
+        label: 'Klaim Ditolak',
+        color: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
+      };
+    default:
+      return {
+        label: status,
+        color: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
+      };
+  }
+}
 
 export default function ClaimsDashboardPage() {
   const [activeTab, setActiveTab] = useState<'outgoing' | 'incoming'>('outgoing');
+  const [outgoingClaims, setOutgoingClaims] = useState<ClaimItem[]>([]);
+  const [incomingClaims, setIncomingClaims] = useState<ClaimItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
 
-  const claimsList = activeTab === 'outgoing' ? MY_OUTGOING_CLAIMS : MY_INCOMING_CLAIMS;
+  useEffect(() => {
+    async function loadClaims() {
+      setLoading(true);
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+          setIsGuest(true);
+          setLoading(false);
+          return;
+        }
+
+        // 1. Fetch Outgoing Claims (klaim yang diajukan oleh user)
+        const { data: outgoingData, error: outErr } = await supabase
+          .from('klaim_barang')
+          .select('*, laporan_barang(*, profil_pengguna:pelapor_id(nama_lengkap, role_kampus))')
+          .eq('pengklaim_id', user.id)
+          .order('dibuat_pada', { ascending: false });
+
+        if (!outErr && outgoingData) {
+          const mappedOut: ClaimItem[] = outgoingData.map((c: any) => {
+            const badge = getStatusBadge(c.status);
+            const report = c.laporan_barang;
+            const finder = report?.profil_pengguna;
+            return {
+              id: c.id,
+              itemName: report?.nama_barang || 'Barang Kampus',
+              itemCategory: report?.kategori || 'Barang Kampus',
+              counterpartName: finder?.nama_lengkap || 'Penemu Barang',
+              counterpartRole: finder?.role_kampus || 'Civitas Kampus',
+              location: report?.lokasi_terakhir || 'Lingkungan Kampus',
+              date: new Date(c.dibuat_pada).toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              }),
+              status: c.status,
+              statusLabel: badge.label,
+              statusColor: badge.color,
+              icon: getCategoryIcon(report?.kategori || ''),
+            };
+          });
+          setOutgoingClaims(mappedOut);
+        }
+
+        // 2. Fetch Incoming Claims (klaim dari orang lain atas laporan temuan milik user)
+        const { data: myReports } = await supabase
+          .from('laporan_barang')
+          .select('id')
+          .eq('pelapor_id', user.id);
+
+        if (myReports && myReports.length > 0) {
+          const reportIds = myReports.map((r: any) => r.id);
+          const { data: incomingData, error: inErr } = await supabase
+            .from('klaim_barang')
+            .select('*, laporan_barang(*), profil_pengguna:pengklaim_id(nama_lengkap, role_kampus)')
+            .in('laporan_id', reportIds)
+            .order('dibuat_pada', { ascending: false });
+
+          if (!inErr && incomingData) {
+            const mappedIn: ClaimItem[] = incomingData.map((c: any) => {
+              const badge = getStatusBadge(c.status);
+              const report = c.laporan_barang;
+              const claimant = c.profil_pengguna;
+              return {
+                id: c.id,
+                itemName: report?.nama_barang || 'Barang Kampus',
+                itemCategory: report?.kategori || 'Barang Kampus',
+                counterpartName: claimant?.nama_lengkap || 'Pengaju Klaim',
+                counterpartRole: claimant?.role_kampus || 'Civitas Kampus',
+                location: report?.lokasi_terakhir || 'Lingkungan Kampus',
+                date: new Date(c.dibuat_pada).toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                }),
+                status: c.status,
+                statusLabel: badge.label,
+                statusColor: badge.color,
+                icon: getCategoryIcon(report?.kategori || ''),
+              };
+            });
+            setIncomingClaims(mappedIn);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading claims:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadClaims();
+  }, []);
+
+  const claimsList = activeTab === 'outgoing' ? outgoingClaims : incomingClaims;
 
   return (
     <AppLayout>
@@ -100,7 +218,7 @@ export default function ClaimsDashboardPage() {
           </div>
 
           <Link
-            href="/claim/new"
+            href="/find"
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold rounded-xl shadow-sm transition-all shrink-0 self-start sm:self-auto"
           >
             <Plus size={15} />
@@ -108,89 +226,156 @@ export default function ClaimsDashboardPage() {
           </Link>
         </div>
 
-        {/* Tabs Bar */}
-        <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-          <button
-            onClick={() => setActiveTab('outgoing')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'outgoing'
-                ? 'bg-white text-gray-900 border border-gray-200 shadow-2xs'
-                : 'text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            Klaim Diajukan ({MY_OUTGOING_CLAIMS.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('incoming')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'incoming'
-                ? 'bg-white text-gray-900 border border-gray-200 shadow-2xs'
-                : 'text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            Klaim Masuk ({MY_INCOMING_CLAIMS.length})
-          </button>
-        </div>
-
-        {/* Claims List */}
-        <div className="space-y-4">
-          {claimsList.map((claim) => {
-            const Icon = claim.icon;
-
-            return (
-              <div
-                key={claim.id}
-                className="bg-white p-5 rounded-2xl border border-gray-100 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+        {isGuest ? (
+          <div className="bg-white p-8 sm:p-12 rounded-3xl border border-gray-100 text-center space-y-4 shadow-2xs max-w-md mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 text-[#30AFFF] flex items-center justify-center mx-auto">
+              <FileCheck2 size={32} />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-base text-gray-900">Anda Belum Masuk</h3>
+              <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                Silakan masuk atau daftarkan akun kampus untuk mengajukan klaim dan memantau status verifikasi barang.
+              </p>
+            </div>
+            <div className="flex justify-center gap-3 pt-2">
+              <Link
+                href="/login?redirect=/claims"
+                className="px-5 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold transition-all inline-flex items-center gap-1.5"
               >
-                <div className="flex items-start sm:items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#30AFFF] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
-                    <Icon size={24} className="stroke-[1.75]" />
-                  </div>
+                <LogIn size={13} />
+                <span>Masuk</span>
+              </Link>
+              <Link
+                href="/register"
+                className="px-5 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-all inline-flex items-center gap-1.5"
+              >
+                <UserPlus size={13} />
+                <span>Daftar</span>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Tabs Bar */}
+            <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+              <button
+                onClick={() => setActiveTab('outgoing')}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'outgoing'
+                    ? 'bg-white text-gray-900 border border-gray-200 shadow-2xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                Klaim Diajukan ({outgoingClaims.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('incoming')}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'incoming'
+                    ? 'bg-white text-gray-900 border border-gray-200 shadow-2xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                Klaim Masuk ({incomingClaims.length})
+              </button>
+            </div>
 
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-bold text-sm sm:text-base text-gray-900">
-                        {claim.itemName}
-                      </h3>
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${claim.statusColor.bg} ${claim.statusColor.text} ${claim.statusColor.border}`}
-                      >
-                        {claim.statusLabel}
-                      </span>
+            {loading ? (
+              <div className="space-y-4">
+                {[1, 2].map((i) => (
+                  <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-2xs animate-pulse flex gap-4 items-center">
+                    <div className="w-12 h-12 bg-gray-100 rounded-xl shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-100 rounded w-1/3" />
+                      <div className="h-3 bg-gray-100 rounded w-1/4" />
                     </div>
-
-                    <p className="text-xs text-gray-500">
-                      {activeTab === 'outgoing' ? 'Penemu: ' : 'Pengklaim: '}
-                      <strong className="text-gray-700">{claim.counterpartName}</strong> ({claim.counterpartRole})
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-400 pt-0.5">
-                      <span className="flex items-center gap-1">
-                        <MapPin size={12} />
-                        {claim.location}
-                      </span>
-                      <span>·</span>
-                      <span className="flex items-center gap-1">
-                        <Clock size={12} />
-                        Diajukan pada {claim.date}
-                      </span>
-                    </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 shrink-0 self-end md:self-center w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-gray-50">
-                  <Link
-                    href="/messages"
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-all w-full md:w-auto"
-                  >
-                    <MessageSquare size={14} />
-                    <span>Buka Chat Verifikasi</span>
-                  </Link>
-                </div>
+                ))}
               </div>
-            );
-          })}
-        </div>
+            ) : claimsList.length === 0 ? (
+              <div className="bg-white p-12 rounded-3xl border border-gray-100 text-center space-y-4 shadow-2xs">
+                <div className="w-16 h-16 rounded-full bg-blue-50 text-[#30AFFF] flex items-center justify-center mx-auto">
+                  <FileCheck2 size={28} />
+                </div>
+                <h3 className="font-bold text-base text-gray-900">
+                  {activeTab === 'outgoing'
+                    ? 'Belum ada klaim yang Anda ajukan'
+                    : 'Belum ada klaim masuk atas laporan barang temuan Anda'}
+                </h3>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                  {activeTab === 'outgoing'
+                    ? 'Jika Anda menemukan barang Anda di katalog Cari Barang, klik tombol Ajukan Klaim untuk memulai verifikasi kepemilikan.'
+                    : 'Ketika seseorang mengklaim barang yang Anda laporkan ditemukan, daftar klaim akan muncul di sini.'}
+                </p>
+                <Link
+                  href="/find"
+                  className="inline-flex items-center px-4 py-2 bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold rounded-xl shadow-sm transition-all"
+                >
+                  Jelajahi Cari Barang
+                </Link>
+              </div>
+            ) : (
+              /* Claims List */
+              <div className="space-y-3.5">
+                {claimsList.map((claim) => {
+                  const Icon = claim.icon;
+                  return (
+                    <div
+                      key={claim.id}
+                      className="bg-white p-5 rounded-2xl border border-gray-100 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-50/80 text-[#30AFFF] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+                          <Icon size={24} className="stroke-[1.75]" />
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-bold text-sm sm:text-base text-gray-900 group-hover:text-[#30AFFF] transition-colors">
+                              {claim.itemName}
+                            </h3>
+                            <span
+                              className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${claim.statusColor.bg} ${claim.statusColor.text} ${claim.statusColor.border}`}
+                            >
+                              {claim.statusLabel}
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-gray-500">
+                            {activeTab === 'outgoing' ? 'Penemu' : 'Pengaju Klaim'}:{' '}
+                            <strong className="text-gray-700">{claim.counterpartName}</strong> ({claim.counterpartRole})
+                          </p>
+
+                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-400 pt-1">
+                            <div className="flex items-center gap-1">
+                              <MapPin size={11} className="text-gray-400" />
+                              <span>{claim.location}</span>
+                            </div>
+                            <span>·</span>
+                            <div className="flex items-center gap-1">
+                              <Clock size={11} className="text-gray-400" />
+                              <span>Diajukan pada {claim.date}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <Link
+                          href="/messages"
+                          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                        >
+                          <MessageSquare size={14} />
+                          <span>Buka Chat Verifikasi</span>
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </AppLayout>
   );

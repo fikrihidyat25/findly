@@ -29,13 +29,20 @@ interface SidebarProps {
 export default function AppSidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
 
-  const mainNavItems = [
+  interface NavItem {
+    label: string;
+    href: string;
+    icon: any;
+    badge?: number | string;
+  }
+
+  const mainNavItems: NavItem[] = [
     { label: 'Beranda', href: '/dashboard', icon: Home },
     { label: 'Cari Barang', href: '/find', icon: Search },
     { label: 'Saya Kehilangan', href: '/lost/new', icon: AlertCircle },
     { label: 'Saya Menemukan', href: '/found/new', icon: HelpCircle },
     { label: 'Klaim Saya', href: '/claims', icon: FileCheck2 },
-    { label: 'Pesan', href: '/messages', icon: MessageSquare, badge: 2 },
+    { label: 'Pesan', href: '/messages', icon: MessageSquare },
     { label: 'Disimpan', href: '/saved', icon: Bookmark },
     { label: 'Notifikasi', href: '/notifications', icon: Bell },
   ];
@@ -87,12 +94,9 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
     <div className="flex flex-col h-full bg-white border-r border-gray-100/90 select-none">
       {/* Brand Logo Header */}
       <div className="px-6 py-5 flex items-center justify-between border-b border-gray-50">
-        <Link href="/dashboard" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-[#30AFFF] text-white font-bold flex items-center justify-center text-base shadow-sm group-hover:bg-[#2196E8] transition-colors">
-            F
-          </div>
-          <span className="font-bold text-xl text-gray-900 tracking-tight">
-            Findly<span className="text-[#30AFFF]">.</span>
+        <Link href="/dashboard" className="flex items-center group">
+          <span className="text-2xl font-black tracking-tight text-[#30AFFF] group-hover:opacity-85 transition-opacity">
+            Findly.
           </span>
         </Link>
         {onCloseMobile && (

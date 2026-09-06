@@ -58,17 +58,13 @@ export default function SocialButtons({
         type="button"
         onClick={onEmailClick}
         disabled={isLoading}
-        className={`w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer shadow-2xs ${
-          isEmailActive
-            ? 'border-2 border-[#30AFFF] bg-[#EFF8FF] text-[#111827]'
-            : 'border border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-        }`}
+        className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-gray-200 rounded-xl text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 active:scale-[0.99] transition-all cursor-pointer shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <Mail
           size={17}
-          className={`shrink-0 stroke-[1.75] ${isEmailActive ? 'text-[#30AFFF]' : 'text-gray-500'}`}
+          className="shrink-0 stroke-[1.75] text-gray-500"
         />
-        <span>{actionLabel} dengan email</span>
+        <span>{actionLabel} dengan Email</span>
       </button>
     </div>
   );

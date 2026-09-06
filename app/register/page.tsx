@@ -2,9 +2,9 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Mail,
   Lock,
@@ -15,13 +15,12 @@ import {
   IdCard,
   Eye,
   EyeOff,
-  ArrowRight,
-  ArrowLeft,
   Loader2,
   AlertCircle,
   CheckCircle2,
   Sparkles,
-  Info
+  Info,
+  ShieldCheck,
 } from 'lucide-react';
 import AuthBanner from '@/src/components/auth/AuthBanner';
 import SocialButtons from '@/src/components/auth/SocialButtons';
@@ -30,11 +29,13 @@ import { createClient } from '@/src/lib/supabase/client';
 type AccountType = 'campus' | 'community';
 type CampusRole = 'mahasiswa' | 'dosen' | 'staff';
 
-export default function RegisterPage() {
+function RegisterFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const formContainerRef = useRef<HTMLDivElement>(null);
   const fullNameInputRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
   // Form State
   const [accountType, setAccountType] = useState<AccountType>('campus');
@@ -43,6 +44,17 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [university, setUniversity] = useState('Universitas Bung Hatta');
   const [campusRole, setCampusRole] = useState<CampusRole>('mahasiswa');
+
+  useEffect(() => {
+    const emailParam = searchParams.get('email');
+    if (emailParam) {
+      setEmail(emailParam);
+    }
+    const noticeParam = searchParams.get('notice');
+    if (noticeParam) {
+      setEmailSentNotice(noticeParam);
+    }
+  }, [searchParams]);
   const [nimNip, setNimNip] = useState('');
 
   // UI & Loading State
@@ -53,44 +65,50 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [emailSentNotice, setEmailSentNotice] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
+  const [nimError, setNimError] = useState(false);
 
-  // 1. Google OAuth Register Handler
+  const handleResendVerification = async () => {
+    if (!emailSentNotice) return;
+    setIsResending(true);
+    setResendStatus(null);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: emailSentNotice,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        },
+      });
+      if (error) throw error;
+      setResendStatus('Tautan konfirmasi baru berhasil dikirim ulang ke inbox/spam email Anda!');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal mengirim ulang email konfirmasi.';
+      setResendStatus(msg);
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  // 1. Google OAuth Register Handler (Otomatis deteksi akun Google aktif & langsung terverifikasi)
   const handleGoogleRegister = async () => {
-    setIsGoogleLoading(true);
     setErrorMessage(null);
     setEmailSentNotice(null);
-
+    setIsGoogleLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
           queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
+            prompt: 'select_account',
           },
         },
       });
-
-      if (error) {
-        // Cek jika Google provider belum diaktifkan di Supabase dashboard
-        if (error.message.includes('not enabled') || error.message.includes('Unsupported provider')) {
-          setErrorMessage(
-            'Google OAuth belum diaktifkan di dashboard Supabase (Authentication > Providers > Google). Silakan gunakan formulir pendaftaran Email di bawah ini.'
-          );
-        } else {
-          setErrorMessage(`Google OAuth error: ${error.message}`);
-        }
-        setIsGoogleLoading(false);
-        return;
-      }
-
-      // Jika URL OAuth tersedia, browser akan otomatis redirect
-      if (data?.url) {
-        window.location.href = data.url;
-      }
+      if (error) throw error;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan pada Google OAuth.';
+      const msg = err instanceof Error ? err.message : 'Gagal menghubungkan ke akun Google.';
       setErrorMessage(msg);
       setIsGoogleLoading(false);
     }
@@ -139,95 +157,55 @@ export default function RegisterPage() {
         status_kampus_terverifikasi: isVerified,
       };
 
-      // 1. Coba pendaftaran cepat via RPC (langsung aktif bebas rate limit email)
-      let rpcHandled = false;
-      try {
-        const { data: rpcRes, error: rpcErr } = await supabase.rpc('daftar_pengguna_cepat', {
-          p_email: email.trim(),
-          p_password: password,
-          p_nama_lengkap: fullName.trim(),
-          p_tipe_akun: accountType,
-          p_universitas: accountType === 'campus' ? university.trim() : null,
-          p_role_kampus: accountType === 'campus' ? campusRole : null,
-          p_nim_nip: accountType === 'campus' ? nimNip.trim() : '',
-        });
+      // 1. Pendaftaran Langsung via Supabase Auth SignUp (Mengirim Tautan Konfirmasi Email Otomatis)
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password: password,
+        options: {
+          data: userMetadata,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        },
+      });
 
-        if (!rpcErr && rpcRes?.success) {
-          rpcHandled = true;
-          // Langsung login otomatis
-          const { error: signInErr } = await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password: password,
-          });
-
-          if (!signInErr) {
-            setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke Dashboard...');
-            setTimeout(() => {
-              router.push('/dashboard');
-              router.refresh();
-            }, 800);
-            return;
-          }
-        } else if (rpcRes && !rpcRes.success) {
-          throw new Error(rpcRes.message || 'Pendaftaran gagal.');
+      if (signUpError) {
+        if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
+          throw new Error('Email ini sudah terdaftar. Silakan login ke akun Anda.');
         }
-      } catch (err: unknown) {
-        if (err instanceof Error && err.message.includes('terdaftar')) {
-          throw err;
+        if (signUpError.message.includes('rate limit')) {
+          throw new Error('Batas pengiriman email per jam tercapai (rate limit). Tunggu beberapa saat atau periksa inbox Anda.');
         }
-        // Jika RPC belum ada di database, lanjut ke alur standar signUp
+        throw signUpError;
       }
 
-      if (!rpcHandled) {
-        // 2. Alur Standar Supabase Auth SignUp
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: email.trim(),
-          password: password,
-          options: {
-            data: userMetadata,
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
-          },
-        });
+      const user = data.user;
 
-        if (signUpError) {
-          if (signUpError.message.includes('already registered')) {
-            throw new Error('Email ini sudah terdaftar. Silakan login ke akun Anda.');
-          }
-          if (signUpError.message.includes('rate limit')) {
-            throw new Error('Batas pengiriman email Supabase tercapai (rate limit). Silakan matikan "Confirm email" di Supabase atau klik tombol di bawah untuk langsung masuk ke Dashboard.');
-          }
-          throw signUpError;
+      // Sinkronisasi profil ke tabel profil_pengguna
+      if (user) {
+        try {
+          await supabase.from('profil_pengguna').upsert({
+            id: user.id,
+            nama_lengkap: fullName.trim(),
+            tipe_akun: accountType,
+            universitas: accountType === 'campus' ? university.trim() : null,
+            role_kampus: accountType === 'campus' ? campusRole : null,
+            nim_nip: accountType === 'campus' ? nimNip.trim() : null,
+            status_kampus_terverifikasi: isVerified,
+          });
+        } catch {
+          // Ditangani juga oleh trigger on_auth_user_created
         }
+      }
 
-        const user = data.user;
-
-        // Upayakan insert/upsert langsung ke tabel profil_pengguna
-        if (user) {
-          try {
-            await supabase.from('profil_pengguna').upsert({
-              id: user.id,
-              nama_lengkap: fullName.trim(),
-              tipe_akun: accountType,
-              universitas: accountType === 'campus' ? university.trim() : null,
-              role_kampus: accountType === 'campus' ? campusRole : null,
-              nim_nip: accountType === 'campus' ? nimNip.trim() : null,
-              status_kampus_terverifikasi: isVerified,
-            });
-          } catch {
-            // Abaikan jika ditangani oleh trigger
-          }
-        }
-
-        // Evaluasi sesi
-        if (data.session) {
-          setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke Dashboard...');
-          setTimeout(() => {
-            router.push('/dashboard');
-            router.refresh();
-          }, 1000);
-        } else {
-          setEmailSentNotice(email.trim());
-        }
+      // Evaluasi apakah sesi langsung aktif atau harus konfirmasi email terlebih dahulu
+      if (data.session) {
+        setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke Dashboard...');
+        setTimeout(() => {
+          router.push('/dashboard');
+          router.refresh();
+        }, 1000);
+      } else {
+        // Tampilkan layar notifikasi "Periksa Link Konfirmasi di Email"
+        setEmailSentNotice(email.trim());
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat pendaftaran.';
@@ -256,16 +234,7 @@ export default function RegisterPage() {
         {/* Right Side: Register Form */}
         <div className="flex-1 p-6 sm:p-8 lg:p-10 flex flex-col justify-between overflow-y-auto max-h-[92vh]">
           <div className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center">
-            {/* Back to Login Link */}
-            <div className="mb-3">
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors"
-              >
-                <ArrowLeft size={14} />
-                <span>Kembali ke login</span>
-              </Link>
-            </div>
+
 
             {/* Header Title */}
             <div className="text-center mb-5">
@@ -277,35 +246,40 @@ export default function RegisterPage() {
               </p>
             </div>
 
-            {/* Notice Konfirmasi Email (Jika Email Verification Aktif di Supabase) */}
+            {/* Notice Konfirmasi Email */}
             {emailSentNotice ? (
-              <div className="bg-[#EFF8FF] border border-[#BFDBFE] rounded-2xl p-5 text-center space-y-3 my-4 animate-in fade-in zoom-in duration-300">
-                <div className="w-12 h-12 rounded-full bg-[#30AFFF] text-white flex items-center justify-center mx-auto shadow-sm">
-                  <Mail size={22} />
+              <div className="bg-[#EFF8FF] border border-[#BFDBFE] rounded-3xl p-6 text-center space-y-4 my-4 animate-in fade-in zoom-in duration-300 shadow-sm">
+                <div className="w-14 h-14 rounded-2xl bg-[#30AFFF] text-white flex items-center justify-center mx-auto shadow-sm">
+                  <Mail size={26} />
                 </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-gray-900">
-                    Verifikasi Email Anda
+                <div className="space-y-2">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">
+                    Kami telah mengirimkan tautan konfirmasi ke email Anda
                   </h3>
-                  <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                    Tautan konfirmasi telah dikirim ke{' '}
-                    <span className="font-semibold text-gray-900">{emailSentNotice}</span>. Silakan
-                    periksa inbox atau folder spam untuk mengaktifkan akun Findly Anda.
+                  <div>
+                    <span className="font-bold text-[#0284C7] bg-white px-3 py-1.5 rounded-xl border border-[#BFDBFE]/60 inline-block text-xs">
+                      {emailSentNotice}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500">
+                    Silakan periksa inbox atau folder spam email Anda untuk mengaktifkan akun.
                   </p>
                 </div>
-                <div className="pt-2 flex flex-col gap-2">
-                  <Link
-                    href="/login"
-                    className="w-full bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-medium py-2.5 px-4 rounded-xl transition-all block"
-                  >
-                    Buka Halaman Login
-                  </Link>
+
+                {resendStatus && (
+                  <div className="p-2.5 bg-white border border-[#BFDBFE] text-[#0284C7] rounded-xl text-xs font-medium">
+                    {resendStatus}
+                  </div>
+                )}
+
+                <div className="pt-2">
                   <button
                     type="button"
-                    onClick={() => setEmailSentNotice(null)}
-                    className="text-xs text-gray-500 hover:text-gray-700 underline"
+                    disabled={isResending}
+                    onClick={handleResendVerification}
+                    className="w-full bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
-                    Daftar dengan email lain
+                    {isResending ? 'Mengirim ulang...' : 'Kirim Ulang Link'}
                   </button>
                 </div>
               </div>
@@ -348,10 +322,10 @@ export default function RegisterPage() {
                   actionLabel="Daftar"
                   isLoading={isLoading}
                   isGoogleLoading={isGoogleLoading}
-                  isEmailActive={isEmailFormOpen}
                   onGoogleLogin={handleGoogleRegister}
                   onEmailClick={handleEmailButtonClick}
                 />
+
 
                 {/* Divider 'or' */}
                 <div className="relative my-4 text-center">
@@ -502,17 +476,46 @@ export default function RegisterPage() {
 
                           {/* NIM / NIP */}
                           <div>
-                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">
-                              NIM / NIP / NoBP <span className="text-red-500">*</span>
-                            </label>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-[11px] font-semibold text-gray-700">
+                                NIM / NIP / NoBP <span className="text-red-500">*</span>
+                              </label>
+                              {nimError && (
+                                <span className="text-[10px] font-bold text-rose-500 flex items-center gap-0.5 animate-in fade-in">
+                                  Hanya angka
+                                </span>
+                              )}
+                            </div>
                             <div className="relative">
                               <input
                                 type="text"
+                                inputMode="numeric"
                                 required
                                 value={nimNip}
-                                onChange={(e) => setNimNip(e.target.value)}
-                                placeholder="Nomor Induk"
-                                className="w-full px-2.5 py-2 text-xs text-gray-800 placeholder-gray-400 border border-gray-200 bg-white rounded-lg focus:outline-none focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 transition-all pr-8"
+                                onKeyDown={(e) => {
+                                  if (
+                                    ['Backspace', 'Tab', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Home', 'End'].includes(e.key) ||
+                                    e.ctrlKey || e.metaKey || e.altKey
+                                  ) return;
+                                  if (!/^\d$/.test(e.key)) {
+                                    e.preventDefault();
+                                    setNimError(true);
+                                    setTimeout(() => setNimError(false), 2200);
+                                  }
+                                }}
+                                onChange={(e) => {
+                                  if (/[^\d]/.test(e.target.value)) {
+                                    setNimError(true);
+                                    setTimeout(() => setNimError(false), 2200);
+                                  }
+                                  setNimNip(e.target.value.replace(/\D/g, ''));
+                                }}
+                                placeholder="Nomor Induk (Angka)"
+                                className={`w-full px-2.5 py-2 text-xs text-gray-800 placeholder-gray-400 border rounded-lg focus:outline-none transition-all pr-8 font-mono ${
+                                  nimError
+                                    ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20'
+                                    : 'border-gray-200 bg-white focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
+                                }`}
                               />
                               <IdCard
                                 size={15}
@@ -531,11 +534,23 @@ export default function RegisterPage() {
 
                     {/* Email Input */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Email <span className="text-red-500">*</span>
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-semibold text-gray-700">
+                          Email Aktif <span className="text-red-500">*</span>
+                        </label>
+                        {!email.includes('@') && email.trim().length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setEmail((prev) => `${prev.trim()}@gmail.com`)}
+                            className="text-[10px] font-semibold text-[#4285F4] hover:underline bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 cursor-pointer"
+                          >
+                            + Tambah @gmail.com
+                          </button>
+                        )}
+                      </div>
                       <div className="relative">
                         <input
+                          ref={emailInputRef}
                           type="email"
                           required
                           value={email}
@@ -553,7 +568,7 @@ export default function RegisterPage() {
                     {/* Password Input */}
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Password <span className="text-red-500">*</span>
+                        Buat Password <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -587,12 +602,9 @@ export default function RegisterPage() {
                           <span>Mendaftarkan Akun...</span>
                         </>
                       ) : (
-                        <>
-                          <span>
-                            Daftar sebagai {accountType === 'campus' ? 'Campus Member' : 'Community Member'}
-                          </span>
-                          <ArrowRight size={15} />
-                        </>
+                        <span>
+                          Daftar sebagai {accountType === 'campus' ? 'Campus Member' : 'Community Member'}
+                        </span>
                       )}
                     </button>
                   </form>
@@ -627,5 +639,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f4f7fb] flex items-center justify-center p-4 text-xs text-gray-500">Memuat formulir...</div>}>
+      <RegisterFormContent />
+    </Suspense>
   );
 }

@@ -30,10 +30,6 @@ export default function QuickActions() {
             </p>
           </div>
         </div>
-
-        <div className="w-9 h-9 rounded-xl bg-gray-50 group-hover:bg-rose-500 group-hover:text-white text-gray-400 flex items-center justify-center shrink-0 transition-all duration-300 group-hover:translate-x-1">
-          <ArrowRight size={17} />
-        </div>
       </Link>
 
       {/* Action 2: Saya Menemukan Barang */}
@@ -59,10 +55,6 @@ export default function QuickActions() {
               Laporkan barang yang Anda temukan agar pemilik aslinya bisa segera mengambilnya.
             </p>
           </div>
-        </div>
-
-        <div className="w-9 h-9 rounded-xl bg-gray-50 group-hover:bg-emerald-600 group-hover:text-white text-gray-400 flex items-center justify-center shrink-0 transition-all duration-300 group-hover:translate-x-1">
-          <ArrowRight size={17} />
         </div>
       </Link>
     </div>

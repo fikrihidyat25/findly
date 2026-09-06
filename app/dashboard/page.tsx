@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppSidebar from '@/src/components/layout/AppSidebar';
 import AppHeader from '@/src/components/layout/AppHeader';
 import QuickActions from '@/src/components/dashboard/QuickActions';
@@ -8,10 +8,32 @@ import ProfileVerificationCard from '@/src/components/dashboard/ProfileVerificat
 import QuickStats from '@/src/components/dashboard/QuickStats';
 import RecentItemsFeed from '@/src/components/dashboard/RecentItemsFeed';
 import SafetyTipBanner from '@/src/components/dashboard/SafetyTipBanner';
+import { createClient } from '@/src/lib/supabase/client';
 
 export default function DashboardPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [displayName, setDisplayName] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadUser() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profil_pengguna')
+          .select('nama_lengkap')
+          .eq('id', user.id)
+          .single();
+        const fullName = profile?.nama_lengkap || user.user_metadata?.nama_lengkap || user.user_metadata?.full_name || user.email?.split('@')[0];
+        if (fullName) {
+          const firstName = fullName.trim().split(' ')[0];
+          setDisplayName(firstName);
+        }
+      }
+    }
+    loadUser();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex font-sans antialiased text-gray-900 selection:bg-[#30AFFF]/20 selection:text-[#30AFFF]">
@@ -35,7 +57,7 @@ export default function DashboardPage() {
           {/* Welcome Greeting Banner */}
           <div className="space-y-1">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-              Selamat datang kembali, Budi!
+              {displayName ? `Selamat datang kembali, ${displayName}!` : 'Selamat datang di Findly!'}
             </h1>
             <p className="text-xs sm:text-sm text-gray-500 font-normal">
               Mari bersama ciptakan lingkungan kampus yang aman, transparan, dan peduli sesama.

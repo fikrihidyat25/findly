@@ -1,13 +1,70 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { PackageOpen, CheckCircle2, Bookmark, FileText, ArrowRight } from 'lucide-react';
+import { PackageOpen, CheckCircle2, Bookmark, FileText } from 'lucide-react';
+import { createClient } from '@/src/lib/supabase/client';
 
 export default function QuickStats() {
+  const [activeClaimsCount, setActiveClaimsCount] = useState<number>(0);
+  const [returnedCount, setReturnedCount] = useState<number>(0);
+  const [savedCount, setSavedCount] = useState<number>(0);
+  const [totalReportsCount, setTotalReportsCount] = useState<number>(0);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        // Get saved count from localStorage
+        if (typeof window !== 'undefined') {
+          const saved = JSON.parse(localStorage.getItem('findly_saved_items') || '[]');
+          setSavedCount(Array.isArray(saved) ? saved.length : 0);
+        }
+
+        if (!user) {
+          // Guest mode: 0 across all
+          setActiveClaimsCount(0);
+          setReturnedCount(0);
+          setTotalReportsCount(0);
+          return;
+        }
+
+        // Fetch user's reports count
+        const { count: reportsCount } = await supabase
+          .from('laporan_barang')
+          .select('*', { count: 'exact', head: true })
+          .eq('pelapor_id', user.id);
+        setTotalReportsCount(reportsCount || 0);
+
+        // Fetch active claims count
+        const { count: claimsCount } = await supabase
+          .from('klaim_barang')
+          .select('*', { count: 'exact', head: true })
+          .eq('pengklaim_id', user.id)
+          .neq('status', 'SELESAI');
+        setActiveClaimsCount(claimsCount || 0);
+
+        // Fetch returned / resolved items count
+        const { count: resolvedCount } = await supabase
+          .from('klaim_barang')
+          .select('*', { count: 'exact', head: true })
+          .eq('pengklaim_id', user.id)
+          .eq('status', 'SELESAI');
+        setReturnedCount(resolvedCount || 0);
+      } catch (err) {
+        console.error('Error fetching quick stats:', err);
+      }
+    }
+
+    fetchStats();
+  }, []);
+
   const stats = [
     {
       label: 'Klaim aktif',
-      value: '2',
+      value: activeClaimsCount,
       href: '/claims',
       icon: PackageOpen,
       iconColor: 'text-amber-600',
@@ -16,8 +73,8 @@ export default function QuickStats() {
     },
     {
       label: 'Barang Dikembalikan',
-      value: '5',
-      href: '/claims?status=returned',
+      value: returnedCount,
+      href: '/claims',
       icon: CheckCircle2,
       iconColor: 'text-emerald-600',
       bgColor: 'bg-emerald-50/80',
@@ -25,7 +82,7 @@ export default function QuickStats() {
     },
     {
       label: 'Disimpan',
-      value: '3',
+      value: savedCount,
       href: '/saved',
       icon: Bookmark,
       iconColor: 'text-[#30AFFF]',
@@ -34,8 +91,8 @@ export default function QuickStats() {
     },
     {
       label: 'Total Laporan',
-      value: '8',
-      href: '/my-reports',
+      value: totalReportsCount,
+      href: '/find',
       icon: FileText,
       iconColor: 'text-purple-600',
       bgColor: 'bg-purple-50/80',
@@ -69,10 +126,9 @@ export default function QuickStats() {
               </span>
               <Link
                 href={stat.href}
-                className="text-[#30AFFF] font-semibold hover:underline flex items-center gap-0.5 text-[11px] shrink-0"
+                className="text-[#30AFFF] font-semibold hover:underline text-[11px] shrink-0"
               >
-                <span>Lihat semua</span>
-                <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
+                Lihat semua
               </Link>
             </div>
           </div>

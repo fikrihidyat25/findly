@@ -28,22 +28,64 @@ export default function EditProfilePage() {
   const supabase = createClient();
 
   // Profile Form States
-  const [fullName, setFullName] = useState('Budi Santoso');
-  const [phone, setPhone] = useState('0812-3456-7890');
-  const [email, setEmail] = useState('budi.santoso@univ-abc.ac.id');
-  const [university, setUniversity] = useState('Universitas ABC');
-  const [faculty, setFaculty] = useState('Fakultas Ilmu Komputer');
-  const [studyProgram, setStudyProgram] = useState('Teknik Informatika');
-  const [cohortYear, setCohortYear] = useState('2022');
-  const [nim, setNim] = useState('2212345678');
-  const [bio, setBio] = useState(
-    'Mahasiswa Teknik Informatika angkatan 2022. Sering beraktivitas di Perpustakaan Pusat dan Laboratorium Software Engineering.'
-  );
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [accountType, setAccountType] = useState<'campus' | 'community' | 'admin'>('community');
+  const [university, setUniversity] = useState('Universitas Bung Hatta');
+  const [faculty, setFaculty] = useState('');
+  const [studyProgram, setStudyProgram] = useState('');
+  const [cohortYear, setCohortYear] = useState('');
+  const [nim, setNim] = useState('');
+  const [bio, setBio] = useState('');
 
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // States peringatan 'Hanya angka'
+  const [phoneError, setPhoneError] = useState(false);
+  const [cohortError, setCohortError] = useState(false);
+  const [nimError, setNimError] = useState(false);
+
+  const handleNumberKeyDown = (e: React.KeyboardEvent, setErrorFn: (val: boolean) => void) => {
+    if (
+      ['Backspace', 'Tab', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Home', 'End'].includes(e.key) ||
+      e.ctrlKey || e.metaKey || e.altKey
+    ) {
+      return;
+    }
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault();
+      setErrorFn(true);
+      setTimeout(() => setErrorFn(false), 2200);
+    }
+  };
+
+  const handlePhoneChange = (val: string) => {
+    if (/[^\d]/.test(val)) {
+      setPhoneError(true);
+      setTimeout(() => setPhoneError(false), 2200);
+    }
+    setPhone(val.replace(/\D/g, ''));
+  };
+
+  const handleCohortChange = (val: string) => {
+    if (/[^\d]/.test(val)) {
+      setCohortError(true);
+      setTimeout(() => setCohortError(false), 2200);
+    }
+    setCohortYear(val.replace(/\D/g, '').slice(0, 4));
+  };
+
+  const handleNimChange = (val: string) => {
+    if (/[^\d]/.test(val)) {
+      setNimError(true);
+      setTimeout(() => setNimError(false), 2200);
+    }
+    setNim(val.replace(/\D/g, ''));
+  };
 
   // Load current user data if logged in with Supabase
   useEffect(() => {
@@ -51,7 +93,7 @@ export default function EditProfilePage() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          setEmail(user.email || 'budi.santoso@univ-abc.ac.id');
+          setEmail(user.email || '');
           if (user.user_metadata?.full_name) {
             setFullName(user.user_metadata.full_name);
           }
@@ -66,11 +108,16 @@ export default function EditProfilePage() {
             if (profile.nama_lengkap) setFullName(profile.nama_lengkap);
             if (profile.no_telepon) setPhone(profile.no_telepon);
             if (profile.avatar_url) setAvatarPreview(profile.avatar_url);
+            if (profile.universitas) setUniversity(profile.universitas);
+            if (profile.nim_nip) setNim(profile.nim_nip);
+            if (profile.tipe_akun) setAccountType(profile.tipe_akun);
+          } else if (user.user_metadata?.tipe_akun) {
+            setAccountType(user.user_metadata.tipe_akun);
           }
         }
       } catch (err) {
-        // Fallback to initial demo data
-        console.log('Using default mock profile');
+        // Fallback
+        console.log('Error loading user in edit profile');
       }
     }
     loadUser();
@@ -145,10 +192,12 @@ export default function EditProfilePage() {
           </Link>
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">
-              Edit Profil Civitas
+              Edit Profil {accountType === 'campus' ? 'Civitas Kampus' : 'Pengguna'}
             </h1>
             <p className="text-xs sm:text-sm text-gray-500">
-              Perbarui identitas kampus, informasi kontak, dan biodata Anda di Findly.
+              {accountType === 'campus'
+                ? 'Perbarui identitas kampus, informasi kontak, dan biodata Anda di Findly.'
+                : 'Perbarui informasi kontak dan profil akun Anda di Findly.'}
             </p>
           </div>
         </div>
@@ -249,28 +298,41 @@ export default function EditProfilePage() {
 
               {/* No WhatsApp */}
               <div className="space-y-1.5">
-                <label className="font-bold text-gray-700 flex items-center gap-1.5">
-                  <Phone size={13} className="text-[#30AFFF]" />
-                  <span>Nomor WhatsApp / HP *</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-gray-700 flex items-center gap-1.5">
+                    <Phone size={13} className="text-[#30AFFF]" />
+                    <span>Nomor WhatsApp / HP *</span>
+                  </label>
+                  {phoneError && (
+                    <span className="text-[11px] font-bold text-rose-500 flex items-center gap-1 animate-in fade-in">
+                      <AlertCircle size={12} /> Hanya angka
+                    </span>
+                  )}
+                </div>
                 <input
                   type="tel"
+                  inputMode="numeric"
                   required
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Contoh: 0812-3456-7890"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-xs sm:text-sm focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all"
+                  onKeyDown={(e) => handleNumberKeyDown(e, setPhoneError)}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
+                  placeholder="Contoh: 081234567890"
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm focus:outline-none transition-all ${
+                    phoneError
+                      ? 'border-rose-400 ring-2 ring-rose-100'
+                      : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
+                  }`}
                 />
                 <span className="text-[10px] text-gray-400">
                   Digunakan untuk notifikasi klaim & koordinasi pengambilan aman.
                 </span>
               </div>
 
-              {/* Email Kampus */}
+              {/* Email Login */}
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="font-bold text-gray-700 flex items-center gap-1.5">
                   <Mail size={13} className="text-gray-400" />
-                  <span>Email Kampus (Akun Login)</span>
+                  <span>Email Akun (Login)</span>
                 </label>
                 <div className="relative">
                   <input
@@ -288,11 +350,12 @@ export default function EditProfilePage() {
             </div>
           </div>
 
-          {/* Data Akademika Kampus */}
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-2xs space-y-4">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-              Data Civitas Akademika
-            </h2>
+          {/* Data Akademika Kampus (Hanya untuk Anggota Kampus) */}
+          {accountType === 'campus' && (
+            <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-2xs space-y-4">
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                Data Civitas Akademika
+              </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               {/* Universitas */}
@@ -342,31 +405,58 @@ export default function EditProfilePage() {
 
               {/* Tahun Angkatan */}
               <div className="space-y-1.5">
-                <label className="font-bold text-gray-700 flex items-center gap-1.5">
-                  <Hash size={13} className="text-[#30AFFF]" />
-                  <span>Tahun Angkatan</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-gray-700 flex items-center gap-1.5">
+                    <Hash size={13} className="text-[#30AFFF]" />
+                    <span>Tahun Angkatan</span>
+                  </label>
+                  {cohortError && (
+                    <span className="text-[11px] font-bold text-rose-500 flex items-center gap-1 animate-in fade-in">
+                      <AlertCircle size={12} /> Hanya angka
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  maxLength={4}
                   value={cohortYear}
-                  onChange={(e) => setCohortYear(e.target.value)}
+                  onKeyDown={(e) => handleNumberKeyDown(e, setCohortError)}
+                  onChange={(e) => handleCohortChange(e.target.value)}
                   placeholder="Contoh: 2022"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-xs sm:text-sm focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all"
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm focus:outline-none transition-all ${
+                    cohortError
+                      ? 'border-rose-400 ring-2 ring-rose-100'
+                      : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
+                  }`}
                 />
               </div>
 
               {/* NIM */}
               <div className="space-y-1.5 sm:col-span-2">
-                <label className="font-bold text-gray-700 flex items-center gap-1.5">
-                  <Hash size={13} className="text-[#30AFFF]" />
-                  <span>Nomor Induk Mahasiswa (NIM)</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-gray-700 flex items-center gap-1.5">
+                    <Hash size={13} className="text-[#30AFFF]" />
+                    <span>Nomor Induk Mahasiswa (NIM)</span>
+                  </label>
+                  {nimError && (
+                    <span className="text-[11px] font-bold text-rose-500 flex items-center gap-1 animate-in fade-in">
+                      <AlertCircle size={12} /> Hanya angka
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
+                  inputMode="numeric"
                   value={nim}
-                  onChange={(e) => setNim(e.target.value)}
+                  onKeyDown={(e) => handleNumberKeyDown(e, setNimError)}
+                  onChange={(e) => handleNimChange(e.target.value)}
                   placeholder="Contoh: 2212345678"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-xs sm:text-sm font-mono focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all"
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm font-mono focus:outline-none transition-all ${
+                    nimError
+                      ? 'border-rose-400 ring-2 ring-rose-100'
+                      : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
+                  }`}
                 />
                 <span className="text-[10px] text-gray-400">
                   NIM disensor secara otomatis demi keamanan privasi Anda pada laporan publik.
@@ -374,6 +464,7 @@ export default function EditProfilePage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Bio Singkat */}
           <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-2xs space-y-4">

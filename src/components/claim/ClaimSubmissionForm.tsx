@@ -207,21 +207,39 @@ export default function ClaimSubmissionForm({
       </div>
 
       {/* Stepper (3 Steps) */}
-      <div className="py-2">
-        <div className="flex items-start justify-between max-w-xl mx-auto">
-          {claimSteps.map((step, idx) => {
-            const isCompleted = currentStep > step.num;
-            const isCurrent = currentStep === step.num;
-            const isLast = idx === claimSteps.length - 1;
+      <div className="py-2.5 px-2 sm:px-4 bg-white sm:bg-transparent rounded-2xl border border-gray-100 sm:border-0 shadow-2xs sm:shadow-none">
+        {/* Mobile current step indicator */}
+        <div className="sm:hidden mb-2 text-center">
+          <span className="text-xs font-bold text-gray-800">
+            Langkah {currentStep} dari {claimSteps.length}: <span className="text-[#30AFFF]">{claimSteps[currentStep - 1]?.label}</span>
+          </span>
+        </div>
 
-            return (
-              <div key={step.num} className={`flex items-start ${isLast ? 'flex-none' : 'flex-1'}`}>
-                {/* Step Circle & Label */}
-                <div className="flex flex-col items-center shrink-0 relative">
+        <div className="relative max-w-xl mx-auto">
+          {/* Connector Line Background (Center of col 1 to col 3 = 16.66% to 83.33% => span 66.66%) */}
+          <div className="absolute top-3.5 sm:top-4 left-[16.66%] right-[16.66%] h-[2px] bg-gray-200 -translate-y-1/2 z-0" />
+
+          {/* Connector Line Active Fill */}
+          <div
+            className="absolute top-3.5 sm:top-4 left-[16.66%] h-[2px] bg-[#30AFFF] -translate-y-1/2 transition-all duration-300 z-0"
+            style={{
+              width: `${((currentStep - 1) / (claimSteps.length - 1)) * 66.66}%`,
+            }}
+          />
+
+          {/* Steps Grid */}
+          <div className="grid grid-cols-3 relative z-10">
+            {claimSteps.map((step) => {
+              const isCompleted = currentStep > step.num;
+              const isCurrent = currentStep === step.num;
+
+              return (
+                <div key={step.num} className="flex flex-col items-center">
+                  {/* Step Circle */}
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs z-10 ${
+                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs ${
                       isCurrent
-                        ? 'bg-[#30AFFF] text-white ring-4 ring-[#30AFFF]/20 scale-110'
+                        ? 'bg-[#30AFFF] text-white ring-4 ring-[#30AFFF]/20 scale-105 sm:scale-110'
                         : isCompleted
                         ? 'bg-[#30AFFF] text-white'
                         : 'bg-white text-gray-400 border border-gray-300'
@@ -229,28 +247,23 @@ export default function ClaimSubmissionForm({
                   >
                     {isCompleted ? <Check size={14} className="stroke-[2.5]" /> : step.num}
                   </div>
+
+                  {/* Step Label */}
                   <span
-                    className={`text-[11px] sm:text-xs font-semibold mt-2 text-center whitespace-nowrap ${
-                      isCurrent ? 'text-gray-900 font-bold' : isCompleted ? 'text-[#30AFFF]' : 'text-gray-400'
+                    className={`text-[10px] sm:text-xs font-semibold mt-1.5 sm:mt-2 text-center leading-tight max-w-[80px] sm:max-w-[120px] px-0.5 transition-colors ${
+                      isCurrent
+                        ? 'text-gray-900 font-bold'
+                        : isCompleted
+                        ? 'text-[#30AFFF] font-medium'
+                        : 'text-gray-400'
                     }`}
                   >
                     {step.label}
                   </span>
                 </div>
-
-                {/* Connector Line (Only between steps, NEVER after the last step) */}
-                {!isLast && (
-                  <div className="flex-1 h-[2px] mx-2 sm:mx-3 mt-4 bg-gray-200 relative overflow-hidden rounded-full">
-                    <div
-                      className={`h-full bg-[#30AFFF] transition-all duration-300 ${
-                        currentStep > step.num ? 'w-full' : 'w-0'
-                      }`}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 

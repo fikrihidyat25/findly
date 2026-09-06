@@ -18,6 +18,7 @@ import {
   MapPin,
   Building2,
 } from 'lucide-react';
+import { createClient } from '@/src/lib/supabase/client';
 
 export default function FoundItemWizardPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -101,7 +102,7 @@ export default function FoundItemWizardPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) {
       setErrorMessage('Mohon setujui komitmen amanah pengembalian barang.');
@@ -109,10 +110,46 @@ export default function FoundItemWizardPage() {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    setErrorMessage(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setErrorMessage('Anda harus masuk/login terlebih dahulu untuk mengirimkan laporan temuan.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const storageDesc = storageType === 'self'
+        ? 'Disimpan sendiri oleh penemu'
+        : storageType === 'security'
+        ? 'Dititipkan ke Pos Satpam Kampus'
+        : 'Dititipkan ke Tata Usaha Fakultas';
+
+      const fullDescription = `${storageDesc}${locationDetail ? ` (${locationDetail})` : ''}${storageNote ? `. Catatan: ${storageNote}` : ''}`;
+      const ciriRahasiaCombined = `Pertanyaan: ${secretQuestion} | Jawaban: ${secretAnswer}`;
+
+      const { error } = await supabase
+        .from('laporan_barang')
+        .insert({
+          pelapor_id: user.id,
+          jenis_laporan: 'DITEMUKAN',
+          nama_barang: itemName,
+          deskripsi: fullDescription,
+          foto_url: photoPreview || null,
+          lokasi_terakhir: foundLocation,
+          ciri_rahasia: ciriRahasiaCombined,
+          status: 'MENCARI',
+        });
+
+      if (error) throw error;
       setIsSuccess(true);
-    }, 1000);
+    } catch (err: any) {
+      console.error('Error submitting found report:', err);
+      setErrorMessage(err.message || 'Gagal menyimpan laporan temuan. Silakan periksa koneksi Anda.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSuccess) {
@@ -202,21 +239,39 @@ export default function FoundItemWizardPage() {
         </div>
 
         {/* Stepper */}
-        <div className="py-2">
-          <div className="flex items-start justify-between max-w-2xl mx-auto">
-            {steps.map((step, idx) => {
-              const isCompleted = currentStep > step.num;
-              const isCurrent = currentStep === step.num;
-              const isLast = idx === steps.length - 1;
+        <div className="py-2.5 px-2 sm:px-4 bg-white sm:bg-transparent rounded-2xl border border-gray-100 sm:border-0 shadow-2xs sm:shadow-none">
+          {/* Mobile current step indicator */}
+          <div className="sm:hidden mb-2 text-center">
+            <span className="text-xs font-bold text-gray-800">
+              Langkah {currentStep} dari {steps.length}: <span className="text-emerald-600">{steps[currentStep - 1]?.label}</span>
+            </span>
+          </div>
 
-              return (
-                <div key={step.num} className={`flex items-start ${isLast ? 'flex-none' : 'flex-1'}`}>
-                  {/* Step Circle & Label */}
-                  <div className="flex flex-col items-center shrink-0 relative">
+          <div className="relative max-w-2xl mx-auto">
+            {/* Connector Line Background */}
+            <div className="absolute top-3.5 sm:top-4 left-[12.5%] right-[12.5%] h-[2px] bg-gray-200 -translate-y-1/2 z-0" />
+
+            {/* Connector Line Active Fill */}
+            <div
+              className="absolute top-3.5 sm:top-4 left-[12.5%] h-[2px] bg-emerald-500 -translate-y-1/2 transition-all duration-300 z-0"
+              style={{
+                width: `${((currentStep - 1) / (steps.length - 1)) * 75}%`,
+              }}
+            />
+
+            {/* Steps Grid */}
+            <div className="grid grid-cols-4 relative z-10">
+              {steps.map((step) => {
+                const isCompleted = currentStep > step.num;
+                const isCurrent = currentStep === step.num;
+
+                return (
+                  <div key={step.num} className="flex flex-col items-center">
+                    {/* Step Circle */}
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs z-10 ${
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs ${
                         isCurrent
-                          ? 'bg-emerald-500 text-white ring-4 ring-emerald-100 scale-110'
+                          ? 'bg-emerald-500 text-white ring-4 ring-emerald-100 scale-105 sm:scale-110'
                           : isCompleted
                           ? 'bg-emerald-500 text-white'
                           : 'bg-white text-gray-400 border border-gray-300'
@@ -224,28 +279,23 @@ export default function FoundItemWizardPage() {
                     >
                       {isCompleted ? <Check size={14} className="stroke-[2.5]" /> : step.num}
                     </div>
+
+                    {/* Step Label */}
                     <span
-                      className={`text-[11px] sm:text-xs font-semibold mt-2 text-center whitespace-nowrap ${
-                        isCurrent ? 'text-gray-900 font-bold' : isCompleted ? 'text-emerald-600' : 'text-gray-400'
+                      className={`text-[10px] sm:text-xs font-semibold mt-1.5 sm:mt-2 text-center leading-tight max-w-[70px] sm:max-w-[110px] px-0.5 transition-colors ${
+                        isCurrent
+                          ? 'text-gray-900 font-bold'
+                          : isCompleted
+                          ? 'text-emerald-600 font-medium'
+                          : 'text-gray-400'
                       }`}
                     >
                       {step.label}
                     </span>
                   </div>
-
-                  {/* Connector Line (Only between steps, NEVER after the last step) */}
-                  {!isLast && (
-                    <div className="flex-1 h-[2px] mx-2 sm:mx-3 mt-4 bg-gray-200 relative overflow-hidden rounded-full">
-                      <div
-                        className={`h-full bg-emerald-500 transition-all duration-300 ${
-                          currentStep > step.num ? 'w-full' : 'w-0'
-                        }`}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -277,7 +327,7 @@ export default function FoundItemWizardPage() {
                         onChange={(e) => setCategory(e.target.value)}
                         className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all cursor-pointer"
                       >
-                        <option value="">Pilih Kategori</option>
+                        <option value="" disabled hidden>Pilih Kategori</option>
                         <option value="Elektronik & Gadget">Elektronik & Gadget</option>
                         <option value="Dompet & Aksesoris">Dompet & Aksesoris</option>
                         <option value="Tas & Ransel">Tas & Ransel</option>
@@ -358,15 +408,6 @@ export default function FoundItemWizardPage() {
               {/* Step 2: Detail Rahasia (Secret Attributes) */}
               {currentStep === 2 && (
                 <div className="space-y-5">
-                  <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-2xl space-y-1">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
-                      <Lock size={14} className="text-emerald-600" />
-                      <span>Aturan Emas: Verifikasi Buta (Blind Verification)</span>
-                    </div>
-                    <p className="text-xs text-emerald-900/90 leading-relaxed">
-                      Bagian ini <strong>TIDAK PERNAH DIPERLIHATKAN KE PUBLIK</strong>. Anda menyimpannya sebagai kunci verifikasi untuk menanyai pengklaim di ruang chat.
-                    </p>
-                  </div>
 
                   <div className="space-y-4">
                     <div>
@@ -415,7 +456,7 @@ export default function FoundItemWizardPage() {
                         onChange={(e) => setFoundLocation(e.target.value)}
                         className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all cursor-pointer"
                       >
-                        <option value="">Pilih Area Kampus</option>
+                        <option value="" disabled hidden>Pilih Area Kampus</option>
                         <option value="Perpustakaan Pusat">Perpustakaan Pusat</option>
                         <option value="Gedung Kuliah Bersama (GKB)">Gedung Kuliah Bersama</option>
                         <option value="Fakultas Ilmu Komputer">Fakultas Ilmu Komputer</option>

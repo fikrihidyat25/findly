@@ -1,43 +1,107 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/src/components/layout/AppLayout';
 import {
   Bookmark,
   MapPin,
-  Clock,
   Trash2,
-  ArrowRight,
   Briefcase,
   Smartphone,
-  CheckCircle2,
+  Wallet,
+  CreditCard,
+  KeyRound,
+  BookOpen,
 } from 'lucide-react';
+import { createClient } from '@/src/lib/supabase/client';
+
+interface SavedItem {
+  id: string;
+  title: string;
+  type: 'lost' | 'found';
+  category: string;
+  location: string;
+  icon: any;
+}
+
+function getCategoryIcon(cat: string) {
+  const lower = (cat || '').toLowerCase();
+  if (lower.includes('elektronik') || lower.includes('hp') || lower.includes('gadget') || lower.includes('laptop')) {
+    return Smartphone;
+  }
+  if (lower.includes('dompet') || lower.includes('aksesoris')) {
+    return Wallet;
+  }
+  if (lower.includes('tas') || lower.includes('ransel')) {
+    return Briefcase;
+  }
+  if (lower.includes('dokumen') || lower.includes('kartu') || lower.includes('ktm')) {
+    return CreditCard;
+  }
+  if (lower.includes('kunci') || lower.includes('kendaraan') || lower.includes('motor')) {
+    return KeyRound;
+  }
+  if (lower.includes('buku') || lower.includes('tulis')) {
+    return BookOpen;
+  }
+  return Briefcase;
+}
 
 export default function SavedItemsPage() {
-  const [items, setItems] = useState([
-    {
-      id: '1',
-      title: 'Tas Ransel Kuning Nike',
-      type: 'found',
-      category: 'Tas & Ransel',
-      location: 'Perpustakaan Pusat, Lantai 2',
-      date: '01 Sep 2026',
-      icon: Briefcase,
-    },
-    {
-      id: '3',
-      title: 'iPhone 13 Pro Biru Sierra',
-      type: 'lost',
-      category: 'Elektronik & Gadget',
-      location: 'Gedung Kuliah Bersama (GKB) Ruang 304',
-      date: '01 Sep 2026',
-      icon: Smartphone,
-    },
-  ]);
+  const [items, setItems] = useState<SavedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadSaved() {
+      setLoading(true);
+      try {
+        const savedIds: string[] = JSON.parse(localStorage.getItem('findly_saved_items') || '[]');
+        if (!Array.isArray(savedIds) || savedIds.length === 0) {
+          setItems([]);
+          setLoading(false);
+          return;
+        }
+
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('laporan_barang')
+          .select('*')
+          .in('id', savedIds);
+
+        if (error) throw error;
+
+        if (data) {
+          const mapped: SavedItem[] = data.map((row: any) => ({
+            id: row.id,
+            title: row.nama_barang,
+            type: row.jenis_laporan === 'DITEMUKAN' ? 'found' : 'lost',
+            category: row.kategori || 'Barang Kampus',
+            location: row.lokasi_terakhir || 'Lingkungan Kampus',
+            icon: getCategoryIcon(row.kategori || ''),
+          }));
+          setItems(mapped);
+        }
+      } catch (err) {
+        console.error('Error loading saved items:', err);
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadSaved();
+  }, []);
 
   const removeItem = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
+    try {
+      const savedIds: string[] = JSON.parse(localStorage.getItem('findly_saved_items') || '[]');
+      const updated = savedIds.filter((item) => item !== id);
+      localStorage.setItem('findly_saved_items', JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
   };
 
   return (
@@ -52,7 +116,17 @@ export default function SavedItemsPage() {
           </p>
         </div>
 
-        {items.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3 animate-pulse">
+                <div className="h-12 w-12 bg-gray-100 rounded-xl" />
+                <div className="h-4 bg-gray-100 rounded w-1/3" />
+                <div className="h-5 bg-gray-100 rounded w-3/4" />
+              </div>
+            ))}
+          </div>
+        ) : items.length === 0 ? (
           <div className="bg-white p-12 rounded-3xl border border-gray-100 text-center space-y-4 shadow-2xs">
             <div className="w-16 h-16 rounded-full bg-blue-50 text-[#30AFFF] flex items-center justify-center mx-auto">
               <Bookmark size={28} />
@@ -63,10 +137,9 @@ export default function SavedItemsPage() {
             </p>
             <Link
               href="/find"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold rounded-xl shadow-sm transition-all"
+              className="inline-flex items-center px-4 py-2 bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold rounded-xl shadow-sm transition-all"
             >
-              <span>Jelajahi Cari Barang</span>
-              <ArrowRight size={14} />
+              Jelajahi Cari Barang
             </Link>
           </div>
         ) : (
@@ -99,9 +172,11 @@ export default function SavedItemsPage() {
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
                       {item.category}
                     </span>
-                    <h3 className="font-bold text-sm sm:text-base text-gray-900 group-hover:text-[#30AFFF] transition-colors mt-0.5">
-                      {item.title}
-                    </h3>
+                    <Link href={`/find/${item.id}`}>
+                      <h3 className="font-bold text-sm sm:text-base text-gray-900 hover:text-[#30AFFF] transition-colors mt-0.5 cursor-pointer">
+                        {item.title}
+                      </h3>
+                    </Link>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
                       <MapPin size={12} className="text-gray-400 shrink-0" />
                       <span className="truncate">{item.location}</span>
@@ -111,18 +186,17 @@ export default function SavedItemsPage() {
                   <div className="pt-3 border-t border-gray-50 flex items-center justify-between gap-2">
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="p-2 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                      className="p-2 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
                       title="Hapus dari simpanan"
                     >
                       <Trash2 size={16} />
                     </button>
 
                     <Link
-                      href={item.type === 'found' ? '/claim/new' : '/find'}
-                      className="px-3.5 py-1.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-all flex items-center gap-1"
+                      href={`/find/${item.id}`}
+                      className="px-4 py-1.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-all text-center cursor-pointer"
                     >
-                      <span>{item.type === 'found' ? 'Ajukan Klaim' : 'Lihat Detail'}</span>
-                      <ArrowRight size={13} />
+                      {item.type === 'found' ? 'Ajukan Klaim' : 'Lihat Detail'}
                     </Link>
                   </div>
                 </div>
