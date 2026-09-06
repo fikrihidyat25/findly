@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,32 +16,96 @@ import {
   FileText,
   AlertCircle,
   Briefcase,
+  Wallet,
+  Smartphone,
+  CreditCard,
+  KeyRound,
+  BookOpen,
+  PackageSearch,
   X,
   MessageSquare,
   ShieldAlert,
+  Loader2,
 } from 'lucide-react';
+import { createClient } from '@/src/lib/supabase/client';
 
-interface ItemDetails {
+export interface ItemDetails {
+  id?: string;
   name: string;
   location: string;
   foundDate: string;
   category: string;
+  type?: 'lost' | 'found';
+  description?: string;
+  pelaporName?: string;
+  pelaporRole?: string;
+  foto_url?: string;
 }
 
 interface ClaimSubmissionFormProps {
   initialItem?: ItemDetails;
 }
 
-export default function ClaimSubmissionForm({
-  initialItem = {
-    name: 'Tas Ransel Kuning Nike',
-    location: 'Perpustakaan Pusat, Lantai 2',
-    foundDate: '01 September 2026',
-    category: 'Tas & Ransel',
-  },
-}: ClaimSubmissionFormProps) {
+function getCategoryIcon(nameOrCat: string) {
+  const lower = (nameOrCat || '').toLowerCase();
+  if (
+    lower.includes('elektronik') ||
+    lower.includes('hp') ||
+    lower.includes('gadget') ||
+    lower.includes('laptop') ||
+    lower.includes('airpods') ||
+    lower.includes('headphone')
+  ) {
+    return Smartphone;
+  }
+  if (
+    lower.includes('dompet') ||
+    lower.includes('wallet') ||
+    lower.includes('uang') ||
+    lower.includes('aksesoris')
+  ) {
+    return Wallet;
+  }
+  if (lower.includes('tas') || lower.includes('ransel') || lower.includes('bag')) {
+    return Briefcase;
+  }
+  if (
+    lower.includes('dokumen') ||
+    lower.includes('kartu') ||
+    lower.includes('ktm') ||
+    lower.includes('ktp') ||
+    lower.includes('sim')
+  ) {
+    return CreditCard;
+  }
+  if (lower.includes('kunci') || lower.includes('kendaraan') || lower.includes('motor')) {
+    return KeyRound;
+  }
+  if (lower.includes('buku') || lower.includes('tulis') || lower.includes('binder')) {
+    return BookOpen;
+  }
+  return PackageSearch;
+}
+
+export default function ClaimSubmissionForm({ initialItem }: ClaimSubmissionFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const paramItemId = searchParams?.get('id') || searchParams?.get('item_id') || initialItem?.id || '';
+
+  const [item, setItem] = useState<ItemDetails>(
+    initialItem || {
+      id: paramItemId,
+      name: 'Memuat data barang...',
+      location: 'Sedang mengambil lokasi...',
+      foundDate: 'Sedang memuat tanggal...',
+      category: 'Barang Temuan',
+      type: 'found',
+      description: '',
+    }
+  );
+  const [isLoadingItem, setIsLoadingItem] = useState<boolean>(true);
 
   // Stepper state (1 to 3)
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -60,6 +124,74 @@ export default function ClaimSubmissionForm({
   // Form Fields - Step 3
   const [agreed, setAgreed] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Fetch real item data from Supabase
+  useEffect(() => {
+    async function loadItemData() {
+      setIsLoadingItem(true);
+      try {
+        const supabase = createClient();
+
+        let query = supabase
+          .from('laporan_barang')
+          .select('*, profil_pengguna:pelapor_id(nama_lengkap, role_kampus, universitas, status_kampus_terverifikasi)');
+
+        if (paramItemId) {
+          query = query.eq('id', paramItemId);
+        } else {
+          // If no query parameter, load the latest found item from database
+          query = query.eq('jenis_laporan', 'DITEMUKAN').order('dibuat_pada', { ascending: false }).limit(1);
+        }
+
+        const { data, error } = await query.maybeSingle();
+
+        if (error || !data) {
+          console.warn('Item not found for claim:', error);
+          if (initialItem) {
+            setItem(initialItem);
+          } else {
+            setItem({
+              id: '',
+              name: 'Barang Tidak Ditemukan',
+              location: 'Lokasi tidak tersedia',
+              foundDate: '-',
+              category: 'Umum',
+              type: 'found',
+            });
+          }
+          return;
+        }
+
+        const isFound = data.jenis_laporan === 'DITEMUKAN';
+        const pelapor = data.profil_pengguna;
+
+        setItem({
+          id: data.id,
+          name: data.nama_barang,
+          location: data.lokasi_terakhir || 'Lingkungan Kampus',
+          foundDate: data.dibuat_pada
+            ? new Date(data.dibuat_pada).toLocaleDateString('id-ID', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+              })
+            : 'Baru saja',
+          category: data.kategori || (isFound ? 'Barang Ditemukan' : 'Barang Kehilangan'),
+          type: isFound ? 'found' : 'lost',
+          description: data.deskripsi || '',
+          pelaporName: pelapor?.nama_lengkap || 'Civitas Kampus',
+          pelaporRole: pelapor?.role_kampus || 'Warga Kampus',
+          foto_url: data.foto_url || undefined,
+        });
+      } catch (err) {
+        console.error('Error fetching claim item:', err);
+      } finally {
+        setIsLoadingItem(false);
+      }
+    }
+
+    loadItemData();
+  }, [paramItemId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -99,7 +231,7 @@ export default function ClaimSubmissionForm({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) {
       setErrorMessage('Anda wajib mencentang pernyataan keaslian klaim sebelum mengirimkan permohonan.');
@@ -107,16 +239,56 @@ export default function ClaimSubmissionForm({
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    setErrorMessage(null);
+
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        const currentUrl = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/claim';
+        router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+        return;
+      }
+
+      if (item.id) {
+        const verificationNotes = [
+          `Alasan Kepemilikan: ${reason.trim()}`,
+          `Terakhir Dilihat: ${lastSeen.trim()}`,
+          secretDetails.trim() ? `Ciri Khusus / Rahasia: ${secretDetails.trim()}` : null,
+        ]
+          .filter(Boolean)
+          .join('\n\n');
+
+        const { error: insertError } = await supabase.from('klaim_barang').insert({
+          laporan_id: item.id,
+          pengklaim_id: user.id,
+          pesan_verifikasi: verificationNotes,
+          status: 'MENUNGGU',
+        });
+
+        if (insertError) {
+          console.warn('Gagal mencatat klaim ke database:', insertError.message);
+        }
+      }
+
       setIsSuccess(true);
-    }, 1000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kendala saat memproses klaim.';
+      setErrorMessage(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const ItemIcon = getCategoryIcon(item.category || item.name);
 
   // Success Celebration
   if (isSuccess) {
     return (
-      <div className="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-sm text-center space-y-5">
+      <div className="max-w-2xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-sky-100 shadow-sm text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
         <div className="w-16 h-16 rounded-full bg-sky-50 text-[#30AFFF] flex items-center justify-center mx-auto shadow-xs">
           <CheckCircle2 size={36} />
         </div>
@@ -128,22 +300,22 @@ export default function ClaimSubmissionForm({
             Pengajuan Klaim Berhasil Terkirim!
           </h2>
           <p className="text-xs sm:text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
-            Permintaan klaim Anda untuk <strong className="text-gray-900">{initialItem.name}</strong> telah diteruskan ke penemu barang. Ruang chat verifikasi telah otomatis dibuat.
+            Permintaan klaim Anda untuk <strong className="text-gray-900">{item.name}</strong> telah diteruskan ke penemu barang. Anda dapat memantau prosesnya di halaman Klaim Saya.
           </p>
         </div>
 
         <div className="p-4 bg-gray-50/80 rounded-2xl border border-gray-100 text-left space-y-2 text-xs">
           <div className="flex justify-between py-1 border-b border-gray-100">
             <span className="text-gray-400">Barang:</span>
-            <span className="font-semibold text-gray-800">{initialItem.name}</span>
+            <span className="font-semibold text-gray-800">{item.name}</span>
           </div>
           <div className="flex justify-between py-1 border-b border-gray-100">
             <span className="text-gray-400">Tempat Ditemukan:</span>
-            <span className="font-semibold text-gray-800">{initialItem.location}</span>
+            <span className="font-semibold text-gray-800">{item.location}</span>
           </div>
           <div className="flex justify-between py-1">
             <span className="text-gray-400">Langkah Berikutnya:</span>
-            <span className="font-semibold text-[#30AFFF]">Diskusi Verifikasi di Chat</span>
+            <span className="font-semibold text-[#30AFFF]">Verifikasi & Diskusi dengan Penemu</span>
           </div>
         </div>
 
@@ -155,11 +327,11 @@ export default function ClaimSubmissionForm({
             Kembali ke Beranda
           </Link>
           <Link
-            href="/messages"
+            href="/claims"
             className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-sm transition-colors flex items-center justify-center gap-2"
           >
-            <MessageSquare size={14} />
-            <span>Buka Ruang Chat Verifikasi</span>
+            <CheckCircle2 size={14} />
+            <span>Lihat di Klaim Saya</span>
           </Link>
         </div>
       </div>
@@ -181,7 +353,10 @@ export default function ClaimSubmissionForm({
             Beranda
           </Link>
           <span>&gt;</span>
-          <Link href="/find" className="hover:text-gray-600 transition-colors">
+          <Link
+            href={item.id ? `/find/${item.id}` : '/find'}
+            className="hover:text-gray-600 transition-colors"
+          >
             Detail Barang
           </Link>
           <span>&gt;</span>
@@ -190,7 +365,7 @@ export default function ClaimSubmissionForm({
 
         <div>
           <Link
-            href="/find"
+            href={item.id ? `/find/${item.id}` : '/find'}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors shadow-2xs"
           >
             <ArrowLeft size={14} />
@@ -211,12 +386,13 @@ export default function ClaimSubmissionForm({
         {/* Mobile current step indicator */}
         <div className="sm:hidden mb-2 text-center">
           <span className="text-xs font-bold text-gray-800">
-            Langkah {currentStep} dari {claimSteps.length}: <span className="text-[#30AFFF]">{claimSteps[currentStep - 1]?.label}</span>
+            Langkah {currentStep} dari {claimSteps.length}:{' '}
+            <span className="text-[#30AFFF]">{claimSteps[currentStep - 1]?.label}</span>
           </span>
         </div>
 
         <div className="relative max-w-xl mx-auto">
-          {/* Connector Line Background (Center of col 1 to col 3 = 16.66% to 83.33% => span 66.66%) */}
+          {/* Connector Line Background */}
           <div className="absolute top-3.5 sm:top-4 left-[16.66%] right-[16.66%] h-[2px] bg-gray-200 -translate-y-1/2 z-0" />
 
           {/* Connector Line Active Fill */}
@@ -285,9 +461,15 @@ export default function ClaimSubmissionForm({
               <div className="space-y-6">
                 {/* Section 1: Informasi Dasar (Pre-filled read only) */}
                 <div className="space-y-3">
-                  <h3 className="font-bold text-sm text-gray-900">
-                    Informasi Dasar
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-sm text-gray-900">Informasi Dasar</h3>
+                    {isLoadingItem && (
+                      <span className="flex items-center gap-1.5 text-xs text-[#30AFFF]">
+                        <Loader2 size={13} className="animate-spin" />
+                        <span>Memuat data barang...</span>
+                      </span>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     {/* Nama Barang */}
@@ -298,8 +480,8 @@ export default function ClaimSubmissionForm({
                       <input
                         type="text"
                         readOnly
-                        value={initialItem.name}
-                        className="w-full px-3 py-2 text-xs sm:text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl cursor-not-allowed select-none"
+                        value={item.name}
+                        className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-xl cursor-not-allowed select-none font-medium"
                       />
                     </div>
 
@@ -312,8 +494,8 @@ export default function ClaimSubmissionForm({
                         <input
                           type="text"
                           readOnly
-                          value={initialItem.location}
-                          className="w-full pl-3 pr-8 py-2 text-xs sm:text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl cursor-not-allowed select-none"
+                          value={item.location}
+                          className="w-full pl-3 pr-8 py-2 text-xs sm:text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-xl cursor-not-allowed select-none font-medium"
                         />
                         <MapPin size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       </div>
@@ -327,8 +509,8 @@ export default function ClaimSubmissionForm({
                       <input
                         type="text"
                         readOnly
-                        value={initialItem.foundDate}
-                        className="w-full px-3 py-2 text-xs sm:text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl cursor-not-allowed select-none"
+                        value={item.foundDate}
+                        className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-xl cursor-not-allowed select-none font-medium"
                       />
                     </div>
                   </div>
@@ -336,9 +518,7 @@ export default function ClaimSubmissionForm({
 
                 {/* Section 2: Ceritakan tentang barang Anda */}
                 <div className="border-t border-gray-100 pt-5 space-y-4">
-                  <h3 className="font-bold text-sm text-gray-900">
-                    Ceritakan tentang barang Anda
-                  </h3>
+                  <h3 className="font-bold text-sm text-gray-900">Ceritakan tentang barang Anda</h3>
 
                   {/* Field: Mengapa Anda yakin ini adalah barang Anda? */}
                   <div className="space-y-1.5">
@@ -354,7 +534,7 @@ export default function ClaimSubmissionForm({
                         maxLength={800}
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
-                        placeholder="Contoh: Saya kehilangan tas ini saat selesai kelas di perpustakaan. Di dalamnya terdapat laptop, buku catatan, dan gantungan kunci kecil berwarna hitam."
+                        placeholder={`Contoh: Saya kehilangan ${item.name || 'barang ini'} saat beraktivitas di kampus. Ciri-ciri utama dan isinya sangat sesuai dengan yang saya miliki.`}
                         className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-xl focus:outline-none focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 transition-all resize-none"
                       />
                       <span className="block text-right text-[10px] text-gray-400 mt-1">
@@ -372,7 +552,7 @@ export default function ClaimSubmissionForm({
                       type="text"
                       value={lastSeen}
                       onChange={(e) => setLastSeen(e.target.value)}
-                      placeholder="Contoh: 24 Mei 2026, sekitar pukul 15.00 di Perpustakaan Pusat, meja baca 15"
+                      placeholder="Contoh: Kemarin sore sekitar pukul 16.00 di sekitar lokasi penemuan."
                       className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-xl focus:outline-none focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 transition-all"
                     />
                   </div>
@@ -398,7 +578,7 @@ export default function ClaimSubmissionForm({
                     Foto Bukti Kepemilikan <span className="text-gray-400 font-normal">(opsional tapi dianjurkan)</span>
                   </label>
                   <p className="text-[11px] text-gray-400">
-                    Bisa berupa foto lama saat memakai barang, nota/struk pembelian, nomor seri, atau kartu garansi.
+                    Bisa berupa foto saat menggunakan barang, nota/struk, nomor seri, kartu garansi, atau foto identitas pendukung.
                   </p>
 
                   <input
@@ -437,12 +617,8 @@ export default function ClaimSubmissionForm({
                       <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#30AFFF] flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
                         <UploadCloud size={20} />
                       </div>
-                      <p className="font-bold text-xs text-gray-800">
-                        Unggah Bukti Kepemilikan
-                      </p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">
-                        PNG, JPG, JPEG Maksimal 5MB
-                      </p>
+                      <p className="font-bold text-xs text-gray-800">Unggah Bukti Kepemilikan</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">PNG, JPG, JPEG Maksimal 5MB</p>
                     </div>
                   )}
                 </div>
@@ -453,13 +629,13 @@ export default function ClaimSubmissionForm({
                     Ciri Rahasia Lainnya
                   </label>
                   <p className="text-[11px] text-gray-400">
-                    Tuliskan sesuatu yang tidak terlihat pada foto publik barang (misal: isi kantong, nomor IMEI, goresan tertentu).
+                    Tuliskan ciri khas yang tidak terlihat pada foto publik (misal: isi bagian dalam, gantungan kunci tersembunyi, goresan unik).
                   </p>
                   <textarea
                     rows={3}
                     value={secretDetails}
                     onChange={(e) => setSecretDetails(e.target.value)}
-                    placeholder="Contoh: Di kantong depan ada flashdisk warna merah 32GB, dan kartu perpustakaan atas nama Budi..."
+                    placeholder="Contoh: Di dalamnya tersimpan kartu tanda pengenal atas nama saya, serta aksesoris khusus..."
                     className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-xl focus:outline-none focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 transition-all resize-none"
                   />
                 </div>
@@ -482,7 +658,7 @@ export default function ClaimSubmissionForm({
                 <div className="bg-gray-50/90 rounded-2xl p-4.5 border border-gray-200/80 space-y-3 text-xs">
                   <div>
                     <span className="text-gray-400 block text-[11px]">Barang yang Diklaim:</span>
-                    <span className="font-bold text-gray-900 text-sm">{initialItem.name}</span>
+                    <span className="font-bold text-gray-900 text-sm">{item.name}</span>
                   </div>
 
                   <div className="pt-2 border-t border-gray-200/60">
@@ -516,7 +692,7 @@ export default function ClaimSubmissionForm({
                 <div className="p-3.5 bg-blue-50/70 border border-blue-200/60 rounded-xl flex items-start gap-2.5 text-xs text-blue-900">
                   <ShieldAlert size={17} className="text-[#30AFFF] shrink-0 mt-0.5" />
                   <p className="leading-relaxed">
-                    Setelah klaim terkirim, ruang chat verifikasi terenkripsi akan dibuka antara Anda dan penemu. Penemu dapat meminta pembuktian lebih lanjut sebelum menyetujui serah terima barang.
+                    Setelah klaim terkirim, penemu barang akan menerima permohonan klaim ini. Anda dapat mendiskusikan proses verifikasi dan serah terima secara aman di titik kumpul kampus.
                   </p>
                 </div>
 
@@ -530,7 +706,7 @@ export default function ClaimSubmissionForm({
                     className="w-4 h-4 rounded border-gray-300 text-[#30AFFF] focus:ring-[#30AFFF] cursor-pointer accent-[#30AFFF] mt-0.5"
                   />
                   <label htmlFor="claimAgree" className="text-xs text-gray-700 cursor-pointer leading-normal">
-                    Saya menyatakan dengan jujur bahwa barang ini adalah milik saya dan saya bersedia mempertanggungjawabkan informasi ini di bawah tata tertib kampus.
+                    Saya menyatakan dengan jujur bahwa barang ini adalah milik saya dan saya bersedia mempertanggungjawabkan informasi ini di bawah ketentuan tata tertib Findly.
                   </label>
                 </div>
               </div>
@@ -549,7 +725,7 @@ export default function ClaimSubmissionForm({
                 </button>
               ) : (
                 <Link
-                  href="/find"
+                  href={item.id ? `/find/${item.id}` : '/find'}
                   className="px-4 py-2 text-xs font-semibold text-gray-500 hover:text-gray-800 border border-transparent hover:border-gray-200 rounded-xl transition-all"
                 >
                   Batal
@@ -573,7 +749,10 @@ export default function ClaimSubmissionForm({
                   className="px-6 py-2.5 text-xs font-bold text-white bg-[#30AFFF] hover:bg-[#2196E8] active:scale-[0.98] disabled:opacity-50 rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer"
                 >
                   {isSubmitting ? (
-                    <span>Mengirimkan Klaim...</span>
+                    <span className="flex items-center gap-2">
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Mengirimkan Klaim...</span>
+                    </span>
                   ) : (
                     <>
                       <span>Kirim Pengajuan Klaim</span>
@@ -593,25 +772,25 @@ export default function ClaimSubmissionForm({
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-xs text-gray-900">Ringkasan Barang</h4>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70">
-                Ditemukan
+                {item.type === 'found' ? 'Ditemukan' : 'Kehilangan'}
               </span>
             </div>
 
-            <div className="flex items-center gap-3.5 p-2 bg-amber-50/50 rounded-xl border border-amber-100/60">
+            <div className="flex items-center gap-3.5 p-2.5 bg-amber-50/50 rounded-xl border border-amber-100/60">
               <div className="w-14 h-14 rounded-xl bg-amber-100/80 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
-                <Briefcase size={26} className="stroke-[1.75]" />
+                <ItemIcon size={26} className="stroke-[1.75]" />
               </div>
-              <div className="space-y-1">
-                <h5 className="font-bold text-xs text-gray-900 leading-snug">
-                  {initialItem.name}
+              <div className="space-y-1 min-w-0">
+                <h5 className="font-bold text-xs text-gray-900 leading-snug truncate">
+                  {item.name}
                 </h5>
                 <div className="flex items-center gap-1 text-[11px] text-gray-500">
                   <MapPin size={11} className="shrink-0 text-gray-400" />
-                  <span className="truncate">{initialItem.location}</span>
+                  <span className="truncate">{item.location}</span>
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-gray-400">
                   <Calendar size={11} className="shrink-0" />
-                  <span>{initialItem.foundDate}</span>
+                  <span>{item.foundDate}</span>
                 </div>
               </div>
             </div>
@@ -650,7 +829,7 @@ export default function ClaimSubmissionForm({
                   2
                 </div>
                 <div>
-                  <strong className="block text-xs text-gray-700">Verifikasi & Chat</strong>
+                  <strong className="block text-xs text-gray-600">Verifikasi & Chat</strong>
                   <span className="text-[11px] text-gray-400 leading-tight">
                     Berdiskusi dan verifikasi kepemilikan
                   </span>
@@ -663,9 +842,9 @@ export default function ClaimSubmissionForm({
                   3
                 </div>
                 <div>
-                  <strong className="block text-xs text-gray-700">Keputusan Klaim</strong>
+                  <strong className="block text-xs text-gray-600">Keputusan Klaim</strong>
                   <span className="text-[11px] text-gray-400 leading-tight">
-                    Penemu menerima atau menolak klaim
+                    Penemu menyetujui atau menolak
                   </span>
                 </div>
               </div>
@@ -676,9 +855,9 @@ export default function ClaimSubmissionForm({
                   4
                 </div>
                 <div>
-                  <strong className="block text-xs text-gray-700">Pengambilan Barang</strong>
+                  <strong className="block text-xs text-gray-600">Serah Terima Aman</strong>
                   <span className="text-[11px] text-gray-400 leading-tight">
-                    Ambil barang di lokasi yang disepakati
+                    Ambil barang di titik kumpul resmi
                   </span>
                 </div>
               </div>
@@ -688,17 +867,11 @@ export default function ClaimSubmissionForm({
           {/* Widget 3: Tips Klaim Berhasil */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-2xs space-y-3">
             <h4 className="font-bold text-xs text-gray-900">Tips Klaim Berhasil</h4>
-            <ul className="space-y-2.5 text-xs">
+            <ul className="space-y-2.5">
               <li className="flex items-start gap-2">
                 <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
                 <span className="text-[11px] text-gray-600 leading-snug">
-                  Berikan informasi spesifik tentang barang Anda
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
-                <span className="text-[11px] text-gray-600 leading-snug">
-                  Jelaskan ciri-ciri khusus yang hanya Anda tahu
+                  Jelaskan ciri-ciri khusus yang hanya Anda ketahui
                 </span>
               </li>
               <li className="flex items-start gap-2">
@@ -742,11 +915,9 @@ export default function ClaimSubmissionForm({
               <div className="flex items-center gap-2">
                 <span className="bg-emerald-50 text-emerald-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-                  Ditemukan
+                  {item.type === 'found' ? 'Ditemukan' : 'Kehilangan'}
                 </span>
-                <span className="text-xs text-gray-500 font-medium">
-                  {initialItem.category}
-                </span>
+                <span className="text-xs text-gray-500 font-medium">{item.category}</span>
               </div>
               <button
                 type="button"
@@ -761,19 +932,19 @@ export default function ClaimSubmissionForm({
             {/* Item Primary Info */}
             <div className="flex items-start gap-4">
               <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100/80 shadow-2xs">
-                <Briefcase size={30} />
+                <ItemIcon size={30} />
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                  {initialItem.name}
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-gray-900 leading-snug truncate">
+                  {item.name}
                 </h3>
                 <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
                   <MapPin size={13} className="text-[#30AFFF] shrink-0" />
-                  <span>{initialItem.location}</span>
+                  <span>{item.location}</span>
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
                   <Calendar size={13} className="shrink-0" />
-                  <span>Ditemukan pada: {initialItem.foundDate}</span>
+                  <span>Ditemukan pada: {item.foundDate}</span>
                 </p>
               </div>
             </div>
@@ -782,10 +953,13 @@ export default function ClaimSubmissionForm({
             <div className="p-4 bg-[#EFF8FF] rounded-2xl border border-[#BFDBFE]/60 space-y-1.5">
               <div className="flex items-center gap-1.5 text-[#0284C7] font-semibold text-xs">
                 <CheckCircle2 size={15} className="text-emerald-600" />
-                <span>Pelapor / Penemu: Satpam Perpustakaan (Bpk. Joko)</span>
+                <span>
+                  Pelapor / Penemu: {item.pelaporName || 'Civitas Kampus'}
+                  {item.pelaporRole ? ` (${item.pelaporRole})` : ''}
+                </span>
               </div>
               <p className="text-xs text-gray-600 leading-relaxed">
-                Barang saat ini disimpan dan dijaga aman di Pos Satpam Utama Perpustakaan Lantai 1.
+                Barang saat ini disimpan di: <strong className="text-gray-800">{item.location}</strong>
               </p>
             </div>
 
@@ -793,7 +967,7 @@ export default function ClaimSubmissionForm({
             <div className="space-y-1.5 text-xs">
               <span className="font-bold text-gray-800 block">Keterangan Publik Penemu:</span>
               <p className="text-gray-600 bg-gray-50/80 p-3.5 rounded-2xl border border-gray-100 leading-relaxed text-xs">
-                Ditemukan tas ransel Nike warna kuning dengan aksen abu-abu di bawah meja baca lantai 2. Kondisi masih sangat baik dan bersih. Terdapat botol minum di saku samping. Barang berharga di kantong kecil sengaja tidak kami sebutkan untuk verifikasi pemilik sah.
+                {item.description || 'Tidak ada deskripsi tambahan yang dicantumkan penemu.'}
               </p>
             </div>
 
@@ -801,7 +975,7 @@ export default function ClaimSubmissionForm({
             <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 leading-relaxed">
               <ShieldAlert size={17} className="text-amber-600 shrink-0 mt-0.5" />
               <span>
-                <strong>Privasi & Keamanan:</strong> Jangan membagikan informasi sensitif pribadi seperti PIN kartu atau sandi. Cukup jelaskan ciri fisik atau isi unik yang membuktikan Anda pemilik asli pada form klaim.
+                <strong>Privasi & Keamanan:</strong> Jangan membagikan data rahasia seperti PIN kartu atau sandi. Jelaskan ciri fisik atau isi khas yang membuktikan Anda pemilik asli pada form klaim.
               </span>
             </div>
 
@@ -823,13 +997,15 @@ export default function ClaimSubmissionForm({
                   Lanjutkan Form Klaim
                 </button>
               </div>
-              <Link
-                href="/find/1"
-                target="_blank"
-                className="block text-center text-[11px] font-medium text-[#30AFFF] hover:underline"
-              >
-                Buka detail di halaman penuh (tab baru) →
-              </Link>
+              {item.id && (
+                <Link
+                  href={`/find/${item.id}`}
+                  target="_blank"
+                  className="block text-center text-[11px] font-medium text-[#30AFFF] hover:underline"
+                >
+                  Buka detail di halaman penuh (tab baru) →
+                </Link>
+              )}
             </div>
           </div>
         </div>

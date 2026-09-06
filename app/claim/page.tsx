@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import AppSidebar from '@/src/components/layout/AppSidebar';
 import AppHeader from '@/src/components/layout/AppHeader';
 import ClaimSubmissionForm from '@/src/components/claim/ClaimSubmissionForm';
@@ -21,7 +21,9 @@ export default function ClaimPage() {
         <AppHeader onOpenMobileMenu={() => setMobileSidebarOpen(true)} />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          <ClaimSubmissionForm />
+          <Suspense fallback={<div className="p-8 text-center text-gray-400">Memuat formulir klaim...</div>}>
+            <ClaimSubmissionForm />
+          </Suspense>
         </main>
       </div>
     </div>
