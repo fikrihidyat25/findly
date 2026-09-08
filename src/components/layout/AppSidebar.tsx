@@ -87,7 +87,6 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
     { label: 'Moderasi Laporan', href: '/admin/laporan', icon: FileText },
     { label: 'Mediasi Klaim', href: '/admin/klaim', icon: FileCheck2 },
     { label: 'Pesan & Mediasi', href: '/messages', icon: MessageSquare },
-    { label: 'Titik Temu Kampus', href: '/safe-zones', icon: ShieldCheck },
     { label: 'Verifikasi Civitas', href: '/admin/pengguna', icon: Users },
     { label: 'Katalog Barang', href: '/find', icon: Search },
     { label: 'Notifikasi', href: '/notifications', icon: Bell },
@@ -96,7 +95,6 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
   const currentNavItems = isAdmin ? adminNavItems : userNavItems;
 
   const userSecondaryNavItems = [
-    { label: 'Titik Temu Aman', href: '/safe-zones', icon: ShieldCheck },
     { label: 'Akun Saya', href: '/profile', icon: User },
     { label: 'Pengaturan', href: '/settings', icon: Settings },
     { label: 'Bantuan', href: '/help', icon: LifeBuoy },

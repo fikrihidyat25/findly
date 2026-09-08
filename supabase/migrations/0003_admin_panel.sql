@@ -53,10 +53,10 @@ USING (
     )
 );
 
--- Admin dapat memperbarui status verifikasi civitas pengguna
+-- Admin dapat memperbarui & menghapus profil pengguna
 DROP POLICY IF EXISTS "Admin dapat mengelola profil pengguna" ON public.profil_pengguna;
 CREATE POLICY "Admin dapat mengelola profil pengguna"
-ON public.profil_pengguna FOR UPDATE
+ON public.profil_pengguna FOR ALL
 USING (
     EXISTS (
         SELECT 1 FROM public.profil_pengguna

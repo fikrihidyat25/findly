@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   ArrowLeft,
+  ArrowDown,
   MessageSquare,
   Search,
   Check,
@@ -132,6 +133,7 @@ export default function MessagesPage() {
   const [selectedSafePointModalId, setSelectedSafePointModalId] = useState<string>('sp-1');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -370,15 +372,66 @@ export default function MessagesPage() {
           }
         });
 
+        // Deduplicate conversations by id to prevent duplicate React keys
+        const uniqueMap = new Map<string, ChatConversation>();
+        convList.forEach((c) => {
+          if (!uniqueMap.has(c.id)) {
+            uniqueMap.set(c.id, c);
+          }
+        });
+
         // Check if there is an id or claimId in url search params
         const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
         const targetId = urlParams?.get('id') || urlParams?.get('claimId');
 
-        setConversations(convList);
+        if (targetId && !uniqueMap.has(targetId)) {
+          try {
+            const { data: targetClaim } = await supabase
+              .from('klaim_barang')
+              .select('*, laporan_barang(*, profil_pengguna:pelapor_id(nama_lengkap, role_kampus, universitas)), profil_pengguna:pengklaim_id(nama_lengkap, role_kampus, universitas)')
+              .eq('id', targetId)
+              .maybeSingle();
+
+            if (targetClaim) {
+              const report = targetClaim.laporan_barang;
+              const isLost = report?.jenis_laporan === 'KEHILANGAN';
+              const claimant = targetClaim.profil_pengguna;
+              const finder = report?.profil_pengguna;
+              const counterpartName = claimant?.nama_lengkap || finder?.nama_lengkap || (isLost ? 'Pemilik Barang' : 'Penemu Barang');
+              const counterpartRole = claimant?.role_kampus || finder?.role_kampus || 'Civitas Kampus';
+              const itemTitle = report?.nama_barang || 'Barang Terkait';
+
+              const timeStr = targetClaim.dibuat_pada
+                ? new Date(targetClaim.dibuat_pada).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':')
+                : 'Baru saja';
+
+              uniqueMap.set(targetClaim.id, {
+                id: targetClaim.id,
+                counterpartName,
+                counterpartRole,
+                itemTitle,
+                lastMessage: targetClaim.pesan_verifikasi ? targetClaim.pesan_verifikasi.split('\n')[0] : 'Sesi verifikasi klaim',
+                lastTime: timeStr,
+                unread: false,
+                status: targetClaim.status === 'SELESAI' ? 'RESOLVED' : targetClaim.status === 'DITOLAK' ? 'DISPUTED' : 'VERIFYING',
+                initialPesanVerifikasi: targetClaim.pesan_verifikasi,
+              });
+
+              if (!initMsgMap[targetClaim.id]) {
+                initMsgMap[targetClaim.id] = [];
+              }
+            }
+          } catch {
+            // ignore if not found
+          }
+        }
+
+        const finalConversations = Array.from(uniqueMap.values());
+        setConversations(finalConversations);
         setMessagesMap(initMsgMap);
-        if (convList.length > 0) {
-          const match = targetId ? convList.find((c) => c.id === targetId) : null;
-          setSelectedConv(match || convList[0]);
+        if (finalConversations.length > 0) {
+          const match = targetId ? finalConversations.find((c) => c.id === targetId) : null;
+          setSelectedConv(match || finalConversations[0]);
         }
       } catch (err) {
         console.error('Error loading conversations:', err);
@@ -391,14 +444,33 @@ export default function MessagesPage() {
   }, []);
 
   const currentMessages = selectedConv ? messagesMap[selectedConv.id] || [] : [];
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    const atBottom = scrollHeight - scrollTop - clientHeight < 90;
+    setIsAtBottom(atBottom);
+  };
+
+  const scrollToBottom = (smooth = true, force = false) => {
+    if (messagesContainerRef.current) {
+      if (force || isAtBottom) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: smooth ? 'smooth' : 'auto',
+        });
+      }
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [currentMessages, selectedConv]);
+    scrollToBottom(false, true);
+  }, [selectedConv?.id]);
+
+  useEffect(() => {
+    scrollToBottom(true, false);
+  }, [currentMessages.length]);
 
   const getCurrentTime = () => {
     const now = new Date();
@@ -434,6 +506,13 @@ export default function MessagesPage() {
 
           setMessagesMap((prev) => {
             const currentList = prev[convId] || [];
+            if (
+              currentList.length === dbMsgs.length &&
+              currentList[currentList.length - 1]?.id === dbMsgs[dbMsgs.length - 1]?.id
+            ) {
+              return prev;
+            }
+
             const systemWelcome = currentList.find((msg) => msg.id.startsWith('sys-'));
             const merged = systemWelcome && !dbMsgs.some((msg) => msg.id === systemWelcome.id)
               ? [systemWelcome, ...dbMsgs]
@@ -590,6 +669,7 @@ export default function MessagesPage() {
       ...prev,
       [selectedConv.id]: updated,
     }));
+    setTimeout(() => scrollToBottom(true, true), 40);
 
     try {
       localStorage.setItem(`findly_chat_${selectedConv.id}`, JSON.stringify(updated));
@@ -707,16 +787,18 @@ export default function MessagesPage() {
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-4">
+    <AppLayout fullHeight>
+      <div className="flex-1 flex flex-col min-h-0 space-y-2.5 overflow-hidden">
         {/* Header Title */}
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-            Pesan & Verifikasi
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500">
-            Ruang diskusi dan verifikasi kepemilikan peer-to-peer antara penemu dan pengklaim kampus.
-          </p>
+        <div className="flex items-center justify-between shrink-0">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+              Pesan & Verifikasi
+            </h1>
+            <p className="text-xs text-gray-500 hidden sm:block">
+              Ruang diskusi dan verifikasi kepemilikan peer-to-peer antara penemu dan pengklaim kampus.
+            </p>
+          </div>
         </div>
 
         {/* Guest Warning */}
@@ -778,26 +860,26 @@ export default function MessagesPage() {
           </div>
         ) : (
           /* Real Chat Layout */
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[640px] max-h-[750px]">
+          <div className="flex-1 min-h-0 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12">
             {/* Left Column: Conversations List */}
             <div
-              className={`lg:col-span-4 border-r border-gray-100 flex flex-col h-full bg-gray-50/40 ${
+              className={`lg:col-span-4 border-r border-gray-100 flex flex-col h-full min-h-0 bg-gray-50/40 ${
                 showMobileChat ? 'hidden lg:flex' : 'flex'
               }`}
             >
-              <div className="p-4 border-b border-gray-100 bg-white">
+              <div className="p-3.5 sm:p-4 border-b border-gray-100 bg-white shrink-0">
                 <h2 className="font-bold text-sm text-gray-900">Kotak Masuk Verifikasi</h2>
                 <p className="text-[11px] text-gray-400 mt-0.5">
                   {conversations.length} sesi chat aktif
                 </p>
               </div>
 
-              <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
-                {conversations.map((conv) => {
+              <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0 divide-y divide-gray-50">
+                {conversations.map((conv, idx) => {
                   const active = selectedConv?.id === conv.id;
                   return (
                     <button
-                      key={conv.id}
+                      key={`conv-${conv.id}-${idx}`}
                       onClick={() => {
                         setSelectedConv(conv);
                         setShowMobileChat(true);
@@ -836,12 +918,12 @@ export default function MessagesPage() {
             {/* Right Column: Active Chat Room */}
             {selectedConv && (
               <div
-                className={`lg:col-span-8 flex flex-col h-full bg-white ${
+                className={`lg:col-span-8 flex flex-col h-full min-h-0 bg-white ${
                   !showMobileChat ? 'hidden lg:flex' : 'flex'
                 }`}
               >
                 {/* Chat Room Top Bar */}
-                <div className="p-3.5 sm:p-4 border-b border-gray-100 flex items-center justify-between gap-3 bg-white sticky top-0 z-10">
+                <div className="p-3 sm:p-3.5 border-b border-gray-100 flex items-center justify-between gap-2 sm:gap-3 bg-white shrink-0">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
@@ -916,12 +998,16 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Messages Scroll Area */}
-                <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-3.5 bg-gray-50/30">
-                  {currentMessages.map((msg) => {
+                <div
+                  ref={messagesContainerRef}
+                  onScroll={handleScroll}
+                  className="flex-1 min-h-0 p-4 sm:p-6 overflow-y-scroll custom-scrollbar space-y-3.5 bg-gray-50/30"
+                >
+                  {currentMessages.map((msg, mIdx) => {
                     if (msg.sender === 'system') {
                       return (
                         <div
-                          key={msg.id}
+                          key={`msg-sys-${msg.id || mIdx}-${mIdx}`}
                           className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl text-xs text-blue-900 flex items-start gap-2.5 max-w-xl mx-auto shadow-2xs"
                         >
                           <ShieldCheck size={18} className="text-[#30AFFF] shrink-0 mt-0.5" />
@@ -938,7 +1024,7 @@ export default function MessagesPage() {
                         safePointsList.find((p) => msg.text.includes(p.nama_lokasi)) || safePointsList[0];
                       return (
                         <div
-                          key={msg.id}
+                          key={`msg-meet-${msg.id || mIdx}-${mIdx}`}
                           className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200`}
                         >
                           <div
@@ -993,7 +1079,7 @@ export default function MessagesPage() {
 
                     return (
                       <div
-                        key={msg.id}
+                        key={`msg-body-${msg.id || mIdx}-${mIdx}`}
                         className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200`}
                       >
                         <div
@@ -1021,6 +1107,20 @@ export default function MessagesPage() {
                   })}
 
                   <div ref={messagesEndRef} />
+
+                  {/* Floating button to jump to newest messages */}
+                  {!isAtBottom && (
+                    <div className="sticky bottom-3 flex justify-end pointer-events-none">
+                      <button
+                        type="button"
+                        onClick={() => scrollToBottom(true, true)}
+                        className="pointer-events-auto px-3 py-1.5 rounded-full bg-white text-[#30AFFF] border border-blue-200 shadow-md text-xs font-semibold flex items-center gap-1.5 hover:bg-blue-50 transition-all cursor-pointer animate-in fade-in duration-150"
+                      >
+                        <ArrowDown size={14} />
+                        <span>Pesan Terbaru</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Floating Image Preview Bar if selectedImage is present */}
@@ -1056,7 +1156,7 @@ export default function MessagesPage() {
                 {/* Chat Input Bar */}
                 <form
                   onSubmit={handleSendMessage}
-                  className="p-3 sm:p-4 border-t border-gray-100 bg-white flex items-center gap-2 sticky bottom-0 z-10"
+                  className="p-3 sm:p-4 border-t border-gray-100 bg-white flex items-center gap-2 shrink-0"
                 >
                   <input
                     ref={fileInputRef}
@@ -1165,11 +1265,11 @@ export default function MessagesPage() {
               <div className="p-5 overflow-y-auto space-y-4">
                 {/* List of Points */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {safePointsList.map((pt) => {
+                  {safePointsList.map((pt, pIdx) => {
                     const isSelected = selectedSafePointModalId === pt.id;
                     return (
                       <button
-                        key={pt.id}
+                        key={`safe-pt-${pt.id}-${pIdx}`}
                         type="button"
                         onClick={() => setSelectedSafePointModalId(pt.id)}
                         className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${

@@ -277,11 +277,11 @@ export default function SafeZonesPage() {
 
         {/* Safe Points Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredPoints.map((point) => {
+          {filteredPoints.map((point, pIdx) => {
             const isSelected = point.id === selectedPointId;
             return (
               <div
-                key={point.id}
+                key={`safe-point-${point.id}-${pIdx}`}
                 onClick={() => setSelectedPointId(point.id)}
                 className={`p-5 rounded-3xl border transition-all cursor-pointer bg-white shadow-2xs relative overflow-hidden flex flex-col justify-between ${
                   isSelected
