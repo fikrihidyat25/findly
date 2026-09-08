@@ -50,6 +50,7 @@ interface ItemDetail {
   safePointObj?: SafePoint;
   pelaporId?: string;
   icon: any;
+  foto_url?: string | null;
   colorScheme: {
     bg: string;
     text: string;
@@ -204,6 +205,7 @@ export default function ItemDetailPage() {
           safePointObj: matchedSafe || safePoints[0],
           pelaporId: data.pelapor_id,
           icon: getCategoryIcon(cat),
+          foto_url: data.foto_url || null,
           colorScheme: getColorScheme(isFound ? 'found' : 'lost'),
         });
       } catch (err) {
@@ -466,20 +468,32 @@ export default function ItemDetailPage() {
           </div>
 
           {/* Visual Showcase Banner */}
-          <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100/80 border border-gray-100 p-8 sm:p-12 flex flex-col items-center justify-center text-center space-y-3">
-            <div
-              className={`w-24 h-24 rounded-3xl ${item.colorScheme.bg} ${item.colorScheme.text} border ${item.colorScheme.border} flex items-center justify-center shadow-sm`}
-            >
-              <Icon size={48} className="stroke-[1.75]" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Foto / Ikon Representasi Barang
-              </span>
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                Foto detail internal dirahasiakan oleh sistem untuk melindungi verifikasi klaim kepemilikan.
-              </p>
-            </div>
+          <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100/80 border border-gray-100 overflow-hidden flex flex-col items-center justify-center text-center">
+            {item.foto_url ? (
+              <div className="w-full bg-black/5 flex items-center justify-center p-4 sm:p-6">
+                <img
+                  src={item.foto_url}
+                  alt={item.title}
+                  className="max-h-80 w-auto rounded-xl object-contain shadow-xs"
+                />
+              </div>
+            ) : (
+              <div className="p-8 sm:p-12 flex flex-col items-center justify-center text-center space-y-3">
+                <div
+                  className={`w-24 h-24 rounded-3xl ${item.colorScheme.bg} ${item.colorScheme.text} border ${item.colorScheme.border} flex items-center justify-center shadow-sm`}
+                >
+                  <Icon size={48} className="stroke-[1.75]" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Ilustrasi Kategori Barang
+                  </span>
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    Pelapor tidak melampirkan foto fisik. Menampilkan representasi visual kategori {item.category}.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Key Facts Grid */}

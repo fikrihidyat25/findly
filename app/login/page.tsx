@@ -30,12 +30,26 @@ function LoginFormContent() {
     const verifiedParam = searchParams.get('verified');
     const emailParam = searchParams.get('email');
 
+    const registeredParam = searchParams.get('registered');
+
     if (emailParam) {
       setEmail(emailParam);
     }
 
+    if (registeredParam === 'true') {
+      supabase.auth.signOut();
+      setSuccessMessage(
+        emailParam
+          ? `Pendaftaran berhasil! Tautan konfirmasi telah dikirim ke ${emailParam}. Silakan verifikasi email Anda terlebih dahulu, lalu masukkan kata sandi di bawah untuk masuk.`
+          : 'Pendaftaran berhasil! Silakan verifikasi email Anda terlebih dahulu, lalu masukkan kata sandi di bawah untuk masuk.'
+      );
+      setErrorMessage(null);
+      return;
+    }
+
     if (verifiedParam === 'true') {
-      setSuccessMessage('Email Anda telah berhasil dikonfirmasi! Silakan masukkan kata sandi untuk masuk.');
+      supabase.auth.signOut();
+      setSuccessMessage('Email Anda telah berhasil diverifikasi! Silakan masukkan kata sandi untuk masuk.');
       setErrorMessage(null);
       return;
     }

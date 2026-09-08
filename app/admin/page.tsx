@@ -187,9 +187,9 @@ export default function AdminDashboardPage() {
       {/* Top Controls & Status Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:px-6 rounded-2xl border border-gray-100 shadow-2xs">
         <div>
-          <h2 className="text-sm font-bold text-gray-900">Ringkasan Sistem</h2>
-          <p className="text-xs text-gray-500">
-            Kondisi data laporan, klaim verifikasi, dan pengguna kampus terkini.
+          <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">Dashboard Admin</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Ringkasan kondisi data laporan, mediasi klaim, dan pengguna kampus terkini.
           </p>
         </div>
 

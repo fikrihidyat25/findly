@@ -56,7 +56,12 @@ export default function AppSidebar({
           .eq('id', user.id)
           .single();
 
-        if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin' || user.user_metadata?.tipe_akun === 'admin') {
+        if (
+          profile?.tipe_akun === 'admin' ||
+          profile?.role_kampus === 'admin' ||
+          user.user_metadata?.tipe_akun === 'admin' ||
+          user.email?.toLowerCase().includes('admin')
+        ) {
           setIsAdmin(true);
         } else {
           setIsAdmin(false);
@@ -98,7 +103,6 @@ export default function AppSidebar({
     { label: 'Mediasi Klaim', href: '/admin/klaim', icon: FileCheck2 },
     { label: 'Pesan & Mediasi', href: '/messages', icon: MessageSquare, badge: msgBadge },
     { label: 'Verifikasi Civitas', href: '/admin/pengguna', icon: Users },
-    { label: 'Katalog Barang', href: '/find', icon: Search },
     { label: 'Notifikasi', href: '/notifications', icon: Bell, badge: notifBadge },
   ];
 
@@ -178,11 +182,6 @@ export default function AppSidebar({
           <span className="text-2xl font-black tracking-tight text-[#30AFFF] group-hover:opacity-85 transition-opacity">
             Findly.
           </span>
-          {isAdmin && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#30AFFF] border border-blue-200 uppercase tracking-wider">
-              Admin
-            </span>
-          )}
         </Link>
         {onCloseMobile && (
           <button

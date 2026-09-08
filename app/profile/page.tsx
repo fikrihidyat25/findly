@@ -194,9 +194,8 @@ export default function ProfilePage() {
                     {user.nama_lengkap}
                   </h1>
                   {isAdmin ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                      <ShieldAlert size={12} className="text-amber-600" />
-                      <span>Admin Mediator</span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                      <span>Administrator</span>
                     </span>
                   ) : user.status_kampus_terverifikasi ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
@@ -217,8 +216,7 @@ export default function ProfilePage() {
                   </p>
                 ) : isAdmin ? (
                   <p className="text-xs sm:text-sm text-gray-500 font-medium flex items-center gap-1.5">
-                    <ShieldAlert size={15} className="text-amber-600" />
-                    <span>Administrator Platform & Mediator</span>
+                    <span>Administrator Findly</span>
                   </p>
                 ) : (
                   <p className="text-xs sm:text-sm text-gray-500 font-medium flex items-center gap-1.5">

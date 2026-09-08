@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
-  UploadCloud,
   Check,
   ArrowRight,
   ArrowLeft,
@@ -17,7 +15,6 @@ import {
   MapPin,
   FileText,
   ShieldCheck,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
@@ -25,7 +22,6 @@ import { createClient } from '@/src/lib/supabase/client';
 
 export default function LostItemForm() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Stepper State (1 to 4)
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -36,7 +32,6 @@ export default function LostItemForm() {
   const [category, setCategory] = useState('');
   const [itemName, setItemName] = useState('');
   const [condition, setCondition] = useState('');
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [specialFeatures, setSpecialFeatures] = useState('');
 
   // Step 2: Location & Time
@@ -52,34 +47,6 @@ export default function LostItemForm() {
   // Step 4: Agreement
   const [agreed, setAgreed] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // Handle Image Upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setErrorMsg('Ukuran file maksimal adalah 5MB.');
-        return;
-      }
-      setErrorMsg(null);
-      const url = URL.createObjectURL(file);
-      setPhotoPreview(url);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setErrorMsg('Ukuran file maksimal adalah 5MB.');
-        return;
-      }
-      setErrorMsg(null);
-      const url = URL.createObjectURL(file);
-      setPhotoPreview(url);
-    }
-  };
 
   // Validation before step progress
   const validateStep = (step: number) => {
@@ -157,7 +124,7 @@ export default function LostItemForm() {
           jenis_laporan: 'KEHILANGAN',
           nama_barang: itemName,
           deskripsi: fullDesc,
-          foto_url: photoPreview || null,
+          foto_url: null,
           lokasi_terakhir: locationFull,
           status: 'MENCARI',
         });
@@ -337,7 +304,7 @@ export default function LostItemForm() {
                       <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all cursor-pointer"
+                        className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-white border border-gray-200 rounded-[6px] focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all cursor-pointer"
                       >
                         <option value="" disabled hidden>Pilih Kategori Barang</option>
                         <option value="Elektronik & Gadget">Elektronik & Gadget</option>
@@ -361,7 +328,7 @@ export default function LostItemForm() {
                         value={itemName}
                         onChange={(e) => setItemName(e.target.value)}
                         placeholder="Contoh: iPhone 13, Tas Ransel Abu-abu"
-                        className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-xl focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all"
+                        className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-[6px] focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all"
                       />
                     </div>
 
@@ -373,7 +340,7 @@ export default function LostItemForm() {
                       <select
                         value={condition}
                         onChange={(e) => setCondition(e.target.value)}
-                        className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all cursor-pointer"
+                        className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-white border border-gray-200 rounded-[6px] focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all cursor-pointer"
                       >
                         <option value="" disabled hidden>Pilih Kondisi</option>
                         <option value="Sangat Baik / Baru">Sangat Baik / Baru</option>
@@ -385,107 +352,10 @@ export default function LostItemForm() {
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 pt-5 space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-0.5">
-                      Foto Barang <span className="text-red-500">*</span>
-                    </label>
-                    <p className="text-[11px] text-gray-400">
-                      Upload foto barang Anda, foto yang jelas akan sangat membantu proses identifikasi.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
-                    {/* Drag & Drop Box */}
-                    <div className="md:col-span-7">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/png, image/jpeg, image/jpg"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-
-                      {photoPreview ? (
-                        <div className="relative rounded-2xl border border-gray-200 overflow-hidden h-44 bg-gray-50 flex items-center justify-center group">
-                          <img
-                            src={photoPreview}
-                            alt="Pratinjau Foto Barang"
-                            className="w-full h-full object-contain"
-                          />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => fileInputRef.current?.click()}
-                              className="px-3 py-1.5 bg-white text-xs font-semibold text-gray-800 rounded-lg shadow-sm hover:bg-gray-100"
-                            >
-                              Ganti Foto
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPhotoPreview(null)}
-                              className="p-1.5 bg-red-600 text-white rounded-lg shadow-sm hover:bg-red-700"
-                              aria-label="Hapus Foto"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={handleDrop}
-                          onClick={() => fileInputRef.current?.click()}
-                          className="h-44 border-2 border-dashed border-gray-200 hover:border-[#30AFFF] rounded-2xl flex flex-col items-center justify-center p-4 text-center cursor-pointer transition-colors bg-gray-50/50 hover:bg-[#EFF8FF]/30 group"
-                        >
-                          <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#30AFFF] flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
-                            <UploadCloud size={22} />
-                          </div>
-                          <p className="font-bold text-xs text-gray-800">
-                            Klik Untuk Upload Foto
-                          </p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">
-                            Atau seret & lepas file di sini
-                          </p>
-                          <span className="text-[10px] text-gray-400 mt-2 bg-white px-2 py-0.5 rounded border border-gray-200">
-                            PNG, JPG, JPEG Maksimal 5MB
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Green Helper Box: Tips Foto */}
-                    <div className="md:col-span-5 bg-emerald-50/70 border border-emerald-200/60 rounded-2xl p-4 flex flex-col justify-center text-emerald-950 space-y-2">
-                      <p className="text-xs font-bold flex items-center gap-1.5 text-emerald-800">
-                        <Sparkles size={13} className="text-emerald-600" />
-                        <span>Tips foto yang baik:</span>
-                      </p>
-                      <ul className="text-[11px] text-emerald-800/90 space-y-1.5 leading-tight">
-                        <li className="flex items-center gap-1.5">
-                          <Check size={12} className="text-emerald-600 shrink-0 stroke-[2.5]" />
-                          <span>Foto barang dengan jelas</span>
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <Check size={12} className="text-emerald-600 shrink-0 stroke-[2.5]" />
-                          <span>Ambil dari beberapa sudut</span>
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <Check size={12} className="text-emerald-600 shrink-0 stroke-[2.5]" />
-                          <span>Pastikan pencahayaan cukup</span>
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <Check size={12} className="text-emerald-600 shrink-0 stroke-[2.5]" />
-                          <span>Hindari blur atau tertutup objek lain</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Ciri-ciri Khusus */}
                 <div className="border-t border-gray-100 pt-5 space-y-2">
                   <label className="block text-xs font-semibold text-gray-700">
-                    Ciri-ciri Khusus <span className="text-gray-400 font-normal">(opsional)</span>
+                    Ciri-ciri Khusus
                   </label>
                   <p className="text-[11px] text-gray-400">
                     Tambahkan ciri-ciri khusus yang membedakan barang Anda dengan barang lainnya.
@@ -495,7 +365,7 @@ export default function LostItemForm() {
                     value={specialFeatures}
                     onChange={(e) => setSpecialFeatures(e.target.value)}
                     placeholder="Contoh: Ada stiker di bagian belakang laptop, resleting rusak di sisi kanan tas, casing handphone warna biru muda..."
-                    className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-xl focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all resize-none"
+                    className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-[6px] focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all resize-none"
                   />
                 </div>
               </div>
@@ -669,15 +539,6 @@ export default function LostItemForm() {
                     <div className="pt-2 border-t border-gray-200/60">
                       <span className="text-gray-400 block text-[11px]">Ciri-ciri Khusus:</span>
                       <span className="text-gray-700 leading-relaxed">{specialFeatures}</span>
-                    </div>
-                  )}
-
-                  {photoPreview && (
-                    <div className="pt-2 border-t border-gray-200/60">
-                      <span className="text-gray-400 block text-[11px] mb-1">Lampiran Foto:</span>
-                      <div className="w-20 h-20 rounded-xl overflow-hidden border border-gray-200 bg-white">
-                        <img src={photoPreview} alt="Foto Barang" className="w-full h-full object-cover" />
-                      </div>
                     </div>
                   )}
                 </div>

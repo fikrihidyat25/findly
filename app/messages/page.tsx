@@ -4,106 +4,22 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/src/components/layout/AppLayout';
 import {
-  Send,
-  Paperclip,
-  CheckCircle2,
-  ShieldCheck,
-  AlertTriangle,
-  ArrowLeft,
-  ArrowDown,
   MessageSquare,
   Search,
-  Check,
   Loader2,
   LogIn,
-  X,
-  Image as ImageIcon,
-  MapPin,
-  Navigation,
+  FileCheck2,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
-import LeafletSafeMap from '@/src/components/map/LeafletSafeMap';
 import { SafePoint, getSafePoints, DEFAULT_SAFE_POINTS } from '@/src/lib/safePoints';
-
-export interface ChatConversation {
-  id: string;
-  counterpartName: string;
-  counterpartRole: string;
-  itemTitle: string;
-  lastMessage: string;
-  lastTime: string;
-  unread: boolean;
-  status: 'VERIFYING' | 'RESOLVED' | 'DISPUTED';
-  initialPesanVerifikasi?: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  sender: 'me' | 'other' | 'system';
-  text: string;
-  time: string;
-  imageUrl?: string;
-}
-
-function compressImage(file: File, maxWidth = 1000, quality = 0.78): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', quality);
-        resolve(dataUrl);
-      };
-      img.onerror = (err) => reject(err);
-    };
-    reader.onerror = (err) => reject(err);
-  });
-}
-
-function parseChatMessage(rawText: string): { text: string; imageUrl?: string } {
-  if (!rawText) return { text: '' };
-
-  if (rawText.startsWith('{') && rawText.endsWith('}')) {
-    try {
-      const parsed = JSON.parse(rawText);
-      if (parsed && typeof parsed === 'object') {
-        return {
-          text: typeof parsed.text === 'string' ? parsed.text : '',
-          imageUrl: typeof parsed.imageUrl === 'string' ? parsed.imageUrl : undefined,
-        };
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  if (rawText.includes('[GAMBAR]:')) {
-    const parts = rawText.split('[GAMBAR]:');
-    return {
-      text: parts[0].trim(),
-      imageUrl: parts[1].trim(),
-    };
-  }
-
-  if (rawText.startsWith('data:image/') || rawText.startsWith('blob:')) {
-    return { text: '', imageUrl: rawText };
-  }
-
-  return { text: rawText };
-}
+import { ChatConversation, ChatMessage, SelectedImageAttachment } from '@/src/types/chat';
+import { compressImage, parseChatMessage, getCurrentTime } from '@/src/lib/chatUtils';
+import ConversationList from '@/src/components/chat/ConversationList';
+import ChatHeader from '@/src/components/chat/ChatHeader';
+import ChatMessageList from '@/src/components/chat/ChatMessageList';
+import ChatInput from '@/src/components/chat/ChatInput';
+import SafePointModal from '@/src/components/chat/SafePointModal';
+import ImageLightbox from '@/src/components/chat/ImageLightbox';
 
 export default function MessagesPage() {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -114,16 +30,13 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [isDisputed, setIsDisputed] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
 
   // Image attachment & zoom states
-  const [selectedImage, setSelectedImage] = useState<{
-    dataUrl: string;
-    name: string;
-    size: number;
-  } | null>(null);
+  const [selectedImage, setSelectedImage] = useState<SelectedImageAttachment | null>(null);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
@@ -136,6 +49,7 @@ export default function MessagesPage() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
   // Fetch safe points
   useEffect(() => {
@@ -145,62 +59,35 @@ export default function MessagesPage() {
     });
   }, []);
 
-  const handleShareSafePoint = async () => {
-    if (!selectedConv) return;
-    const pt = safePointsList.find((p) => p.id === selectedSafePointModalId) || safePointsList[0];
-    const timeStr = getCurrentTime();
+  const scrollToBottom = (smooth = true, force = false) => {
+    if (!messagesContainerRef.current) return;
+    const { scrollHeight, clientHeight, scrollTop } = messagesContainerRef.current;
+    const distanceToBottom = scrollHeight - (scrollTop + clientHeight);
 
-    const textMsg = `📍 KESEPAKATAN TITIK TEMU AMAN KAMPUS\n🏛️ Lokasi: ${pt.nama_lokasi}\n📌 Alamat: ${pt.alamat_lengkap}\n🕒 Jam Operasional: ${pt.jam_buka} - ${pt.jam_tutup} WIB\n🛡️ Keamanan: ${pt.ada_satpam ? 'Satpam Standby' : ''} ${pt.ada_cctv ? '• CCTV Aktif' : ''}\nGPS: ${pt.latitude},${pt.longitude}`;
-
-    const tempId = `sp-${Date.now()}`;
-    const newMsg: ChatMessage = {
-      id: tempId,
-      sender: 'me',
-      text: textMsg,
-      time: timeStr,
-    };
-
-    const updated = [...(messagesMap[selectedConv.id] || []), newMsg];
-    setMessagesMap((prev) => ({
-      ...prev,
-      [selectedConv.id]: updated,
-    }));
-
-    try {
-      localStorage.setItem(`findly_chat_${selectedConv.id}`, JSON.stringify(updated));
-      const supabase = createClient();
-      await supabase.from('pesan_chat').insert({
-        klaim_id: selectedConv.id,
-        pengirim_id: currentUserId,
-        pesan: textMsg,
-        tipe_pesan: 'teks',
-      });
-    } catch (err) {
-      console.warn('Error syncing safe point to chat:', err);
+    if (force || distanceToBottom < 120) {
+      if (smooth) {
+        messagesContainerRef.current.scrollTo({
+          top: scrollHeight,
+          behavior: 'smooth',
+        });
+      } else {
+        messagesContainerRef.current.scrollTop = scrollHeight;
+      }
+      setIsAtBottom(true);
     }
+  };
 
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === selectedConv.id
-          ? { ...c, lastMessage: `📍 Titik Temu: ${pt.nama_lokasi}`, lastTime: timeStr }
-          : c
-      )
-    );
-
-    setShowSafePointModal(false);
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollHeight, clientHeight, scrollTop } = messagesContainerRef.current;
+    const distanceToBottom = scrollHeight - (scrollTop + clientHeight);
+    setIsAtBottom(distanceToBottom <= 40);
   };
 
   // Load real user conversations from Supabase klaim_barang
   useEffect(() => {
-    // Purge legacy demo keys if any exist in browser
-    try {
-      ['c1', 'c2', 'conv-1', 'conv-2'].forEach((k) => {
-        localStorage.removeItem(`findly_chat_${k}`);
-      });
-    } catch {
-      // ignore
-    }
-    async function loadUserChats() {
+    let isMounted = true;
+    async function loadUserConversations() {
       setLoading(true);
       try {
         const supabase = createClient();
@@ -216,368 +103,247 @@ export default function MessagesPage() {
 
         setCurrentUserId(user.id);
 
-        // 1. Klaim yang diajukan oleh user saat ini (User sebagai Claimant)
-        const { data: outgoingClaims } = await supabase
-          .from('klaim_barang')
-          .select('*, laporan_barang(*, profil_pengguna:pelapor_id(nama_lengkap, role_kampus, universitas))')
-          .eq('pengklaim_id', user.id)
-          .order('dibuat_pada', { ascending: false });
+        const { data: profile } = await supabase
+          .from('profil_pengguna')
+          .select('tipe_akun, role_kampus')
+          .eq('id', user.id)
+          .single();
 
-        // 2. Laporan milik user yang diklaim oleh orang lain (User sebagai Finder)
-        const { data: myReports } = await supabase
-          .from('laporan_barang')
-          .select('id')
-          .eq('pelapor_id', user.id);
+        const userIsAdmin = Boolean(
+          profile?.tipe_akun === 'admin' ||
+          profile?.role_kampus === 'admin' ||
+          user.user_metadata?.tipe_akun === 'admin' ||
+          user.email?.toLowerCase().includes('admin')
+        );
 
-        let incomingClaims: any[] = [];
-        if (myReports && myReports.length > 0) {
-          const reportIds = myReports.map((r) => r.id);
-          const { data: inc } = await supabase
+        setIsAdmin(userIsAdmin);
+
+        const loadedConversations: ChatConversation[] = [];
+
+        if (userIsAdmin) {
+          const { data: allClaims } = await supabase
             .from('klaim_barang')
-            .select('*, laporan_barang(*), profil_pengguna:pengklaim_id(nama_lengkap, role_kampus, universitas)')
-            .in('laporan_id', reportIds)
+            .select('*, laporan_barang(*, profil_pengguna:pelapor_id(nama_lengkap, role_kampus, universitas)), profil_pengguna:pengklaim_id(nama_lengkap, role_kampus, universitas)')
             .order('dibuat_pada', { ascending: false });
-          if (inc) incomingClaims = inc;
-        }
 
-        const convList: ChatConversation[] = [];
-        const initMsgMap: Record<string, ChatMessage[]> = {};
+          (allClaims || []).forEach((c: any) => {
+            const report = c.laporan_barang;
+            const claimant = c.profil_pengguna;
+            const pelapor = report?.profil_pengguna;
 
-        // Format outgoing claims (User sebagai Claimant / Finder)
-        (outgoingClaims || []).forEach((c: any) => {
-          const report = c.laporan_barang;
-          const isLostReport = report?.jenis_laporan === 'KEHILANGAN';
-          const finder = report?.profil_pengguna;
-          const counterpartName = finder?.nama_lengkap || (isLostReport ? 'Pemilik Barang' : 'Penemu Barang');
-          const counterpartRole = finder?.role_kampus
-            ? finder.role_kampus.charAt(0).toUpperCase() + finder.role_kampus.slice(1)
-            : (isLostReport ? 'Pemilik Barang' : 'Civitas Kampus');
-          const itemTitle = report?.nama_barang || (isLostReport ? 'Barang Hilang' : 'Barang Temuan');
+            const claimantName = claimant?.nama_lengkap || 'Pengklaim';
+            const pelaporName = pelapor?.nama_lengkap || 'Pelapor';
+            const counterpartName = `${claimantName} & ${pelaporName}`;
+            const counterpartRole = c.status === 'DITOLAK' ? 'Sengketa Mediasi' : 'Mediasi Kampus';
 
-          let status: 'VERIFYING' | 'RESOLVED' | 'DISPUTED' = 'VERIFYING';
-          if (c.status === 'SELESAI') status = 'RESOLVED';
-          if (c.status === 'DITOLAK') status = 'DISPUTED';
+            const d = new Date(c.dibuat_pada);
+            const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 
-          const timeStr = c.dibuat_pada
-            ? new Date(c.dibuat_pada).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':')
-            : 'Baru saja';
+            let convStatus: 'VERIFYING' | 'RESOLVED' | 'DISPUTED' = 'VERIFYING';
+            if (c.status === 'SELESAI') convStatus = 'RESOLVED';
+            else if (c.status === 'DITOLAK') convStatus = 'DISPUTED';
 
-          convList.push({
-            id: c.id,
-            counterpartName,
-            counterpartRole,
-            itemTitle,
-            lastMessage: c.pesan_verifikasi ? c.pesan_verifikasi.split('\n')[0] : 'Sesi verifikasi dibuka',
-            lastTime: timeStr,
-            unread: false,
-            status,
-            initialPesanVerifikasi: c.pesan_verifikasi,
+            const initialText = c.pesan_verifikasi || 'Pengajuan klaim baru untuk ditinjau mediator.';
+
+            loadedConversations.push({
+              id: c.id,
+              counterpartName,
+              counterpartRole,
+              itemTitle: report?.nama_barang || 'Barang Kampus',
+              lastMessage: initialText,
+              lastTime: timeStr,
+              unread: false,
+              status: convStatus,
+              initialPesanVerifikasi: c.pesan_verifikasi,
+            });
           });
+        } else {
+          // 1. Klaim yang diajukan oleh user sendiri (User = Pengklaim)
+          const { data: myOutgoingClaims } = await supabase
+            .from('klaim_barang')
+            .select('*, laporan_barang(*, profil_pengguna:pelapor_id(nama_lengkap, role_kampus, universitas))')
+            .eq('pengklaim_id', user.id)
+            .order('dibuat_pada', { ascending: false });
 
-          // Check saved messages in localStorage
-          try {
-            const savedMsgs = localStorage.getItem(`findly_chat_${c.id}`);
-            if (savedMsgs) {
-              initMsgMap[c.id] = JSON.parse(savedMsgs);
-            } else {
-              initMsgMap[c.id] = [
-                {
-                  id: `sys-${c.id}`,
-                  sender: 'system',
-                  text: isLostReport
-                    ? `🔒 Sesi Verifikasi & Serah Terima Dibuka. Anda telah mengonfirmasi menemukan barang "${itemTitle}". Silakan koordinasikan verifikasi dan jadwal serah terima dengan ${counterpartName}.`
-                    : '🔒 Sesi Verifikasi Pemilik Sah Dibuka. Penemu memegang detail rahasia barang. Silakan lakukan tanya jawab untuk membuktikan kepemilikan sebelum serah terima.',
-                  time: timeStr,
-                },
-                ...(c.pesan_verifikasi
-                  ? [
-                      {
-                        id: `claim-${c.id}`,
-                        sender: 'me' as const,
-                        text: isLostReport && c.pesan_verifikasi.startsWith('📢')
-                          ? c.pesan_verifikasi
-                          : `Halo ${counterpartName}, saya ingin memverifikasi barang "${itemTitle}":\n\n${c.pesan_verifikasi}`,
-                        time: timeStr,
-                      },
-                    ]
-                  : []),
-              ];
-            }
-          } catch {
-            initMsgMap[c.id] = [];
-          }
-        });
+          // 2. Klaim dari orang lain atas laporan milik user (User = Pelapor)
+          const { data: myReports } = await supabase
+            .from('laporan_barang')
+            .select('id, nama_barang')
+            .eq('pelapor_id', user.id);
 
-        // Format incoming claims (User sebagai Pemilik Laporan)
-        (incomingClaims || []).forEach((c: any) => {
-          const report = c.laporan_barang;
-          const isLostReport = report?.jenis_laporan === 'KEHILANGAN';
-          const claimant = c.profil_pengguna;
-          const counterpartName = claimant?.nama_lengkap || (isLostReport ? 'Penemu Barang' : 'Pengaju Klaim');
-          const counterpartRole = claimant?.role_kampus
-            ? claimant.role_kampus.charAt(0).toUpperCase() + claimant.role_kampus.slice(1)
-            : (isLostReport ? 'Penemu Barang' : 'Civitas Kampus');
-          const itemTitle = report?.nama_barang || (isLostReport ? 'Barang Hilang' : 'Barang Temuan');
+          const reportIds = (myReports || []).map((r) => r.id);
 
-          let status: 'VERIFYING' | 'RESOLVED' | 'DISPUTED' = 'VERIFYING';
-          if (c.status === 'SELESAI') status = 'RESOLVED';
-          if (c.status === 'DITOLAK') status = 'DISPUTED';
-
-          const timeStr = c.dibuat_pada
-            ? new Date(c.dibuat_pada).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':')
-            : 'Baru saja';
-
-          convList.push({
-            id: c.id,
-            counterpartName,
-            counterpartRole,
-            itemTitle,
-            lastMessage: c.pesan_verifikasi ? c.pesan_verifikasi.split('\n')[0] : 'Permohonan klaim baru',
-            lastTime: timeStr,
-            unread: true,
-            status,
-            initialPesanVerifikasi: c.pesan_verifikasi,
-          });
-
-          try {
-            const savedMsgs = localStorage.getItem(`findly_chat_${c.id}`);
-            if (savedMsgs) {
-              initMsgMap[c.id] = JSON.parse(savedMsgs);
-            } else {
-              initMsgMap[c.id] = [
-                {
-                  id: `sys-${c.id}`,
-                  sender: 'system',
-                  text: isLostReport
-                    ? `🔒 Sesi Verifikasi & Serah Terima Dibuka. ${counterpartName} telah mengonfirmasi menemukan barang Anda "${itemTitle}". Silakan koordinasikan verifikasi dan jadwal serah terima aman.`
-                    : '🔒 Sesi Verifikasi Pemilik Sah Dibuka. Anda sebagai penemu memegang informasi rahasia. Ajukan pertanyaan untuk memastikan barang ini adalah miliknya.',
-                  time: timeStr,
-                },
-                ...(c.pesan_verifikasi
-                  ? [
-                      {
-                        id: `claim-${c.id}`,
-                        sender: 'other' as const,
-                        text: isLostReport && c.pesan_verifikasi.startsWith('📢')
-                          ? c.pesan_verifikasi
-                          : `Halo, saya telah mengajukan klaim untuk "${itemTitle}":\n\n${c.pesan_verifikasi}`,
-                        time: timeStr,
-                      },
-                    ]
-                  : []),
-              ];
-            }
-          } catch {
-            initMsgMap[c.id] = [];
-          }
-        });
-
-        // Deduplicate conversations by id to prevent duplicate React keys
-        const uniqueMap = new Map<string, ChatConversation>();
-        convList.forEach((c) => {
-          if (!uniqueMap.has(c.id)) {
-            uniqueMap.set(c.id, c);
-          }
-        });
-
-        // Check if there is an id or claimId in url search params
-        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-        const targetId = urlParams?.get('id') || urlParams?.get('claimId');
-
-        if (targetId && !uniqueMap.has(targetId)) {
-          try {
-            const { data: targetClaim } = await supabase
+          let myIncomingClaims: any[] = [];
+          if (reportIds.length > 0) {
+            const { data: incoming } = await supabase
               .from('klaim_barang')
-              .select('*, laporan_barang(*, profil_pengguna:pelapor_id(nama_lengkap, role_kampus, universitas)), profil_pengguna:pengklaim_id(nama_lengkap, role_kampus, universitas)')
-              .eq('id', targetId)
-              .maybeSingle();
-
-            if (targetClaim) {
-              const report = targetClaim.laporan_barang;
-              const isLost = report?.jenis_laporan === 'KEHILANGAN';
-              const claimant = targetClaim.profil_pengguna;
-              const finder = report?.profil_pengguna;
-              const counterpartName = claimant?.nama_lengkap || finder?.nama_lengkap || (isLost ? 'Pemilik Barang' : 'Penemu Barang');
-              const counterpartRole = claimant?.role_kampus || finder?.role_kampus || 'Civitas Kampus';
-              const itemTitle = report?.nama_barang || 'Barang Terkait';
-
-              const timeStr = targetClaim.dibuat_pada
-                ? new Date(targetClaim.dibuat_pada).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':')
-                : 'Baru saja';
-
-              uniqueMap.set(targetClaim.id, {
-                id: targetClaim.id,
-                counterpartName,
-                counterpartRole,
-                itemTitle,
-                lastMessage: targetClaim.pesan_verifikasi ? targetClaim.pesan_verifikasi.split('\n')[0] : 'Sesi verifikasi klaim',
-                lastTime: timeStr,
-                unread: false,
-                status: targetClaim.status === 'SELESAI' ? 'RESOLVED' : targetClaim.status === 'DITOLAK' ? 'DISPUTED' : 'VERIFYING',
-                initialPesanVerifikasi: targetClaim.pesan_verifikasi,
-              });
-
-              if (!initMsgMap[targetClaim.id]) {
-                initMsgMap[targetClaim.id] = [];
-              }
-            }
-          } catch {
-            // ignore if not found
+              .select('*, laporan_barang(*), profil_pengguna:pengklaim_id(nama_lengkap, role_kampus, universitas)')
+              .in('laporan_id', reportIds)
+              .order('dibuat_pada', { ascending: false });
+            myIncomingClaims = incoming || [];
           }
+
+          (myOutgoingClaims || []).forEach((c: any) => {
+            const report = c.laporan_barang;
+            const pelapor = report?.profil_pengguna;
+            const counterpartName = pelapor?.nama_lengkap || 'Pelapor Temuan';
+            const counterpartRole = pelapor?.role_kampus ? pelapor.role_kampus.charAt(0).toUpperCase() + pelapor.role_kampus.slice(1) : 'Civitas Kampus';
+
+            const d = new Date(c.dibuat_pada);
+            const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+
+            let convStatus: 'VERIFYING' | 'RESOLVED' | 'DISPUTED' = 'VERIFYING';
+            if (c.status === 'SELESAI') convStatus = 'RESOLVED';
+            else if (c.status === 'DITOLAK') convStatus = 'DISPUTED';
+
+            loadedConversations.push({
+              id: c.id,
+              counterpartName,
+              counterpartRole,
+              itemTitle: report?.nama_barang || 'Barang Temuan',
+              lastMessage: c.pesan_verifikasi || 'Halo, saya telah mengajukan klaim atas barang ini.',
+              lastTime: timeStr,
+              unread: false,
+              status: convStatus,
+              initialPesanVerifikasi: c.pesan_verifikasi,
+            });
+          });
+
+          (myIncomingClaims || []).forEach((c: any) => {
+            if (loadedConversations.some((x) => x.id === c.id)) return;
+
+            const pengklaim = c.profil_pengguna;
+            const counterpartName = pengklaim?.nama_lengkap || 'Calon Pemilik';
+            const counterpartRole = pengklaim?.role_kampus ? pengklaim.role_kampus.charAt(0).toUpperCase() + pengklaim.role_kampus.slice(1) : 'Pengklaim Barang';
+
+            const d = new Date(c.dibuat_pada);
+            const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+
+            let convStatus: 'VERIFYING' | 'RESOLVED' | 'DISPUTED' = 'VERIFYING';
+            if (c.status === 'SELESAI') convStatus = 'RESOLVED';
+            else if (c.status === 'DITOLAK') convStatus = 'DISPUTED';
+
+            loadedConversations.push({
+              id: c.id,
+              counterpartName,
+              counterpartRole,
+              itemTitle: c.laporan_barang?.nama_barang || 'Barang Laporan Anda',
+              lastMessage: c.pesan_verifikasi || 'Pengguna mengajukan klaim atas barang yang Anda laporkan.',
+              lastTime: timeStr,
+              unread: true,
+              status: convStatus,
+              initialPesanVerifikasi: c.pesan_verifikasi,
+            });
+          });
         }
 
-        const finalConversations = Array.from(uniqueMap.values());
-        setConversations(finalConversations);
-        setMessagesMap(initMsgMap);
-        if (finalConversations.length > 0) {
-          const match = targetId ? finalConversations.find((c) => c.id === targetId) : null;
-          setSelectedConv(match || finalConversations[0]);
+        if (isMounted) {
+          setConversations(loadedConversations);
+          if (loadedConversations.length > 0) {
+            setSelectedConv(loadedConversations[0]);
+          }
         }
       } catch (err) {
         console.error('Error loading conversations:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
 
-    loadUserChats();
+    loadUserConversations();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const currentMessages = selectedConv ? messagesMap[selectedConv.id] || [] : [];
-  const [isAtBottom, setIsAtBottom] = useState(true);
-
-  const handleScroll = () => {
-    if (!messagesContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    const atBottom = scrollHeight - scrollTop - clientHeight < 90;
-    setIsAtBottom(atBottom);
-  };
-
-  const scrollToBottom = (smooth = true, force = false) => {
-    if (messagesContainerRef.current) {
-      if (force || isAtBottom) {
-        messagesContainerRef.current.scrollTo({
-          top: messagesContainerRef.current.scrollHeight,
-          behavior: smooth ? 'smooth' : 'auto',
-        });
-      }
+  // Update conversation status
+  useEffect(() => {
+    if (selectedConv) {
+      setIsApproved(selectedConv.status === 'RESOLVED');
+      setIsDisputed(selectedConv.status === 'DISPUTED');
     }
-  };
+  }, [selectedConv]);
 
+  // Load Realtime Messages for active conversation
   useEffect(() => {
-    scrollToBottom(false, true);
-  }, [selectedConv?.id]);
-
-  useEffect(() => {
-    scrollToBottom(true, false);
-  }, [currentMessages.length]);
-
-  const getCurrentTime = () => {
-    const now = new Date();
-    return now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
-  };
-
-  // Realtime subscription & database fetch for selected conversation
-  useEffect(() => {
-    if (!selectedConv || !currentUserId) return;
+    if (!selectedConv?.id) return;
     const convId = selectedConv.id;
     const supabase = createClient();
     let isMounted = true;
 
     async function fetchDbMessages() {
       try {
-        const { data, error } = await supabase
+        const { data: dbRows, error } = await supabase
           .from('pesan_chat')
           .select('*')
           .eq('klaim_id', convId)
           .order('dibuat_pada', { ascending: true });
 
-        if (!error && data && data.length > 0 && isMounted) {
-          const dbMsgs: ChatMessage[] = data.map((m: any) => {
-            const parsed = parseChatMessage(m.pesan);
+        if (error) throw error;
+
+        if (dbRows && dbRows.length > 0) {
+          const mapped: ChatMessage[] = dbRows.map((r: any) => {
+            const isMe = r.pengirim_id === currentUserId;
+            const isSystem = r.tipe_pesan === 'sistem';
+            const parsed = parseChatMessage(r.pesan);
+            const d = new Date(r.dibuat_pada);
+            const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+
             return {
-              id: m.id,
-              sender: m.tipe_pesan === 'sistem' ? 'system' : (m.pengirim_id === currentUserId ? 'me' : 'other'),
+              id: r.id,
+              sender: isSystem ? 'system' : isMe ? 'me' : 'other',
               text: parsed.text,
               imageUrl: parsed.imageUrl,
-              time: new Date(m.dibuat_pada).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':'),
+              time: timeStr,
             };
           });
 
-          setMessagesMap((prev) => {
-            const currentList = prev[convId] || [];
-            if (
-              currentList.length === dbMsgs.length &&
-              currentList[currentList.length - 1]?.id === dbMsgs[dbMsgs.length - 1]?.id
-            ) {
-              return prev;
-            }
-
-            const systemWelcome = currentList.find((msg) => msg.id.startsWith('sys-'));
-            const merged = systemWelcome && !dbMsgs.some((msg) => msg.id === systemWelcome.id)
-              ? [systemWelcome, ...dbMsgs]
-              : dbMsgs;
-
-            try {
-              localStorage.setItem(`findly_chat_${convId}`, JSON.stringify(merged));
-            } catch {
-              // ignore
-            }
-
-            return {
+          if (isMounted) {
+            setMessagesMap((prev) => ({
               ...prev,
-              [convId]: merged,
-            };
-          });
+              [convId]: mapped,
+            }));
 
-          const last = dbMsgs[dbMsgs.length - 1];
-          if (last) {
-            const snippet = last.imageUrl ? (last.text ? `📷 ${last.text}` : '📷 Mengirim foto') : last.text.split('\n')[0];
-            setConversations((prev) =>
-              prev.map((c) =>
-                c.id === convId
-                  ? { ...c, lastMessage: snippet, lastTime: last.time }
-                  : c
-              )
-            );
-          }
-
-          if (currentUserId && typeof window !== 'undefined') {
-            try {
-              const key = `findly_read_notifs_${currentUserId}`;
-              const readIds: string[] = JSON.parse(localStorage.getItem(key) || '[]');
-              let modified = false;
-              const incomingNotifId = `claim-in-${convId}`;
-              if (!readIds.includes(incomingNotifId)) {
-                readIds.push(incomingNotifId);
-                modified = true;
-              }
-              dbMsgs.forEach((m) => {
-                const chatNotifId = `chat-${convId}-${m.id}`;
-                if (!readIds.includes(chatNotifId)) {
-                  readIds.push(chatNotifId);
-                  modified = true;
-                }
-              });
-              if (modified) {
-                localStorage.setItem(key, JSON.stringify(readIds));
-                window.dispatchEvent(new Event('findly:counts_updated'));
-              }
-            } catch {
-              // ignore
+            const lastOne = mapped[mapped.length - 1];
+            if (lastOne) {
+              const snippet = lastOne.imageUrl ? (lastOne.text ? `📷 ${lastOne.text}` : '📷 Mengirim foto') : lastOne.text.split('\n')[0];
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === convId
+                    ? { ...c, lastMessage: snippet, lastTime: lastOne.time }
+                    : c
+                )
+              );
             }
+          }
+        } else {
+          // Fallback to initial message
+          const initialMsgs: ChatMessage[] = [];
+          if (selectedConv?.initialPesanVerifikasi) {
+            initialMsgs.push({
+              id: `init-${convId}`,
+              sender: 'other',
+              text: `Halo, saya mengajukan klaim dengan bukti verifikasi:\n"${selectedConv.initialPesanVerifikasi}"`,
+              time: selectedConv.lastTime || 'Baru saja',
+            });
+          }
+          if (isMounted) {
+            setMessagesMap((prev) => ({
+              ...prev,
+              [convId]: initialMsgs,
+            }));
           }
         }
       } catch (err) {
-        // graceful fallback if table not yet created
+        console.warn('Error fetching db messages:', err);
       }
     }
 
     fetchDbMessages();
 
-    // Realtime channel listener
+    // Subscribe to realtime changes
     const channel = supabase
-      .channel(`chat_realtime_${convId}`)
+      .channel(`room_${convId}`)
       .on(
         'postgres_changes',
         {
@@ -586,31 +352,29 @@ export default function MessagesPage() {
           table: 'pesan_chat',
           filter: `klaim_id=eq.${convId}`,
         },
-        (payload) => {
-          const m = payload.new as any;
-          if (!m || !isMounted) return;
+        (payload: any) => {
+          const row = payload.new;
+          if (row.pengirim_id === currentUserId) return;
 
-          const parsed = parseChatMessage(m.pesan);
+          const isSystem = row.tipe_pesan === 'sistem';
+          const parsed = parseChatMessage(row.pesan);
+          const d = new Date(row.dibuat_pada);
+          const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+
           const newChat: ChatMessage = {
-            id: m.id,
-            sender: m.tipe_pesan === 'sistem' ? 'system' : (m.pengirim_id === currentUserId ? 'me' : 'other'),
+            id: row.id,
+            sender: isSystem ? 'system' : 'other',
             text: parsed.text,
             imageUrl: parsed.imageUrl,
-            time: new Date(m.dibuat_pada).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':'),
+            time: timeStr,
           };
 
           setMessagesMap((prev) => {
             const list = prev[convId] || [];
-            if (list.some((existing) => existing.id === newChat.id)) return prev;
-            const nextList = [...list, newChat];
-            try {
-              localStorage.setItem(`findly_chat_${convId}`, JSON.stringify(nextList));
-            } catch {
-              // ignore
-            }
+            if (list.some((m) => m.id === newChat.id)) return prev;
             return {
               ...prev,
-              [convId]: nextList,
+              [convId]: [...list, newChat],
             };
           });
 
@@ -626,7 +390,6 @@ export default function MessagesPage() {
       )
       .subscribe();
 
-    // Auto-sync polling every 3.5 seconds as fallback
     const interval = setInterval(() => {
       fetchDbMessages();
     }, 3500);
@@ -660,10 +423,10 @@ export default function MessagesPage() {
         name: file.name,
         size: file.size,
       });
-      inputRef.current?.focus();
+      setTimeout(() => inputRef.current?.focus(), 100);
     } catch (err) {
-      console.error('Error processing image:', err);
-      alert('Gagal memproses gambar. Silakan pilih foto lain.');
+      console.error('Compress image failed:', err);
+      alert('Gagal memproses gambar. Silakan coba lagi.');
     } finally {
       setIsUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -697,12 +460,6 @@ export default function MessagesPage() {
     }));
     setTimeout(() => scrollToBottom(true, true), 40);
 
-    try {
-      localStorage.setItem(`findly_chat_${selectedConv.id}`, JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
-
     const previewSnippet = imageToSend
       ? (userText ? `📷 ${userText}` : '📷 Mengirim foto')
       : userText;
@@ -713,7 +470,6 @@ export default function MessagesPage() {
       )
     );
 
-    // Save to Supabase database (Real cloud sync!)
     try {
       const supabase = createClient();
       const payloadString = imageToSend
@@ -744,6 +500,50 @@ export default function MessagesPage() {
     }
   };
 
+  const handleShareSafePoint = async () => {
+    if (!selectedConv) return;
+    const pt = safePointsList.find((p) => p.id === selectedSafePointModalId) || safePointsList[0];
+    const timeStr = getCurrentTime();
+
+    const textMsg = `📍 KESEPAKATAN TITIK TEMU AMAN KAMPUS\n🏛️ Lokasi: ${pt.nama_lokasi}\n📌 Alamat: ${pt.alamat_lengkap}\n🕒 Jam Operasional: ${pt.jam_buka} - ${pt.jam_tutup} WIB\n🛡️ Keamanan: ${pt.ada_satpam ? 'Satpam Standby' : ''} ${pt.ada_cctv ? '• CCTV Aktif' : ''}\nGPS: ${pt.latitude},${pt.longitude}`;
+
+    const tempId = `sp-${Date.now()}`;
+    const newMsg: ChatMessage = {
+      id: tempId,
+      sender: 'me',
+      text: textMsg,
+      time: timeStr,
+    };
+
+    const updated = [...(messagesMap[selectedConv.id] || []), newMsg];
+    setMessagesMap((prev) => ({
+      ...prev,
+      [selectedConv.id]: updated,
+    }));
+
+    try {
+      const supabase = createClient();
+      await supabase.from('pesan_chat').insert({
+        klaim_id: selectedConv.id,
+        pengirim_id: currentUserId,
+        pesan: textMsg,
+        tipe_pesan: 'teks',
+      });
+    } catch (err) {
+      console.warn('Error syncing safe point to chat:', err);
+    }
+
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === selectedConv.id
+          ? { ...c, lastMessage: `📍 Titik Temu: ${pt.nama_lokasi}`, lastTime: timeStr }
+          : c
+      )
+    );
+
+    setShowSafePointModal(false);
+  };
+
   const handleApprove = async () => {
     if (!selectedConv) return;
     setIsApproved(true);
@@ -751,7 +551,9 @@ export default function MessagesPage() {
     const approveMsg: ChatMessage = {
       id: `sys-${Date.now()}`,
       sender: 'system',
-      text: '✅ Kepemilikan Telah Disepakati! Status klaim disetujui. Silakan lakukan serah terima di titik kumpul kampus yang aman (Pos Satpam / Lobi Rektorat).',
+      text: isAdmin
+        ? 'Persetujuan serah terima barang telah dikonfirmasi oleh admin. Silakan kedua pihak melakukan serah terima di titik temu aman kampus.'
+        : 'Kepemilikan barang telah disepakati oleh kedua pihak. Silakan lakukan serah terima di titik temu aman kampus.',
       time: timeStr,
     };
 
@@ -762,9 +564,14 @@ export default function MessagesPage() {
     }));
 
     try {
-      localStorage.setItem(`findly_chat_${selectedConv.id}`, JSON.stringify(updated));
       const supabase = createClient();
       await supabase.from('klaim_barang').update({ status: 'SELESAI' }).eq('id', selectedConv.id);
+      await supabase.from('pesan_chat').insert({
+        klaim_id: selectedConv.id,
+        pengirim_id: currentUserId,
+        pesan: approveMsg.text,
+        tipe_pesan: 'sistem',
+      });
     } catch (err) {
       console.error('Error syncing approval:', err);
     }
@@ -772,7 +579,7 @@ export default function MessagesPage() {
     setConversations((prev) =>
       prev.map((c) =>
         c.id === selectedConv.id
-          ? { ...c, status: 'RESOLVED', lastMessage: '✅ Kepemilikan Telah Disepakati' }
+          ? { ...c, status: 'RESOLVED', lastMessage: approveMsg.text.split('\n')[0] }
           : c
       )
     );
@@ -785,7 +592,7 @@ export default function MessagesPage() {
     const disputeMsg: ChatMessage = {
       id: `sys-${Date.now()}`,
       sender: 'system',
-      text: '⚖️ Sengketa Diteruskan ke Mediator Admin. Status klaim diubah menjadi DISPUTED. Tim mediator kampus akan meninjau percakapan verifikasi ini.',
+      text: 'Permintaan mediasi telah diteruskan ke admin. Admin akan meninjau riwayat percakapan untuk menengahi kesalahpahaman dan memverifikasi bukti kepemilikan.',
       time: timeStr,
     };
 
@@ -796,9 +603,14 @@ export default function MessagesPage() {
     }));
 
     try {
-      localStorage.setItem(`findly_chat_${selectedConv.id}`, JSON.stringify(updated));
       const supabase = createClient();
       await supabase.from('klaim_barang').update({ status: 'DITOLAK' }).eq('id', selectedConv.id);
+      await supabase.from('pesan_chat').insert({
+        klaim_id: selectedConv.id,
+        pengirim_id: currentUserId,
+        pesan: disputeMsg.text,
+        tipe_pesan: 'sistem',
+      });
     } catch (err) {
       console.error('Error syncing dispute:', err);
     }
@@ -806,11 +618,53 @@ export default function MessagesPage() {
     setConversations((prev) =>
       prev.map((c) =>
         c.id === selectedConv.id
-          ? { ...c, status: 'DISPUTED', lastMessage: '⚖️ Sengketa Diteruskan ke Mediator' }
+          ? { ...c, status: 'DISPUTED', lastMessage: 'Permintaan mediasi aktif' }
           : c
       )
     );
   };
+
+  const handleRejectByAdmin = async () => {
+    if (!selectedConv) return;
+    if (!confirm('Tolak klaim ini setelah peninjauan bukti?')) return;
+    setIsDisputed(true);
+    const timeStr = getCurrentTime();
+    const rejectMsg: ChatMessage = {
+      id: `sys-${Date.now()}`,
+      sender: 'system',
+      text: 'Klaim telah ditolak oleh admin setelah peninjauan bukti verifikasi.',
+      time: timeStr,
+    };
+
+    const updated = [...(messagesMap[selectedConv.id] || []), rejectMsg];
+    setMessagesMap((prev) => ({
+      ...prev,
+      [selectedConv.id]: updated,
+    }));
+
+    try {
+      const supabase = createClient();
+      await supabase.from('klaim_barang').update({ status: 'DITOLAK' }).eq('id', selectedConv.id);
+      await supabase.from('pesan_chat').insert({
+        klaim_id: selectedConv.id,
+        pengirim_id: currentUserId,
+        pesan: rejectMsg.text,
+        tipe_pesan: 'sistem',
+      });
+    } catch (err) {
+      console.error('Error syncing rejection:', err);
+    }
+
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === selectedConv.id
+          ? { ...c, status: 'DISPUTED', lastMessage: 'Klaim ditolak oleh admin' }
+          : c
+      )
+    );
+  };
+
+  const currentMessages = selectedConv ? messagesMap[selectedConv.id] || [] : [];
 
   return (
     <AppLayout fullHeight>
@@ -818,128 +672,112 @@ export default function MessagesPage() {
         {/* Header Title */}
         <div className="flex items-center justify-between shrink-0">
           <div>
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-              Pesan & Verifikasi
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              {isAdmin ? 'Pesan & Mediasi' : 'Pesan & Verifikasi'}
             </h1>
-            <p className="text-xs text-gray-500 hidden sm:block">
-              Ruang diskusi dan verifikasi kepemilikan peer-to-peer antara penemu dan pengklaim kampus.
+            <p className="text-xs text-slate-500 hidden sm:block mt-0.5">
+              {isAdmin
+                ? 'Ruang diskusi dan mediasi klaim kepemilikan barang di kampus.'
+                : 'Ruang diskusi dan verifikasi kepemilikan peer-to-peer antara penemu dan pengklaim kampus.'}
             </p>
           </div>
         </div>
 
         {/* Guest Warning */}
         {isGuest ? (
-          <div className="bg-white rounded-3xl border border-gray-100 p-8 sm:p-12 text-center shadow-sm max-w-lg mx-auto space-y-4 my-8">
-            <div className="w-16 h-16 rounded-full bg-blue-50 text-[#30AFFF] flex items-center justify-center mx-auto">
-              <MessageSquare size={32} />
+          <div className="bg-white rounded-[6px] border border-slate-200 p-8 sm:p-12 text-center shadow-xs max-w-lg mx-auto space-y-4 my-8">
+            <div className="w-14 h-14 rounded-[6px] bg-sky-50 text-sky-700 border border-sky-200 flex items-center justify-center mx-auto">
+              <MessageSquare size={28} />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-gray-900">Masuk untuk Mengakses Pesan</h3>
-              <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">
+              <h3 className="text-lg font-bold text-slate-900">Masuk untuk Mengakses Pesan</h3>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                 Anda harus login terlebih dahulu untuk mengakses ruang chat verifikasi barang hilang & temuan.
               </p>
             </div>
             <Link
               href="/login?redirect=/messages"
-              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-sm transition-all"
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-[6px] bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold shadow-xs transition-all"
             >
               <LogIn size={15} />
               <span>Masuk Sekarang</span>
             </Link>
           </div>
         ) : loading ? (
-          <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center shadow-sm flex flex-col items-center justify-center gap-3 min-h-[400px]">
-            <Loader2 size={32} className="animate-spin text-[#30AFFF]" />
-            <p className="text-xs text-gray-500">Memuat sesi obrolan verifikasi...</p>
+          <div className="bg-white rounded-[6px] border border-slate-200 p-12 text-center shadow-xs flex flex-col items-center justify-center gap-3 min-h-[400px]">
+            <Loader2 size={32} className="animate-spin text-sky-600" />
+            <p className="text-xs text-slate-500">
+              {isAdmin ? 'Memuat sesi mediasi civitas...' : 'Memuat sesi obrolan verifikasi...'}
+            </p>
           </div>
         ) : conversations.length === 0 ? (
-          /* Clean Empty State: No Fake Dummy Data */
-          <div className="bg-white rounded-3xl border border-gray-100 p-8 sm:p-14 text-center shadow-sm max-w-2xl mx-auto space-y-5 my-6 animate-in fade-in duration-200">
-            <div className="w-20 h-20 rounded-full bg-[#EFF8FF] text-[#30AFFF] flex items-center justify-center mx-auto shadow-2xs">
-              <MessageSquare size={38} className="stroke-[1.75]" />
+          /* Empty State */
+          <div className="bg-white rounded-[6px] border border-slate-200 p-8 sm:p-14 text-center shadow-xs max-w-2xl mx-auto space-y-5 my-6">
+            <div className="w-16 h-16 rounded-[6px] bg-sky-50 text-sky-700 border border-sky-200 flex items-center justify-center mx-auto">
+              <MessageSquare size={32} />
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold text-gray-900 tracking-tight">
-                Belum Ada Sesi Pesan & Verifikasi
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                {isAdmin ? 'Belum Ada Sesi Mediasi Aktif' : 'Belum Ada Sesi Pesan & Verifikasi'}
               </h3>
-              <p className="text-xs sm:text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
-                Sesi diskusi verifikasi peer-to-peer akan muncul secara otomatis saat Anda mengajukan klaim atas barang temuan, atau saat ada pengguna lain yang mengklaim barang yang Anda laporkan.
+              <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+                {isAdmin
+                  ? 'Saat ini seluruh verifikasi klaim civitas berjalan lancar atau belum ada laporan sengketa yang membutuhkan intervensi mediator kampus.'
+                  : 'Sesi diskusi verifikasi peer-to-peer akan muncul secara otomatis saat Anda mengajukan klaim atas barang temuan, atau saat ada pengguna lain yang mengklaim barang yang Anda laporkan.'}
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              <Link
-                href="/find"
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] active:scale-[0.98] text-white text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2"
-              >
-                <Search size={14} />
-                <span>Cari Barang Temuan</span>
-              </Link>
-              <Link
-                href="/claims"
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-all flex items-center justify-center gap-2"
-              >
-                <span>Lihat Riwayat Klaim</span>
-              </Link>
+              {isAdmin ? (
+                <>
+                  <Link
+                    href="/admin/klaim"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-[6px] bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-2"
+                  >
+                    <FileCheck2 size={14} />
+                    <span>Kelola Klaim Civitas</span>
+                  </Link>
+                  <Link
+                    href="/admin/laporan"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-[6px] border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>Moderasi Laporan</span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/find"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-[6px] bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-2"
+                  >
+                    <Search size={14} />
+                    <span>Cari Barang Temuan</span>
+                  </Link>
+                  <Link
+                    href="/claims"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-[6px] border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>Lihat Riwayat Klaim</span>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         ) : (
           /* Real Chat Layout */
-          <div className="flex-1 min-h-0 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+          <div className="flex-1 min-h-0 bg-white rounded-[6px] border border-slate-200 shadow-xs overflow-hidden grid grid-cols-1 lg:grid-cols-12">
             {/* Left Column: Conversations List */}
-            <div
-              className={`lg:col-span-4 border-r border-gray-100 flex flex-col h-full min-h-0 bg-gray-50/40 ${
-                showMobileChat ? 'hidden lg:flex' : 'flex'
-              }`}
-            >
-              <div className="p-3.5 sm:p-4 border-b border-gray-100 bg-white shrink-0">
-                <h2 className="font-bold text-sm text-gray-900">Kotak Masuk Verifikasi</h2>
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  {conversations.length} sesi chat aktif
-                </p>
-              </div>
-
-              <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0 divide-y divide-gray-50">
-                {conversations.map((conv, idx) => {
-                  const active = selectedConv?.id === conv.id;
-                  return (
-                    <button
-                      key={`conv-${conv.id}-${idx}`}
-                      onClick={() => {
-                        setSelectedConv(conv);
-                        setShowMobileChat(true);
-                      }}
-                      className={`w-full p-4 text-left flex items-start gap-3 transition-colors cursor-pointer ${
-                        active ? 'bg-[#EFF8FF]' : 'hover:bg-gray-50 bg-white'
-                      }`}
-                    >
-                      <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#30AFFF] to-[#60c4ff] text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
-                        {conv.counterpartName.substring(0, 2).toUpperCase()}
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-white flex items-center justify-center">
-                          <CheckCircle2 size={10} className="text-[#10B981] fill-white" />
-                        </div>
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <h4 className="font-bold text-xs text-gray-900 truncate">
-                            {conv.counterpartName}
-                          </h4>
-                          <span className="text-[10px] text-gray-400 shrink-0">{conv.lastTime}</span>
-                        </div>
-
-                        <p className="text-[11px] font-semibold text-[#30AFFF] truncate mt-0.5">
-                          {conv.itemTitle}
-                        </p>
-
-                        <p className="text-xs text-gray-500 truncate mt-1">{conv.lastMessage}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <ConversationList
+              conversations={conversations}
+              selectedConv={selectedConv}
+              onSelectConv={(conv) => {
+                setSelectedConv(conv);
+                setShowMobileChat(true);
+              }}
+              isAdmin={isAdmin}
+              showMobileChat={showMobileChat}
+            />
 
             {/* Right Column: Active Chat Room */}
             {selectedConv && (
@@ -949,423 +787,65 @@ export default function MessagesPage() {
                 }`}
               >
                 {/* Chat Room Top Bar */}
-                <div className="p-3 sm:p-3.5 border-b border-gray-100 flex items-center justify-between gap-2 sm:gap-3 bg-white shrink-0">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowMobileChat(false)}
-                      className="lg:hidden p-1.5 text-gray-500 hover:text-gray-900 rounded-xl hover:bg-gray-100 cursor-pointer"
-                      aria-label="Kembali ke daftar pesan"
-                    >
-                      <ArrowLeft size={18} />
-                    </button>
-
-                    <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#30AFFF] flex items-center justify-center font-bold text-sm shrink-0">
-                      {selectedConv.counterpartName.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="font-bold text-sm text-gray-900">
-                          {selectedConv.counterpartName}
-                        </h3>
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-                          <CheckCircle2 size={10} />
-                          {selectedConv.counterpartRole}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-gray-400">
-                        Membahas barang: <strong className="text-gray-700">{selectedConv.itemTitle}</strong>
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons in Header */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowSafePointModal(true)}
-                      className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#30AFFF] border border-blue-200 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                      title="Pilih titik temu aman resmi kampus"
-                    >
-                      <MapPin size={13} />
-                      <span className="hidden sm:inline">Titik Temu Aman</span>
-                    </button>
-
-                    {!isApproved && !isDisputed && (
-                      <>
-                        <button
-                          onClick={handleApprove}
-                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer flex items-center gap-1"
-                        >
-                          <Check size={13} />
-                          <span className="hidden sm:inline">Sepakati Pemilikan</span>
-                          <span className="sm:hidden">Sepakati</span>
-                        </button>
-                        <button
-                          onClick={handleDispute}
-                          className="px-3 py-1.5 rounded-xl border border-purple-200 text-purple-700 hover:bg-purple-50 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
-                        >
-                          <AlertTriangle size={13} />
-                          <span className="hidden sm:inline">Panggil Mediator</span>
-                        </button>
-                      </>
-                    )}
-                    {isApproved && (
-                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
-                        ✓ Selesai / Dikembalikan
-                      </span>
-                    )}
-                    {isDisputed && (
-                      <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-xl border border-purple-200">
-                        ⚖️ Dalam Mediasi Admin
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <ChatHeader
+                  selectedConv={selectedConv}
+                  isAdmin={isAdmin}
+                  isApproved={isApproved}
+                  isDisputed={isDisputed}
+                  onBackToConversations={() => setShowMobileChat(false)}
+                  onOpenSafePointModal={() => setShowSafePointModal(true)}
+                  onApprove={handleApprove}
+                  onDispute={handleDispute}
+                  onRejectByAdmin={handleRejectByAdmin}
+                />
 
                 {/* Messages Scroll Area */}
-                <div
-                  ref={messagesContainerRef}
+                <ChatMessageList
+                  messages={currentMessages}
+                  safePointsList={safePointsList}
+                  onZoomImage={(url) => setZoomedImage(url)}
+                  messagesContainerRef={messagesContainerRef}
+                  messagesEndRef={messagesEndRef}
                   onScroll={handleScroll}
-                  className="flex-1 min-h-0 p-4 sm:p-6 overflow-y-scroll custom-scrollbar space-y-3.5 bg-gray-50/30"
-                >
-                  {currentMessages.map((msg, mIdx) => {
-                    if (msg.sender === 'system') {
-                      return (
-                        <div
-                          key={`msg-sys-${msg.id || mIdx}-${mIdx}`}
-                          className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl text-xs text-blue-900 flex items-start gap-2.5 max-w-xl mx-auto shadow-2xs"
-                        >
-                          <ShieldCheck size={18} className="text-[#30AFFF] shrink-0 mt-0.5" />
-                          <p className="leading-relaxed">{msg.text}</p>
-                        </div>
-                      );
-                    }
-
-                    const isMe = msg.sender === 'me';
-                    const isMeetingCard = msg.text?.includes('TITIK TEMU AMAN KAMPUS');
-
-                    if (isMeetingCard) {
-                      const matchedPt =
-                        safePointsList.find((p) => msg.text.includes(p.nama_lokasi)) || safePointsList[0];
-                      return (
-                        <div
-                          key={`msg-meet-${msg.id || mIdx}-${mIdx}`}
-                          className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200`}
-                        >
-                          <div
-                            className={`max-w-md p-4 rounded-2xl text-xs sm:text-sm shadow-sm ${
-                              isMe
-                                ? 'bg-gradient-to-br from-[#30AFFF] to-[#1E88E5] text-white rounded-br-xs'
-                                : 'bg-white text-gray-800 border border-blue-200 rounded-bl-xs'
-                            }`}
-                          >
-                            <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] mb-1.5 opacity-90">
-                              <ShieldCheck size={14} />
-                              <span>Titik Temu Resmi Terverifikasi</span>
-                            </div>
-                            <h4 className="font-bold text-sm mb-1">{matchedPt.nama_lokasi}</h4>
-                            <p className={`text-xs mb-2.5 leading-relaxed ${isMe ? 'text-white/90' : 'text-gray-600'}`}>
-                              {matchedPt.alamat_lengkap}
-                            </p>
-                            <div className="flex flex-wrap gap-1.5 text-[10px] font-semibold mb-3">
-                              {matchedPt.ada_satpam && (
-                                <span className={`px-2 py-0.5 rounded-md ${isMe ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
-                                  👮 Satpam 24 Jam
-                                </span>
-                              )}
-                              {matchedPt.ada_cctv && (
-                                <span className={`px-2 py-0.5 rounded-md ${isMe ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-800 border border-blue-200'}`}>
-                                  📹 CCTV Aktif
-                                </span>
-                              )}
-                              <span className={`px-2 py-0.5 rounded-md ${isMe ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'}`}>
-                                🕒 {matchedPt.jam_buka} - {matchedPt.jam_tutup} WIB
-                              </span>
-                            </div>
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${matchedPt.latitude},${matchedPt.longitude}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`w-full py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95 ${
-                                isMe
-                                  ? 'bg-white text-[#1E88E5] hover:bg-gray-100'
-                                  : 'bg-[#30AFFF] hover:bg-[#2196E8] text-white'
-                              }`}
-                              title="Buka lokasi di Google Maps atau aplikasi HP"
-                            >
-                              <Navigation size={13} />
-                              <span>Buka di Peta</span>
-                            </a>
-                          </div>
-                          <span className="text-[10px] text-gray-400 mt-1 px-1">{msg.time}</span>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div
-                        key={`msg-body-${msg.id || mIdx}-${mIdx}`}
-                        className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200`}
-                      >
-                        <div
-                          className={`max-w-md p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-2xs whitespace-pre-wrap ${
-                            isMe
-                              ? 'bg-[#30AFFF] text-white rounded-br-xs'
-                              : 'bg-white text-gray-800 border border-gray-100 rounded-bl-xs'
-                          }`}
-                        >
-                          {msg.imageUrl && (
-                            <div className="mb-2">
-                              <img
-                                src={msg.imageUrl}
-                                alt="Foto Verifikasi"
-                                onClick={() => setZoomedImage(msg.imageUrl || null)}
-                                className="rounded-xl max-h-60 max-w-full object-cover cursor-pointer hover:opacity-95 transition-opacity border border-black/10 shadow-xs"
-                              />
-                            </div>
-                          )}
-                          {msg.text ? <span>{msg.text}</span> : null}
-                        </div>
-                        <span className="text-[10px] text-gray-400 mt-1 px-1">{msg.time}</span>
-                      </div>
-                    );
-                  })}
-
-                  <div ref={messagesEndRef} />
-
-                  {/* Floating button to jump to newest messages */}
-                  {!isAtBottom && (
-                    <div className="sticky bottom-3 flex justify-end pointer-events-none">
-                      <button
-                        type="button"
-                        onClick={() => scrollToBottom(true, true)}
-                        className="pointer-events-auto px-3 py-1.5 rounded-full bg-white text-[#30AFFF] border border-blue-200 shadow-md text-xs font-semibold flex items-center gap-1.5 hover:bg-blue-50 transition-all cursor-pointer animate-in fade-in duration-150"
-                      >
-                        <ArrowDown size={14} />
-                        <span>Pesan Terbaru</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Floating Image Preview Bar if selectedImage is present */}
-                {selectedImage && (
-                  <div className="px-4 py-2 bg-blue-50/80 border-t border-blue-100 flex items-center justify-between gap-3 animate-in slide-in-from-bottom-2 duration-150">
-                    <div className="flex items-center gap-2.5 overflow-hidden">
-                      <img
-                        src={selectedImage.dataUrl}
-                        alt="Preview"
-                        className="w-11 h-11 rounded-lg object-cover border border-blue-200 shadow-xs shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-gray-800 truncate">{selectedImage.name}</p>
-                        <p className="text-[10px] text-gray-500">
-                          {(selectedImage.size / 1024).toFixed(0)} KB • Siap dikirim
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedImage(null);
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                      }}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white rounded-lg transition-colors cursor-pointer"
-                      title="Batalkan lampiran"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                )}
+                  isAtBottom={isAtBottom}
+                  scrollToBottom={scrollToBottom}
+                />
 
                 {/* Chat Input Bar */}
-                <form
-                  onSubmit={handleSendMessage}
-                  className="p-3 sm:p-4 border-t border-gray-100 bg-white flex items-center gap-2 shrink-0"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageSelect}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingImage}
-                    className="p-2 text-gray-400 hover:text-[#30AFFF] rounded-xl hover:bg-blue-50 transition-colors cursor-pointer relative"
-                    aria-label="Lampirkan foto"
-                    title="Kirim Foto Bukti / Barang"
-                  >
-                    <Paperclip size={18} />
-                    {selectedImage && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#30AFFF] rounded-full ring-2 ring-white" />
-                    )}
-                  </button>
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder={selectedImage ? "Tambah keterangan foto (opsional)..." : `Balas pesan ke ${selectedConv.counterpartName}...`}
-                    className="flex-1 bg-gray-50 hover:bg-white focus:bg-white px-4 py-2.5 rounded-xl text-xs sm:text-sm text-gray-800 border border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all shadow-2xs"
-                  />
-                  <button
-                    type="submit"
-                    disabled={(!inputMessage.trim() && !selectedImage) || isUploadingImage}
-                    className="p-2.5 bg-[#30AFFF] hover:bg-[#2196E8] text-white rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center min-w-[38px]"
-                    aria-label="Kirim Pesan"
-                  >
-                    {isUploadingImage ? (
-                      <Loader2 size={16} className="animate-spin text-white" />
-                    ) : (
-                      <Send size={16} />
-                    )}
-                  </button>
-                </form>
+                <ChatInput
+                  inputMessage={inputMessage}
+                  setInputMessage={setInputMessage}
+                  selectedImage={selectedImage}
+                  onClearSelectedImage={() => {
+                    setSelectedImage(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  isUploadingImage={isUploadingImage}
+                  onSendMessage={handleSendMessage}
+                  onImageSelect={handleImageSelect}
+                  fileInputRef={fileInputRef}
+                  inputRef={inputRef}
+                />
               </div>
             )}
           </div>
         )}
 
         {/* Lightbox / Zoom Modal */}
-        {zoomedImage && (
-          <div
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
-            onClick={() => setZoomedImage(null)}
-          >
-            <div className="relative max-w-3xl max-h-[90vh] flex flex-col items-center">
-              <button
-                type="button"
-                onClick={() => setZoomedImage(null)}
-                className="absolute -top-10 right-0 sm:-right-10 p-2 text-white/80 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-colors cursor-pointer"
-                title="Tutup"
-              >
-                <X size={20} />
-              </button>
-              <img
-                src={zoomedImage}
-                alt="Zoomed"
-                className="max-w-full max-h-[85vh] rounded-xl object-contain shadow-2xl border border-white/10"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          </div>
-        )}
+        <ImageLightbox
+          imageUrl={zoomedImage}
+          onClose={() => setZoomedImage(null)}
+        />
 
         {/* Safe Meeting Point Selector Modal */}
-        {showSafePointModal && (
-          <div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
-            onClick={() => setShowSafePointModal(false)}
-          >
-            <div
-              className="bg-white rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-[#30AFFF]/10 text-[#30AFFF] flex items-center justify-center">
-                    <ShieldCheck size={18} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base">
-                      Pilih Titik Temu Aman Resmi Kampus
-                    </h3>
-                    <p className="text-[11px] text-gray-500">
-                      Disarankan bertemu di lokasi resmi yang diawasi keamanan kampus.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowSafePointModal(false)}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="p-5 overflow-y-auto space-y-4">
-                {/* List of Points */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {safePointsList.map((pt, pIdx) => {
-                    const isSelected = selectedSafePointModalId === pt.id;
-                    return (
-                      <button
-                        key={`safe-pt-${pt.id}-${pIdx}`}
-                        type="button"
-                        onClick={() => setSelectedSafePointModalId(pt.id)}
-                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                          isSelected
-                            ? 'border-[#30AFFF] bg-blue-50/70 text-gray-900 font-semibold ring-2 ring-[#30AFFF]/20'
-                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="font-bold text-xs text-gray-900 line-clamp-1">
-                          🛡️ {pt.nama_lokasi}
-                        </div>
-                        <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
-                          {pt.alamat_lengkap}
-                        </p>
-                        <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-medium mt-1.5">
-                          {pt.ada_satpam && <span>• 👮 Satpam</span>}
-                          {pt.ada_cctv && <span>• 📹 CCTV</span>}
-                          <span>• 🕒 {pt.jam_buka}-{pt.jam_tutup}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Leaflet OSM Map Preview for selected point */}
-                {(() => {
-                  const currentPt =
-                    safePointsList.find((p) => p.id === selectedSafePointModalId) ||
-                    safePointsList[0];
-                  if (!currentPt) return null;
-                  return (
-                    <div className="space-y-1.5 pt-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-gray-800">
-                          Pratinjau Peta (Leaflet OpenStreetMap):
-                        </span>
-                        <span className="text-[10px] text-gray-400">Gratis & Presisi</span>
-                      </div>
-                      <LeafletSafeMap
-                        lat={currentPt.latitude}
-                        lng={currentPt.longitude}
-                        locationName={currentPt.nama_lokasi}
-                        address={currentPt.alamat_lengkap}
-                        heightClass="h-[180px]"
-                      />
-                    </div>
-                  );
-                })()}
-
-                <div className="pt-2 flex items-center justify-end gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowSafePointModal(false)}
-                    className="px-4 py-2 border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleShareSafePoint}
-                    className="px-5 py-2 bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-                  >
-                    <MapPin size={14} />
-                    <span>Bagikan ke Chat Ini</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <SafePointModal
+          isOpen={showSafePointModal}
+          onClose={() => setShowSafePointModal(false)}
+          safePointsList={safePointsList}
+          selectedSafePointId={selectedSafePointModalId}
+          onSelectSafePointId={(id) => setSelectedSafePointModalId(id)}
+          onShareSafePoint={handleShareSafePoint}
+        />
       </div>
     </AppLayout>
   );

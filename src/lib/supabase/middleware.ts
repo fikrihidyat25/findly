@@ -19,19 +19,101 @@ export const createClient = (request: NextRequest) => {
         {
             cookies: {
                 getAll() {
-                    return request.cookies.getAll()
+                    return request.cookies.getAll();
                 },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
                     supabaseResponse = NextResponse.next({
                         request,
-                    })
+                    });
                     cookiesToSet.forEach(({ name, value, options }) =>
                         supabaseResponse.cookies.set(name, value, options)
-                    )
+                    );
                 },
             },
         },
     );
-    return supabaseResponse
+    return { supabase, response: supabaseResponse };
 };
+
+export async function updateSession(request: NextRequest) {
+    let supabaseResponse = NextResponse.next({
+        request: {
+            headers: request.headers,
+        },
+    });
+
+    const supabase = createServerClient(
+        supabaseUrl!,
+        supabaseKey!,
+        {
+            cookies: {
+                getAll() {
+                    return request.cookies.getAll();
+                },
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+                    supabaseResponse = NextResponse.next({
+                        request,
+                    });
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        supabaseResponse.cookies.set(name, value, options)
+                    );
+                },
+            },
+        },
+    );
+
+    // IMPORTANT: Revalidate auth session via getUser (never use getSession for security)
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    const { pathname, search } = request.nextUrl;
+
+    // Public routes allowed for unauthenticated guests
+    const isPublicRoute =
+        pathname === "/" ||
+        pathname.startsWith("/find") ||
+        pathname.startsWith("/cari-barang") ||
+        pathname.startsWith("/safe-zones") ||
+        pathname.startsWith("/bantuan") ||
+        pathname.startsWith("/help") ||
+        pathname.startsWith("/auth");
+
+    const isAuthRoute =
+        pathname.startsWith("/login") ||
+        pathname.startsWith("/register");
+
+    // 1. Guest attempting to access protected routes (dashboard, subpaths, admin, messages, etc.)
+    if (!user && !isPublicRoute && !isAuthRoute) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+
+        const target = pathname + search;
+        if (target && target !== "/") {
+            url.searchParams.set("redirect", target);
+        }
+
+        const redirectResponse = NextResponse.redirect(url);
+        supabaseResponse.cookies.getAll().forEach((cookie) => {
+            redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+        });
+        return redirectResponse;
+    }
+
+    // 2. Logged-in user visiting /login or /register -> Redirect to /dashboard
+    // Kecuali jika terdapat parameter notice seperti verified=true atau registered=true
+    const hasAuthNotice =
+        request.nextUrl.searchParams.has("verified") ||
+        request.nextUrl.searchParams.has("registered");
+
+    if (user && isAuthRoute && !hasAuthNotice) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        url.search = "";
+        return NextResponse.redirect(url);
+    }
+
+    return supabaseResponse;
+}

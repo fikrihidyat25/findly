@@ -163,7 +163,7 @@ function RegisterFormContent() {
         password: password,
         options: {
           data: userMetadata,
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/login?verified=true`,
         },
       });
 
@@ -200,25 +200,9 @@ function RegisterFormContent() {
             throw new Error(rpcData.message || 'Gagal mendaftarkan akun.');
           }
 
-          // Otomatis login ke sesi yang baru didaftarkan
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password: password,
-          });
-
-          if (signInError) {
-            setSuccessMessage('Pendaftaran berhasil! Silakan login dengan email dan password Anda.');
-            setTimeout(() => {
-              router.push('/login');
-            }, 1200);
-            return;
-          }
-
-          setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke Dashboard...');
-          setTimeout(() => {
-            router.push('/dashboard');
-            router.refresh();
-          }, 1000);
+          // Jangan login otomatis ke dashboard, arahkan user ke login dengan notifikasi
+          await supabase.auth.signOut();
+          router.push(`/login?registered=true&email=${encodeURIComponent(email.trim())}`);
           return;
         }
 
@@ -244,17 +228,12 @@ function RegisterFormContent() {
         }
       }
 
-      // Evaluasi apakah sesi langsung aktif atau harus konfirmasi email terlebih dahulu
-      if (data.session) {
-        setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke Dashboard...');
-        setTimeout(() => {
-          router.push('/dashboard');
-          router.refresh();
-        }, 1000);
-      } else {
-        // Tampilkan layar notifikasi "Periksa Link Konfirmasi di Email"
-        setEmailSentNotice(email.trim());
-      }
+      // Pastikan session tidak aktif agar user wajib verifikasi email & login secara manual
+      await supabase.auth.signOut();
+
+      // Tampilkan notifikasi "Periksa Link Konfirmasi di Email"
+      setEmailSentNotice(email.trim());
+      setSuccessMessage('Pendaftaran akun berhasil! Tautan konfirmasi telah dikirim ke email Anda.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat pendaftaran.';
       setErrorMessage(msg);
@@ -296,38 +275,45 @@ function RegisterFormContent() {
 
             {/* Notice Konfirmasi Email */}
             {emailSentNotice ? (
-              <div className="bg-[#EFF8FF] border border-[#BFDBFE] rounded-3xl p-6 text-center space-y-4 my-4 animate-in fade-in zoom-in duration-300 shadow-sm">
-                <div className="w-14 h-14 rounded-2xl bg-[#30AFFF] text-white flex items-center justify-center mx-auto shadow-sm">
-                  <Mail size={26} />
+              <div className="bg-slate-50 border border-slate-200 rounded-[6px] p-6 text-center space-y-4 my-4 animate-in fade-in duration-200 shadow-2xs">
+                <div className="w-12 h-12 rounded-[6px] bg-sky-50 text-sky-700 border border-sky-200 flex items-center justify-center mx-auto">
+                  <Mail size={24} />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">
-                    Kami telah mengirimkan tautan konfirmasi ke email Anda
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+                    Verifikasi Email Anda untuk Mengaktifkan Akun
                   </h3>
                   <div>
-                    <span className="font-bold text-[#0284C7] bg-white px-3 py-1.5 rounded-xl border border-[#BFDBFE]/60 inline-block text-xs">
+                    <span className="font-semibold text-sky-800 bg-white px-3 py-1.5 rounded-[4px] border border-slate-200 inline-block text-xs">
                       {emailSentNotice}
                     </span>
                   </div>
-                  <p className="text-[11px] text-gray-500">
-                    Silakan periksa inbox atau folder spam email Anda untuk mengaktifkan akun.
+                  <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
+                    Kami telah mengirimkan tautan konfirmasi ke email Anda. Silakan buka inbox atau folder spam, klik tautan tersebut untuk memverifikasi email, lalu masuk ke akun Anda.
                   </p>
                 </div>
 
                 {resendStatus && (
-                  <div className="p-2.5 bg-white border border-[#BFDBFE] text-[#0284C7] rounded-xl text-xs font-medium">
+                  <div className="p-2.5 bg-white border border-sky-200 text-sky-700 rounded-[4px] text-xs font-medium">
                     {resendStatus}
                   </div>
                 )}
 
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
+                  <Link
+                    href={`/login?registered=true&email=${encodeURIComponent(emailSentNotice)}`}
+                    className="w-full bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-bold py-2.5 px-4 rounded-[6px] transition-all shadow-xs flex items-center justify-center gap-1.5"
+                  >
+                    <span>Lanjut ke Halaman Login</span>
+                  </Link>
+
                   <button
                     type="button"
                     disabled={isResending}
                     onClick={handleResendVerification}
-                    className="w-full bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="w-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold py-2 px-4 rounded-[6px] transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
-                    {isResending ? 'Mengirim ulang...' : 'Kirim Ulang Link'}
+                    {isResending ? 'Mengirim ulang...' : 'Kirim Ulang Link Konfirmasi'}
                   </button>
                 </div>
               </div>

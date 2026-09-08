@@ -17,12 +17,15 @@ import {
   Calendar,
   User,
   Shield,
+  Edit2,
+  Check,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 
 interface LaporanItem {
   id: string;
   nama_barang: string;
+  kategori?: string;
   deskripsi: string;
   jenis_laporan: 'KEHILANGAN' | 'DITEMUKAN';
   status: string;
@@ -45,7 +48,18 @@ export default function AdminLaporanPage() {
   const [filterStatus, setFilterStatus] = useState<string>('semua');
   const [filterVisibilitas, setFilterVisibilitas] = useState<string>('semua');
 
-  // Modal Detail & Moderasi
+  // Modal Edit & Hapus State
+  const [editingItem, setEditingItem] = useState<LaporanItem | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    nama_barang: '',
+    kategori: 'Elektronik & Gadget',
+    lokasi_terakhir: '',
+    deskripsi: '',
+    ciri_rahasia: '',
+    status: 'MENCARI',
+    aktif: true,
+  });
+
   const [selectedItem, setSelectedItem] = useState<LaporanItem | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [moderasiReason, setModerasiReason] = useState('');
@@ -205,6 +219,65 @@ export default function AdminLaporanPage() {
       });
     } catch (err: any) {
       setFeedbackMessage({ type: 'error', text: err.message || 'Gagal menghapus laporan.' });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  function handleOpenEdit(item: LaporanItem) {
+    setEditingItem(item);
+    setEditFormData({
+      nama_barang: item.nama_barang || '',
+      kategori: item.kategori || 'Elektronik & Gadget',
+      lokasi_terakhir: item.lokasi_terakhir || '',
+      deskripsi: item.deskripsi || '',
+      ciri_rahasia: item.ciri_rahasia || '',
+      status: item.status || 'MENCARI',
+      aktif: item.aktif !== false,
+    });
+  }
+
+  async function handleSaveEdit() {
+    if (!editingItem) return;
+    setActionLoading(true);
+    try {
+      const supabase = createClient();
+      const payload = {
+        nama_barang: editFormData.nama_barang.trim(),
+        kategori: editFormData.kategori,
+        lokasi_terakhir: editFormData.lokasi_terakhir.trim(),
+        deskripsi: editFormData.deskripsi.trim(),
+        ciri_rahasia: editFormData.ciri_rahasia.trim(),
+        status: editFormData.status,
+        aktif: editFormData.aktif,
+      };
+
+      const { error } = await supabase
+        .from('laporan_barang')
+        .update(payload)
+        .eq('id', editingItem.id);
+
+      if (error) throw error;
+
+      setLaporanList((prev) =>
+        prev.map((l) =>
+          l.id === editingItem.id
+            ? {
+                ...l,
+                ...payload,
+              }
+            : l
+        )
+      );
+
+      setFeedbackMessage({
+        type: 'success',
+        text: `Laporan "${payload.nama_barang}" berhasil diperbarui.`,
+      });
+      setEditingItem(null);
+    } catch (err: any) {
+      console.error('Error updating report:', err);
+      setFeedbackMessage({ type: 'error', text: err.message || 'Gagal menyimpan perubahan laporan.' });
     } finally {
       setActionLoading(false);
     }
@@ -432,50 +505,28 @@ export default function AdminLaporanPage() {
                       )}
                     </td>
 
-                    {/* Column 7: Actions */}
+                    {/* Column 7: Actions (Hanya Edit dan Hapus) */}
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
-                          onClick={() => setSelectedItem(item)}
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition-colors"
-                          title="Lihat Detail Lengkap"
+                          onClick={() => handleOpenEdit(item)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-all cursor-pointer"
+                          title="Edit Laporan"
                         >
-                          <Eye size={15} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleToggleAktif(item)}
-                          disabled={actionLoading}
-                          className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
-                            item.aktif === false
-                              ? 'text-emerald-600 hover:bg-emerald-50'
-                              : 'text-amber-600 hover:bg-amber-50'
-                          }`}
-                          title={item.aktif === false ? 'Tampilkan Laporan' : 'Sembunyikan Laporan'}
-                        >
-                          {item.aktif === false ? <Eye size={15} /> : <EyeOff size={15} />}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStatus(item)}
-                          disabled={actionLoading}
-                          className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors"
-                          title={item.status === 'SELESAI' ? 'Ubah jadi Mencari' : 'Tandai Selesai'}
-                        >
-                          <CheckCircle2 size={15} />
+                          <Edit2 size={13} className="text-gray-500" />
+                          <span>Edit</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={() => handleDeleteLaporan(item)}
                           disabled={actionLoading}
-                          className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 cursor-pointer transition-colors"
-                          title="Hapus Permanen"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 transition-all cursor-pointer disabled:opacity-40"
+                          title="Hapus Laporan"
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={13} className="text-red-600" />
+                          <span>Hapus</span>
                         </button>
                       </div>
                     </td>
@@ -487,7 +538,7 @@ export default function AdminLaporanPage() {
         )}
       </div>
 
-      {/* Detail & Moderation Modal Dialog */}
+      {/* Detail & Moderasi Modal Dialog */}
       {selectedItem && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-gray-100 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-5">
@@ -561,27 +612,18 @@ export default function AdminLaporanPage() {
             </div>
 
             {/* Action Buttons in Modal */}
-            <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => handleToggleAktif(selectedItem)}
-                disabled={actionLoading}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer border transition-all ${
-                  selectedItem.aktif === false
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                    : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-                }`}
+                onClick={() => {
+                  const target = selectedItem;
+                  setSelectedItem(null);
+                  handleOpenEdit(target);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold cursor-pointer transition-all"
               >
-                {selectedItem.aktif === false ? 'Tampilkan Kembali' : 'Sembunyikan'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleToggleStatus(selectedItem)}
-                disabled={actionLoading}
-                className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold cursor-pointer transition-all"
-              >
-                {selectedItem.status === 'SELESAI' ? 'Set Status Mencari' : 'Tandai Selesai'}
+                <Edit2 size={13} />
+                <span>Edit Laporan Ini</span>
               </button>
 
               <button
@@ -590,6 +632,159 @@ export default function AdminLaporanPage() {
                 className="px-4 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold cursor-pointer transition-all"
               >
                 Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit Laporan */}
+      {editingItem && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                    editingItem.jenis_laporan === 'KEHILANGAN'
+                      ? 'bg-red-50 text-red-700'
+                      : 'bg-emerald-50 text-emerald-700'
+                  }`}
+                >
+                  {editingItem.jenis_laporan}
+                </span>
+                <h3 className="text-sm font-bold text-gray-900">Edit Data Laporan</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Nama Barang *
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.nama_barang}
+                  onChange={(e) => setEditFormData({ ...editFormData, nama_barang: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-[#30AFFF] focus:outline-none transition-all"
+                  placeholder="Contoh: Kunci Motor Vario Hitam"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">
+                    Kategori
+                  </label>
+                  <select
+                    value={editFormData.kategori}
+                    onChange={(e) => setEditFormData({ ...editFormData, kategori: e.target.value })}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-[#30AFFF] focus:outline-none transition-all cursor-pointer"
+                  >
+                    <option value="Elektronik & Gadget">Elektronik & Gadget</option>
+                    <option value="Dompet & Aksesoris">Dompet & Aksesoris</option>
+                    <option value="Tas & Ransel">Tas & Ransel</option>
+                    <option value="Dokumen & Kartu">Dokumen & Kartu</option>
+                    <option value="Kunci & Kendaraan">Kunci & Kendaraan</option>
+                    <option value="Buku & Alat Tulis">Buku & Alat Tulis</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">
+                    Status Laporan
+                  </label>
+                  <select
+                    value={editFormData.status}
+                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-[#30AFFF] focus:outline-none transition-all cursor-pointer"
+                  >
+                    <option value="MENCARI">Sedang Mencari</option>
+                    <option value="SELESAI">Selesai (Tuntas)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Lokasi Terakhir
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.lokasi_terakhir}
+                  onChange={(e) => setEditFormData({ ...editFormData, lokasi_terakhir: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-[#30AFFF] focus:outline-none transition-all"
+                  placeholder="Contoh: Gedung Rektorat Lt. 2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Visibilitas Publik
+                </label>
+                <select
+                  value={editFormData.aktif ? 'true' : 'false'}
+                  onChange={(e) => setEditFormData({ ...editFormData, aktif: e.target.value === 'true' })}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-[#30AFFF] focus:outline-none transition-all cursor-pointer"
+                >
+                  <option value="true">Aktif (Tampil di Katalog)</option>
+                  <option value="false">Disembunyikan (Hanya Admin)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Deskripsi Publik
+                </label>
+                <textarea
+                  rows={3}
+                  value={editFormData.deskripsi}
+                  onChange={(e) => setEditFormData({ ...editFormData, deskripsi: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-[#30AFFF] focus:outline-none transition-all"
+                  placeholder="Deskripsi ciri umum barang..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-amber-800 uppercase tracking-wider mb-1">
+                  🔒 Ciri Khusus / Rahasia (Hanya Admin & Pelapor)
+                </label>
+                <textarea
+                  rows={2}
+                  value={editFormData.ciri_rahasia}
+                  onChange={(e) => setEditFormData({ ...editFormData, ciri_rahasia: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-amber-50/50 border border-amber-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-amber-400 focus:outline-none transition-all"
+                  placeholder="Detail rahasia verifikasi..."
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                disabled={actionLoading}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={actionLoading || !editFormData.nama_barang.trim()}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#30AFFF] hover:bg-[#2196E8] shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              >
+                {actionLoading && <Loader2 size={13} className="animate-spin" />}
+                <span>Simpan Perubahan</span>
               </button>
             </div>
           </div>

@@ -32,6 +32,7 @@ interface CampusItem {
   date: string;
   description: string;
   icon: any;
+  foto_url?: string | null;
   pelaporId?: string;
   colorScheme: {
     bg: string;
@@ -103,6 +104,7 @@ function formatRelativeTime(dateString: string) {
 export default function FindItemsPage() {
   const [items, setItems] = useState<CampusItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
@@ -127,6 +129,15 @@ export default function FindItemsPage() {
         } = await supabase.auth.getUser();
         if (user) {
           setCurrentUserId(user.id);
+          const { data: profile } = await supabase
+            .from('profil_pengguna')
+            .select('tipe_akun, role_kampus')
+            .eq('id', user.id)
+            .single();
+
+          if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin' || user.user_metadata?.tipe_akun === 'admin') {
+            setIsAdmin(true);
+          }
         }
 
         const { data, error } = await supabase
@@ -154,6 +165,7 @@ export default function FindItemsPage() {
               }),
               description: row.deskripsi || '',
               icon: getCategoryIcon(cat),
+              foto_url: row.foto_url || null,
               pelaporId: row.pelapor_id,
               colorScheme: getColorScheme(isFound ? 'found' : 'lost'),
             };
@@ -212,20 +224,22 @@ export default function FindItemsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <Link
-              href="/lost/new"
-              className="px-3.5 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all"
-            >
-              + Lapor Kehilangan
-            </Link>
-            <Link
-              href="/found/new"
-              className="px-3.5 py-2 text-xs font-semibold text-white bg-[#30AFFF] hover:bg-[#2196E8] rounded-xl shadow-sm transition-all"
-            >
-              + Lapor Temuan
-            </Link>
-          </div>
+          {!isAdmin && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href="/lost/new"
+                className="px-3.5 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all"
+              >
+                + Lapor Kehilangan
+              </Link>
+              <Link
+                href="/found/new"
+                className="px-3.5 py-2 text-xs font-semibold text-white bg-[#30AFFF] hover:bg-[#2196E8] rounded-xl shadow-sm transition-all"
+              >
+                + Lapor Temuan
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Filter Controls Bar */}
@@ -366,7 +380,7 @@ export default function FindItemsPage() {
                 >
                   {/* Visual Thumbnail */}
                   <div
-                    className={`relative w-full h-40 ${item.colorScheme.bg} border-b ${item.colorScheme.border} flex items-center justify-center`}
+                    className={`relative w-full h-40 ${item.foto_url ? 'bg-gray-100' : item.colorScheme.bg} border-b ${item.colorScheme.border} flex items-center justify-center overflow-hidden`}
                   >
                     {/* Status Badge */}
                     <div className="absolute top-3 left-3 z-10">
@@ -391,9 +405,18 @@ export default function FindItemsPage() {
                       <Bookmark size={15} className={isSaved ? 'fill-[#30AFFF] stroke-[#30AFFF]' : ''} />
                     </button>
 
-                    <div className={`w-16 h-16 rounded-2xl bg-white/90 shadow-2xs flex items-center justify-center ${item.colorScheme.text} group-hover:scale-110 transition-transform duration-300`}>
-                      <Icon size={32} className="stroke-[1.75]" />
-                    </div>
+                    {/* Photo or Category Fallback */}
+                    {item.foto_url ? (
+                      <img
+                        src={item.foto_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className={`w-16 h-16 rounded-2xl bg-white/90 shadow-2xs flex items-center justify-center ${item.colorScheme.text} group-hover:scale-110 transition-transform duration-300`}>
+                        <Icon size={32} className="stroke-[1.75]" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Card Content */}
