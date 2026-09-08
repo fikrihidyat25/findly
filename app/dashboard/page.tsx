@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import AppSidebar from '@/src/components/layout/AppSidebar';
 import AppHeader from '@/src/components/layout/AppHeader';
 import QuickActions from '@/src/components/dashboard/QuickActions';
@@ -11,6 +12,7 @@ import SafetyTipBanner from '@/src/components/dashboard/SafetyTipBanner';
 import { createClient } from '@/src/lib/supabase/client';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -22,9 +24,19 @@ export default function DashboardPage() {
       if (user) {
         const { data: profile } = await supabase
           .from('profil_pengguna')
-          .select('nama_lengkap')
+          .select('nama_lengkap, tipe_akun, role_kampus')
           .eq('id', user.id)
           .single();
+
+        if (
+          profile?.tipe_akun === 'admin' ||
+          profile?.role_kampus === 'admin' ||
+          user.user_metadata?.tipe_akun === 'admin'
+        ) {
+          router.replace('/admin');
+          return;
+        }
+
         const fullName = profile?.nama_lengkap || user.user_metadata?.nama_lengkap || user.user_metadata?.full_name || user.email?.split('@')[0];
         if (fullName) {
           const firstName = fullName.trim().split(' ')[0];
@@ -33,7 +45,7 @@ export default function DashboardPage() {
       }
     }
     loadUser();
-  }, []);
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex font-sans antialiased text-gray-900 selection:bg-[#30AFFF]/20 selection:text-[#30AFFF]">

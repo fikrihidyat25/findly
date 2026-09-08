@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import AppLayout from '@/src/components/layout/AppLayout';
 import {
   UploadCloud,
@@ -21,7 +22,33 @@ import {
 import { createClient } from '@/src/lib/supabase/client';
 
 export default function FoundItemWizardPage() {
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    async function checkRole() {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profil_pengguna')
+            .select('tipe_akun, role_kampus')
+            .eq('id', user.id)
+            .single();
+
+          if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin') {
+            router.replace('/admin/laporan');
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    checkRole();
+  }, [router]);
 
   // Stepper State (1 to 4)
   const [currentStep, setCurrentStep] = useState<number>(1);

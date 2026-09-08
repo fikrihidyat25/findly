@@ -424,7 +424,7 @@ export default function FindItemsPage() {
                         </Link>
                       ) : (
                         <Link
-                          href={`/found/new?ref=${item.id}`}
+                          href={`/find/${item.id}`}
                           className="w-full inline-flex items-center justify-center py-2 px-3 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-all"
                         >
                           Saya Menemukan Ini

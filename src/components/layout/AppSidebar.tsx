@@ -1,6 +1,5 @@
 'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -19,7 +18,12 @@ import {
   Menu,
   X,
   Sparkles,
+  ShieldCheck,
+  LayoutDashboard,
+  FileText,
+  Users,
 } from 'lucide-react';
+import { createClient } from '@/src/lib/supabase/client';
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -28,6 +32,35 @@ interface SidebarProps {
 
 export default function AppSidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    async function checkRole() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setIsAdmin(false);
+          return;
+        }
+        const { data: profile } = await supabase
+          .from('profil_pengguna')
+          .select('tipe_akun, role_kampus')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin' || user.user_metadata?.tipe_akun === 'admin') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch {
+        setIsAdmin(false);
+      }
+    }
+
+    checkRole();
+  }, [pathname]);
 
   interface NavItem {
     label: string;
@@ -36,7 +69,8 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
     badge?: number | string;
   }
 
-  const mainNavItems: NavItem[] = [
+  // 1. Navigation for Normal Student / Community User
+  const userNavItems: NavItem[] = [
     { label: 'Beranda', href: '/dashboard', icon: Home },
     { label: 'Cari Barang', href: '/find', icon: Search },
     { label: 'Saya Kehilangan', href: '/lost/new', icon: AlertCircle },
@@ -47,13 +81,48 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
     { label: 'Notifikasi', href: '/notifications', icon: Bell },
   ];
 
-  const secondaryNavItems = [
+  // 2. Dedicated Navigation for Administrator (No personal reporting, focused on moderation & mediation)
+  const adminNavItems: NavItem[] = [
+    { label: 'Dashboard Admin', href: '/admin', icon: LayoutDashboard },
+    { label: 'Moderasi Laporan', href: '/admin/laporan', icon: FileText },
+    { label: 'Mediasi Klaim', href: '/admin/klaim', icon: FileCheck2 },
+    { label: 'Pesan & Mediasi', href: '/messages', icon: MessageSquare },
+    { label: 'Titik Temu Kampus', href: '/safe-zones', icon: ShieldCheck },
+    { label: 'Verifikasi Civitas', href: '/admin/pengguna', icon: Users },
+    { label: 'Katalog Barang', href: '/find', icon: Search },
+    { label: 'Notifikasi', href: '/notifications', icon: Bell },
+  ];
+
+  const currentNavItems = isAdmin ? adminNavItems : userNavItems;
+
+  const userSecondaryNavItems = [
+    { label: 'Titik Temu Aman', href: '/safe-zones', icon: ShieldCheck },
     { label: 'Akun Saya', href: '/profile', icon: User },
     { label: 'Pengaturan', href: '/settings', icon: Settings },
     { label: 'Bantuan', href: '/help', icon: LifeBuoy },
   ];
 
+  const adminSecondaryNavItems = [
+    { label: 'Akun Admin', href: '/profile', icon: User },
+    { label: 'Pengaturan', href: '/settings', icon: Settings },
+    { label: 'Bantuan', href: '/help', icon: LifeBuoy },
+  ];
+
+  const currentSecondaryNavItems = isAdmin ? adminSecondaryNavItems : userSecondaryNavItems;
+
   const isItemActive = (href: string) => {
+    if (href === '/admin') {
+      return pathname === '/admin';
+    }
+    if (href === '/admin/laporan') {
+      return pathname.startsWith('/admin/laporan');
+    }
+    if (href === '/admin/klaim') {
+      return pathname.startsWith('/admin/klaim');
+    }
+    if (href === '/admin/pengguna') {
+      return pathname.startsWith('/admin/pengguna');
+    }
     if (href === '/dashboard' || href === '/beranda') {
       return pathname === '/dashboard' || pathname === '/beranda';
     }
@@ -78,6 +147,9 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
     if (href === '/notifications') {
       return pathname.startsWith('/notifications') || pathname.startsWith('/notifikasi');
     }
+    if (href === '/safe-zones') {
+      return pathname.startsWith('/safe-zones') || pathname.startsWith('/titik-temu');
+    }
     if (href === '/profile') {
       return pathname.startsWith('/profile') || pathname.startsWith('/akun-saya');
     }
@@ -94,10 +166,15 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
     <div className="flex flex-col h-full bg-white border-r border-gray-100/90 select-none">
       {/* Brand Logo Header */}
       <div className="px-6 py-5 flex items-center justify-between border-b border-gray-50">
-        <Link href="/dashboard" className="flex items-center group">
+        <Link href={isAdmin ? '/admin' : '/dashboard'} className="flex items-center gap-2 group">
           <span className="text-2xl font-black tracking-tight text-[#30AFFF] group-hover:opacity-85 transition-opacity">
             Findly.
           </span>
+          {isAdmin && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#30AFFF] border border-blue-200 uppercase tracking-wider">
+              Admin
+            </span>
+          )}
         </Link>
         {onCloseMobile && (
           <button
@@ -114,7 +191,7 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200">
         {/* Main Nav Items */}
         <nav className="space-y-1">
-          {mainNavItems.map((item) => {
+          {currentNavItems.map((item) => {
             const active = isItemActive(item.href);
             const Icon = item.icon;
             return (
@@ -145,13 +222,13 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
           })}
         </nav>
 
-        {/* Divider */}
+        {/* Divider & Secondary Nav Items */}
         <div className="border-t border-gray-100 pt-3">
           <p className="px-3 text-[10px] font-semibold tracking-wider uppercase text-gray-400 mb-2">
-            Pengaturan Akun
+            {isAdmin ? 'Pengaturan Admin' : 'Pengaturan Akun'}
           </p>
           <nav className="space-y-1">
-            {secondaryNavItems.map((item) => {
+            {currentSecondaryNavItems.map((item) => {
               const active = isItemActive(item.href);
               const Icon = item.icon;
               return (
@@ -176,29 +253,31 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
           </nav>
         </div>
 
-        {/* Promo / Action Card in Sidebar */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#EBF7FF] to-[#E0F2FE] p-4 border border-[#BAE6FD]/60 shadow-2xs">
-          <div className="relative z-10 space-y-2">
-            <div className="flex items-center gap-1.5 text-[#0369A1] text-xs font-semibold">
-              <Sparkles size={14} className="text-[#0284C7]" />
-              <span>Aksi Positif</span>
+        {/* Promo / Action Card (Only for regular users, NOT for admin) */}
+        {!isAdmin && (
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#EBF7FF] to-[#E0F2FE] p-4 border border-[#BAE6FD]/60 shadow-2xs">
+            <div className="relative z-10 space-y-2">
+              <div className="flex items-center gap-1.5 text-[#0369A1] text-xs font-semibold">
+                <Sparkles size={14} className="text-[#0284C7]" />
+                <span>Aksi Positif</span>
+              </div>
+              <h4 className="font-bold text-xs text-gray-900 leading-snug">
+                Laporkan barang yang Anda temukan.
+              </h4>
+              <p className="text-[11px] text-gray-600 leading-relaxed">
+                Bantu teman kampus mendapatkan kembali barang berharganya.
+              </p>
+              <Link
+                href="/found/new"
+                onClick={onCloseMobile}
+                className="inline-flex items-center justify-center gap-1.5 w-full mt-2 bg-[#10B981] hover:bg-[#059669] active:scale-[0.98] text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm transition-all"
+              >
+                <PlusCircle size={14} />
+                <span>Laporkan Sekarang</span>
+              </Link>
             </div>
-            <h4 className="font-bold text-xs text-gray-900 leading-snug">
-              Laporkan barang yang Anda temukan.
-            </h4>
-            <p className="text-[11px] text-gray-600 leading-relaxed">
-              Bantu teman kampus mendapatkan kembali barang berharganya.
-            </p>
-            <Link
-              href="/found/new"
-              onClick={onCloseMobile}
-              className="inline-flex items-center justify-center gap-1.5 w-full mt-2 bg-[#10B981] hover:bg-[#059669] active:scale-[0.98] text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm transition-all"
-            >
-              <PlusCircle size={14} />
-              <span>Laporkan Sekarang</span>
-            </Link>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Sidebar Footer Copyright */}

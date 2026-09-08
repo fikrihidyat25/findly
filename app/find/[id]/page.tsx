@@ -23,8 +23,16 @@ import {
   KeyRound,
   BookOpen,
   PackageSearch,
+  X,
+  Send,
+  AlertCircle,
+  Loader2,
+  Lock,
+  Navigation,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
+import LeafletSafeMap from '@/src/components/map/LeafletSafeMap';
+import { SafePoint, getSafePoints, DEFAULT_SAFE_POINTS } from '@/src/lib/safePoints';
 
 interface ItemDetail {
   id: string;
@@ -39,6 +47,8 @@ interface ItemDetail {
   finderRole: string;
   isVerifiedCivitas: boolean;
   safePoint: string;
+  safePointObj?: SafePoint;
+  pelaporId?: string;
   icon: any;
   colorScheme: {
     bg: string;
@@ -105,10 +115,24 @@ export default function ItemDetailPage() {
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Modal template state for "Saya Menemukan Barang Ini"
+  const [showFoundModal, setShowFoundModal] = useState(false);
+  const [foundLocation, setFoundLocation] = useState('');
+  const [storageType, setStorageType] = useState<'security' | 'frontdesk' | 'self' | 'other'>('security');
+  const [storageNote, setStorageNote] = useState('');
+  const [itemCondition, setItemCondition] = useState('Utuh & Baik');
+  const [finderMessage, setFinderMessage] = useState('');
+  const [isSubmittingFound, setIsSubmittingFound] = useState(false);
+  const [foundError, setFoundError] = useState<string | null>(null);
+
+  // Safe point & Leaflet OSM map states
+  const [showMap, setShowMap] = useState(false);
+  const [safePointsList, setSafePointsList] = useState<SafePoint[]>(DEFAULT_SAFE_POINTS);
+  const [selectedSafePointId, setSelectedSafePointId] = useState<string>('sp-1');
+
   const itemId = typeof params?.id === 'string' ? params.id : '';
 
   useEffect(() => {
-    // Check saved state in localStorage
     try {
       const savedIds: string[] = JSON.parse(localStorage.getItem('findly_saved_items') || '[]');
       if (Array.isArray(savedIds) && savedIds.includes(itemId)) {
@@ -141,6 +165,15 @@ export default function ItemDetailPage() {
         const cat = data.kategori || 'Barang Kampus';
         const pelapor = data.profil_pengguna;
 
+        // Fetch official campus safe meeting points
+        const safePoints = await getSafePoints();
+        setSafePointsList(safePoints);
+
+        const matchedSafe = safePoints.find((sp) =>
+          (data.lokasi_terakhir || '').toLowerCase().includes(sp.nama_lokasi.toLowerCase()) ||
+          sp.nama_lokasi.toLowerCase().includes((data.lokasi_terakhir || '').toLowerCase())
+        ) || safePoints[0];
+
         setItem({
           id: data.id,
           title: data.nama_barang,
@@ -155,11 +188,13 @@ export default function ItemDetailPage() {
           }),
           description: data.deskripsi || 'Tidak ada deskripsi tambahan.',
           finderName: pelapor?.nama_lengkap || 'Civitas Kampus',
-          finderRole: pelapor?.role_kampus 
+          finderRole: pelapor?.role_kampus
             ? pelapor.role_kampus.charAt(0).toUpperCase() + pelapor.role_kampus.slice(1)
             : 'Warga Kampus',
           isVerifiedCivitas: pelapor?.status_kampus_terverifikasi ?? false,
-          safePoint: 'Pos Satpam Utama / Lobi Rektorat Kampus',
+          safePoint: matchedSafe ? matchedSafe.nama_lokasi : 'Pos Satpam Utama Gerbang Barat',
+          safePointObj: matchedSafe || safePoints[0],
+          pelaporId: data.pelapor_id,
           icon: getCategoryIcon(cat),
           colorScheme: getColorScheme(isFound ? 'found' : 'lost'),
         });
@@ -192,6 +227,132 @@ export default function ItemDetailPage() {
       setIsSaved(!isSaved);
     } catch {
       // ignore
+    }
+  };
+
+  // Open modal template for "Saya Menemukan Barang Ini"
+  const handleOpenFoundModal = async () => {
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push(`/login?redirect=/find/${itemId}`);
+        return;
+      }
+
+      if (item?.pelaporId && user.id === item.pelaporId) {
+        alert('Ini adalah laporan kehilangan yang Anda buat sendiri.');
+        return;
+      }
+
+      setFoundLocation('');
+      setStorageType('security');
+      setStorageNote('');
+      setItemCondition('Utuh & Baik');
+      setFinderMessage(
+        `Halo ${item?.finderName || 'Pemilik'}, saya telah menemukan barang Anda "${item?.title || ''}". Barang saat ini aman dan siap diserahterimakan.`
+      );
+      setFoundError(null);
+      setShowFoundModal(true);
+    } catch (err) {
+      console.error('Error checking auth:', err);
+    }
+  };
+
+  // Submit template form -> insert to klaim_barang -> go directly to /messages
+  const handleSubmitFoundModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!item) return;
+
+    if (!foundLocation.trim()) {
+      setFoundError('Silakan isi lokasi spesifik barang ditemukan.');
+      return;
+    }
+
+    setIsSubmittingFound(true);
+    setFoundError(null);
+
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push(`/login?redirect=/find/${item.id}`);
+        return;
+      }
+
+      const selectedPoint = safePointsList.find((sp) => sp.id === selectedSafePointId) || safePointsList[0];
+      const storageDisplay = `🛡️ Dititipkan di ${selectedPoint.nama_lokasi} (${selectedPoint.alamat_lengkap})`;
+
+      const formattedVerificationMessage = [
+        `📢 KONFIRMASI PENEMUAN BARANG`,
+        `📍 Lokasi Ditemukan: ${foundLocation.trim()}`,
+        `🏢 Titik Temu / Tempat Penitipan: ${storageDisplay}`,
+        `🔍 Kondisi Barang: ${itemCondition}`,
+        `💬 Pesan Penemu: ${finderMessage.trim()}`,
+      ].join('\n');
+
+      const { data: claimData, error: claimError } = await supabase
+        .from('klaim_barang')
+        .insert({
+          laporan_id: item.id,
+          pengklaim_id: user.id,
+          pesan_verifikasi: formattedVerificationMessage,
+          status: 'MENUNGGU',
+        })
+        .select()
+        .single();
+
+      if (claimError) {
+        throw claimError;
+      }
+
+      const claimId = claimData.id;
+      const timeStr = new Date()
+        .toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+        .replace('.', ':');
+
+      // Initialize chat in localStorage so it appears immediately
+      const initialChat = [
+        {
+          id: `sys-${claimId}`,
+          sender: 'system',
+          text: `🔒 Sesi Verifikasi & Serah Terima Dibuka. Anda telah mengonfirmasi menemukan barang "${item.title}". Silakan koordinasikan verifikasi dan jadwal serah terima aman dengan ${item.finderName}.`,
+          time: timeStr,
+        },
+        {
+          id: `claim-${claimId}`,
+          sender: 'me',
+          text: `Halo ${item.finderName}, saya telah menemukan barang Anda "${item.title}":\n\n${formattedVerificationMessage}`,
+          time: timeStr,
+        },
+      ];
+
+      try {
+        localStorage.setItem(`findly_chat_${claimId}`, JSON.stringify(initialChat));
+        await supabase.from('pesan_chat').insert({
+          klaim_id: claimId,
+          pengirim_id: user.id,
+          pesan: formattedVerificationMessage,
+          tipe_pesan: 'teks',
+        });
+      } catch {
+        // ignore
+      }
+
+      setShowFoundModal(false);
+      // Directly navigate into the chat with this exact claim open!
+      router.push(`/messages?id=${claimId}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal mengirim data penemuan. Silakan coba lagi.';
+      setFoundError(msg);
+    } finally {
+      setIsSubmittingFound(false);
     }
   };
 
@@ -364,12 +525,88 @@ export default function ItemDetailPage() {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-[#BFDBFE]/60 text-xs text-gray-600 flex items-start gap-2">
-              <Building size={14} className="text-[#0284C7] shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-gray-800">Titik Kumpul / Pengambilan Aman:</strong>
-                <p className="text-[11px] text-gray-600 mt-0.5">{item.safePoint}</p>
+            {/* Titik Kumpul / Pengambilan Aman Resmi Kampus */}
+            <div className="pt-3.5 border-t border-[#BFDBFE]/60 space-y-3">
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#30AFFF]/10 text-[#30AFFF] flex items-center justify-center shrink-0 mt-0.5">
+                  <ShieldCheck size={18} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <strong className="text-gray-900 text-xs sm:text-sm">
+                      Titik Kumpul / Pengambilan Aman:
+                    </strong>
+                    <span className="text-[10px] font-bold text-[#30AFFF] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                      Resmi Kampus
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-gray-800 mt-1">
+                    {item.safePointObj?.nama_lokasi || item.safePoint}
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    {item.safePointObj?.alamat_lengkap || 'Area Kampus Terpantau'}
+                  </p>
+
+                  {/* Security & Hours Badges */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    {item.safePointObj?.ada_satpam && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        👮 Ada Satpam Standby
+                      </span>
+                    )}
+                    {item.safePointObj?.ada_cctv && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                        📹 Pantauan CCTV 24 Jam
+                      </span>
+                    )}
+                    {item.safePointObj?.jam_buka && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md">
+                        <Clock size={11} className="text-gray-500" />
+                        {item.safePointObj.jam_buka} - {item.safePointObj.jam_tutup} WIB
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {/* Action Buttons: View Map and Open Navigation/Ojol */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowMap(!showMap)}
+                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-xs font-bold text-gray-700 flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                >
+                  <MapPin size={14} className="text-[#30AFFF]" />
+                  <span>{showMap ? 'Tutup Peta' : 'Lihat Peta (Leaflet OSM)'}</span>
+                </button>
+
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${item.safePointObj?.latitude || -6.36442},${item.safePointObj?.longitude || 106.82861}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                  title="Buka lokasi di Google Maps atau aplikasi HP"
+                >
+                  <Navigation size={14} />
+                  <span>Buka di Peta</span>
+                </a>
+              </div>
+
+              {/* Interactive Leaflet OpenStreetMap */}
+              {showMap && item.safePointObj && (
+                <div className="pt-2 animate-in fade-in zoom-in-98 duration-200">
+                  <LeafletSafeMap
+                    lat={item.safePointObj.latitude}
+                    lng={item.safePointObj.longitude}
+                    locationName={item.safePointObj.nama_lokasi}
+                    address={item.safePointObj.alamat_lengkap}
+                    heightClass="h-[240px]"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1.5 text-center">
+                    Peta interaktif gratis Leaflet.js • Data &copy; OpenStreetMap contributors
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -405,14 +642,17 @@ export default function ItemDetailPage() {
               </>
             ) : (
               <>
-                <Link
-                  href={`/found/new?ref=${item.id}`}
-                  className="flex-1 py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold text-center transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
+                {/* DIRECT TO CHAT MODAL TEMPLATE: Does not create a duplicate post on beranda */}
+                <button
+                  type="button"
+                  onClick={handleOpenFoundModal}
+                  className="flex-1 py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold text-center transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
                 >
                   <CheckCircle2 size={16} />
                   <span>Saya Menemukan Barang Ini</span>
-                </Link>
+                </button>
                 <button
+                  type="button"
                   onClick={handleShare}
                   className="py-3 px-5 rounded-2xl border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs sm:text-sm font-semibold text-center transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
@@ -424,6 +664,202 @@ export default function ItemDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* MODAL TEMPLATE: Hubungi Pemilik Barang Hilang Secara Langsung */}
+      {showFoundModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full border border-gray-100 shadow-2xl p-6 sm:p-7 space-y-5 animate-in fade-in zoom-in-95 duration-200 my-8">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0 shadow-2xs">
+                  <CheckCircle2 size={22} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-gray-900 tracking-tight">
+                    Saya Menemukan Barang Ini
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Kirim konfirmasi penemuan langsung ke ruang chat pemilik.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFoundModal(false)}
+                className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Target Item Mini Card */}
+            <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-3.5 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0 shadow-2xs">
+                <Icon size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-xs sm:text-sm text-gray-900 truncate">
+                  {item.title}
+                </h4>
+                <p className="text-[11px] text-gray-500 truncate">
+                  Dilaporkan hilang oleh <strong className="text-gray-700">{item.finderName}</strong> ({item.location})
+                </p>
+              </div>
+            </div>
+
+            {foundError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-700">
+                <AlertCircle size={14} className="shrink-0" />
+                <span>{foundError}</span>
+              </div>
+            )}
+
+            {/* Template Form */}
+            <form onSubmit={handleSubmitFoundModal} className="space-y-4">
+              {/* Field 1: Lokasi Ditemukan */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-800">
+                  Lokasi Spesifik Ditemukan <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <MapPin size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    required
+                    value={foundLocation}
+                    onChange={(e) => setFoundLocation(e.target.value)}
+                    placeholder="Contoh: Meja Perpustakaan Lt 2, Kantin Gedung B..."
+                    className="w-full pl-9 pr-3 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400">
+                  Di mana Anda menemukan atau mengamankan barang ini?
+                </p>
+              </div>
+
+              {/* Field 2: Status & Tempat Penyimpanan */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-gray-800">
+                    Pilih Titik Kumpul / Tempat Penitipan Aman <span className="text-rose-500">*</span>
+                  </label>
+                  <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
+                    Resmi Admin Kampus
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {safePointsList.map((sp) => {
+                    const isSelected = selectedSafePointId === sp.id;
+                    return (
+                      <button
+                        key={sp.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSafePointId(sp.id);
+                          setStorageType('security');
+                          setStorageNote(sp.nama_lokasi);
+                        }}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-[#30AFFF] bg-blue-50/70 text-gray-900 font-semibold ring-2 ring-[#30AFFF]/20'
+                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="font-bold text-xs text-gray-900 line-clamp-1">
+                          🛡️ {sp.nama_lokasi}
+                        </div>
+                        <span className="block text-[10px] text-gray-500 mt-0.5 line-clamp-1">
+                          {sp.alamat_lengkap}
+                        </span>
+                        <div className="flex items-center gap-1 text-[10px] text-emerald-700 font-medium mt-1">
+                          {sp.ada_satpam && <span>• 👮 Satpam</span>}
+                          {sp.ada_cctv && <span>• 📹 CCTV</span>}
+                          <span>• 🕒 {sp.jam_buka}-{sp.jam_tutup}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Field 3: Kondisi Barang */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-800">
+                  Kondisi Barang Saat Ditemukan
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['Utuh & Baik', 'Ada Sedikit Lecet / Terbuka', 'Sebagian Saja'].map((cond) => (
+                    <button
+                      key={cond}
+                      type="button"
+                      onClick={() => setItemCondition(cond)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        itemCondition === cond
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {cond}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Field 4: Pesan Template untuk Pemilik */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-800">
+                  Pesan Pembuka untuk Pemilik ({item.finderName})
+                </label>
+                <textarea
+                  rows={3}
+                  value={finderMessage}
+                  onChange={(e) => setFinderMessage(e.target.value)}
+                  className="w-full p-3 bg-gray-50/70 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none resize-none leading-relaxed"
+                  placeholder="Tuliskan pesan pembuka untuk pemilik barang..."
+                />
+              </div>
+
+              {/* Safety notice */}
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200/70 flex items-start gap-2 text-[11px] text-amber-800">
+                <ShieldCheck size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  Demi keamanan dan pencegahan penipuan, serah terima fisik barang wajib dikoordinasikan melalui chat ini dan dilakukan di Pos Satpam Kampus.
+                </span>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  disabled={isSubmittingFound}
+                  onClick={() => setShowFoundModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingFound}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-[0.98]"
+                >
+                  {isSubmittingFound ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Mengirim Data & Membuka Chat...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={14} />
+                      <span>Kirim & Buka Chat Pemilik</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

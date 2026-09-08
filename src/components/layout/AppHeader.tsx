@@ -253,6 +253,16 @@ export default function AppHeader({
                   </div>
 
                   <div className="py-1">
+                    {user.tipe_akun === 'admin' && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-[#30AFFF] hover:bg-blue-50"
+                      >
+                        <ShieldAlert size={14} className="text-[#30AFFF]" />
+                        <span>Panel Admin</span>
+                      </Link>
+                    )}
                     <Link
                       href="/profile"
                       onClick={() => setProfileDropdownOpen(false)}

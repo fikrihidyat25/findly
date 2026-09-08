@@ -171,9 +171,57 @@ function RegisterFormContent() {
         if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
           throw new Error('Email ini sudah terdaftar. Silakan login ke akun Anda.');
         }
-        if (signUpError.message.includes('rate limit')) {
-          throw new Error('Batas pengiriman email per jam tercapai (rate limit). Tunggu beberapa saat atau periksa inbox Anda.');
+
+        const isSmtpFailure =
+          signUpError.message.toLowerCase().includes('rate limit') ||
+          signUpError.message.includes('504') ||
+          signUpError.message.toLowerCase().includes('timeout') ||
+          signUpError.message.toLowerCase().includes('gateway') ||
+          signUpError.message.toLowerCase().includes('connection') ||
+          signUpError.message.toLowerCase().includes('failed to send');
+
+        // Jika terjadi kendala SMTP / rate limit / 504 timeout, otomatis fallback daftarkan langsung via database RPC
+        if (isSmtpFailure) {
+          const { data: rpcData, error: rpcError } = await supabase.rpc('daftar_pengguna_cepat', {
+            p_email: email.trim(),
+            p_password: password,
+            p_nama_lengkap: fullName.trim(),
+            p_tipe_akun: accountType,
+            p_universitas: accountType === 'campus' ? university.trim() : '',
+            p_role_kampus: accountType === 'campus' ? campusRole : '',
+            p_nim_nip: accountType === 'campus' ? nimNip.trim() : '',
+          });
+
+          if (rpcError) {
+            throw new Error('Gagal mendaftarkan akun. Silakan periksa koneksi atau coba beberapa saat lagi.');
+          }
+
+          if (rpcData && !rpcData.success) {
+            throw new Error(rpcData.message || 'Gagal mendaftarkan akun.');
+          }
+
+          // Otomatis login ke sesi yang baru didaftarkan
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password: password,
+          });
+
+          if (signInError) {
+            setSuccessMessage('Pendaftaran berhasil! Silakan login dengan email dan password Anda.');
+            setTimeout(() => {
+              router.push('/login');
+            }, 1200);
+            return;
+          }
+
+          setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke Dashboard...');
+          setTimeout(() => {
+            router.push('/dashboard');
+            router.refresh();
+          }, 1000);
+          return;
         }
+
         throw signUpError;
       }
 
@@ -287,25 +335,11 @@ function RegisterFormContent() {
               <>
                 {/* Error Alert */}
                 {errorMessage && (
-                  <div className="mb-4 p-3.5 bg-red-50/80 border border-red-200 text-red-700 rounded-xl text-xs flex flex-col gap-2.5 leading-relaxed animate-in fade-in duration-200">
-                    <div className="flex items-start gap-2.5">
-                      <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-500" />
-                      <div className="flex-1">
-                        <p>{errorMessage}</p>
-                      </div>
+                  <div className="mb-4 p-3.5 bg-red-50/80 border border-red-200 text-red-700 rounded-xl text-xs flex items-start gap-2.5 leading-relaxed animate-in fade-in duration-200">
+                    <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-500" />
+                    <div className="flex-1">
+                      <p>{errorMessage}</p>
                     </div>
-                    {errorMessage.includes('rate limit') && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          router.push('/dashboard');
-                          router.refresh();
-                        }}
-                        className="mt-1 bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm w-full text-center transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                      >
-                        <span>🚀 Lewati & Masuk Langsung ke Dashboard (Mode Demo)</span>
-                      </button>
-                    )}
                   </div>
                 )}
 

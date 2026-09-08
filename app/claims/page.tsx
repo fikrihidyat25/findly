@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import AppLayout from '@/src/components/layout/AppLayout';
 import {
   FileCheck2,
@@ -99,6 +100,7 @@ function getStatusBadge(status: string) {
 }
 
 export default function ClaimsDashboardPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'outgoing' | 'incoming'>('outgoing');
   const [outgoingClaims, setOutgoingClaims] = useState<ClaimItem[]>([]);
   const [incomingClaims, setIncomingClaims] = useState<ClaimItem[]>([]);
@@ -118,6 +120,17 @@ export default function ClaimsDashboardPage() {
           return;
         }
 
+        const { data: profile } = await supabase
+          .from('profil_pengguna')
+          .select('tipe_akun, role_kampus')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin') {
+          router.replace('/admin/klaim');
+          return;
+        }
+
         // 1. Fetch Outgoing Claims (klaim yang diajukan oleh user)
         const { data: outgoingData, error: outErr } = await supabase
           .from('klaim_barang')
@@ -129,13 +142,14 @@ export default function ClaimsDashboardPage() {
           const mappedOut: ClaimItem[] = outgoingData.map((c: any) => {
             const badge = getStatusBadge(c.status);
             const report = c.laporan_barang;
+            const isLost = report?.jenis_laporan === 'KEHILANGAN';
             const finder = report?.profil_pengguna;
             return {
               id: c.id,
-              itemName: report?.nama_barang || 'Barang Kampus',
+              itemName: report?.nama_barang || (isLost ? 'Barang Hilang' : 'Barang Kampus'),
               itemCategory: report?.kategori || 'Barang Kampus',
-              counterpartName: finder?.nama_lengkap || 'Penemu Barang',
-              counterpartRole: finder?.role_kampus || 'Civitas Kampus',
+              counterpartName: finder?.nama_lengkap || (isLost ? 'Pemilik Barang' : 'Penemu Barang'),
+              counterpartRole: finder?.role_kampus || (isLost ? 'Pemilik Laporan' : 'Civitas Kampus'),
               location: report?.lokasi_terakhir || 'Lingkungan Kampus',
               date: new Date(c.dibuat_pada).toLocaleDateString('id-ID', {
                 day: 'numeric',
@@ -151,7 +165,7 @@ export default function ClaimsDashboardPage() {
           setOutgoingClaims(mappedOut);
         }
 
-        // 2. Fetch Incoming Claims (klaim dari orang lain atas laporan temuan milik user)
+        // 2. Fetch Incoming Claims (klaim dari orang lain atas laporan milik user)
         const { data: myReports } = await supabase
           .from('laporan_barang')
           .select('id')
@@ -169,13 +183,14 @@ export default function ClaimsDashboardPage() {
             const mappedIn: ClaimItem[] = incomingData.map((c: any) => {
               const badge = getStatusBadge(c.status);
               const report = c.laporan_barang;
+              const isLost = report?.jenis_laporan === 'KEHILANGAN';
               const claimant = c.profil_pengguna;
               return {
                 id: c.id,
-                itemName: report?.nama_barang || 'Barang Kampus',
+                itemName: report?.nama_barang || (isLost ? 'Barang Hilang' : 'Barang Kampus'),
                 itemCategory: report?.kategori || 'Barang Kampus',
-                counterpartName: claimant?.nama_lengkap || 'Pengaju Klaim',
-                counterpartRole: claimant?.role_kampus || 'Civitas Kampus',
+                counterpartName: claimant?.nama_lengkap || (isLost ? 'Penemu Barang' : 'Pengaju Klaim'),
+                counterpartRole: claimant?.role_kampus || (isLost ? 'Penemu Barang' : 'Civitas Kampus'),
                 location: report?.lokasi_terakhir || 'Lingkungan Kampus',
                 date: new Date(c.dibuat_pada).toLocaleDateString('id-ID', {
                   day: 'numeric',
@@ -362,7 +377,7 @@ export default function ClaimsDashboardPage() {
 
                       <div className="flex items-center gap-2 self-end sm:self-center">
                         <Link
-                          href="/messages"
+                          href={`/messages?id=${claim.id}`}
                           className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
                         >
                           <MessageSquare size={14} />

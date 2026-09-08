@@ -72,13 +72,24 @@
     CREATE TABLE IF NOT EXISTS public.titik_kumpul_aman (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         nama_lokasi TEXT NOT NULL,
-        ada_satpam BOOLEAN DEFAULT FALSE,
-        ada_cctv BOOLEAN DEFAULT FALSE,
-        jam_buka TIME NOT NULL,
-        jam_tutup TIME NOT NULL,
+        alamat_lengkap TEXT,
+        deskripsi TEXT,
+        latitude DOUBLE PRECISION DEFAULT -6.36442,
+        longitude DOUBLE PRECISION DEFAULT 106.82861,
+        ada_satpam BOOLEAN DEFAULT TRUE,
+        ada_cctv BOOLEAN DEFAULT TRUE,
+        jam_buka TIME NOT NULL DEFAULT '08:00:00',
+        jam_tutup TIME NOT NULL DEFAULT '21:00:00',
         aktif BOOLEAN DEFAULT TRUE,
+        kampus TEXT DEFAULT 'Universitas Indonesia',
         dibuat_pada TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
+
+    ALTER TABLE public.titik_kumpul_aman ADD COLUMN IF NOT EXISTS alamat_lengkap TEXT;
+    ALTER TABLE public.titik_kumpul_aman ADD COLUMN IF NOT EXISTS deskripsi TEXT;
+    ALTER TABLE public.titik_kumpul_aman ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION DEFAULT -6.36442;
+    ALTER TABLE public.titik_kumpul_aman ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION DEFAULT 106.82861;
+    ALTER TABLE public.titik_kumpul_aman ADD COLUMN IF NOT EXISTS kampus TEXT DEFAULT 'Universitas Indonesia';
 
     -- 6. Tabel Jadwal Pengembalian
     CREATE TABLE IF NOT EXISTS public.jadwal_pengembalian (
@@ -91,14 +102,26 @@
         dibuat_pada TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
 
-    -- 7. Aktifkan Row Level Security (RLS)
+    -- 7. Tabel Pesan Chat (Real-time P2P Chat Antar Pengguna)
+    CREATE TABLE IF NOT EXISTS public.pesan_chat (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        klaim_id UUID REFERENCES public.klaim_barang(id) ON DELETE CASCADE,
+        pengirim_id UUID REFERENCES public.profil_pengguna(id) ON DELETE CASCADE,
+        pesan TEXT NOT NULL,
+        tipe_pesan TEXT DEFAULT 'teks', -- 'teks', 'sistem'
+        dibaca BOOLEAN DEFAULT FALSE,
+        dibuat_pada TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+
+    -- 8. Aktifkan Row Level Security (RLS)
     ALTER TABLE public.profil_pengguna ENABLE ROW LEVEL SECURITY;
     ALTER TABLE public.laporan_barang ENABLE ROW LEVEL SECURITY;
     ALTER TABLE public.klaim_barang ENABLE ROW LEVEL SECURITY;
     ALTER TABLE public.titik_kumpul_aman ENABLE ROW LEVEL SECURITY;
     ALTER TABLE public.jadwal_pengembalian ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.pesan_chat ENABLE ROW LEVEL SECURITY;
 
-    -- 8. Kebijakan Keamanan RLS
+    -- 9. Kebijakan Keamanan RLS
     -- Profil Pengguna
     DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profil_pengguna;
     CREATE POLICY "Public profiles are viewable by everyone" ON public.profil_pengguna FOR SELECT USING (true);
@@ -129,11 +152,53 @@
     DROP POLICY IF EXISTS "Pengguna dapat mengajukan klaim" ON public.klaim_barang;
     CREATE POLICY "Pengguna dapat mengajukan klaim" ON public.klaim_barang FOR INSERT WITH CHECK (auth.uid() = pengklaim_id);
 
+    -- Pesan Chat (Realtime Obrolan)
+    DROP POLICY IF EXISTS "Pihak terkait dapat melihat pesan" ON public.pesan_chat;
+    CREATE POLICY "Pihak terkait dapat melihat pesan" ON public.pesan_chat FOR SELECT USING (
+        auth.uid() = pengirim_id OR
+        klaim_id IN (
+            SELECT k.id FROM public.klaim_barang k
+            JOIN public.laporan_barang l ON k.laporan_id = l.id
+            WHERE k.pengklaim_id = auth.uid() OR l.pelapor_id = auth.uid()
+        )
+    );
+
+    DROP POLICY IF EXISTS "Pengguna dapat mengirim pesan" ON public.pesan_chat;
+    CREATE POLICY "Pengguna dapat mengirim pesan" ON public.pesan_chat FOR INSERT WITH CHECK (
+        auth.uid() = pengirim_id
+    );
+
+    -- Aktifkan Realtime Replication untuk tabel pesan_chat
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_publication_tables 
+            WHERE pubname = 'supabase_realtime' AND tablename = 'pesan_chat'
+        ) THEN
+            ALTER PUBLICATION supabase_realtime ADD TABLE public.pesan_chat;
+        END IF;
+    EXCEPTION
+        WHEN OTHERS THEN
+            NULL;
+    END $$;
+
     -- Titik Kumpul Aman
     DROP POLICY IF EXISTS "Titik kumpul dapat dilihat publik" ON public.titik_kumpul_aman;
     CREATE POLICY "Titik kumpul dapat dilihat publik" ON public.titik_kumpul_aman FOR SELECT USING (true);
 
-    -- 9. Trigger Otomatis: Sinkronkan Auth Users ke Profil Pengguna
+    DROP POLICY IF EXISTS "Titik kumpul dapat dikelola pengguna terautentikasi" ON public.titik_kumpul_aman;
+    CREATE POLICY "Titik kumpul dapat dikelola pengguna terautentikasi" ON public.titik_kumpul_aman FOR ALL USING (auth.uid() IS NOT NULL);
+
+    -- Seed Data Awal Titik Kumpul Aman Resmi Kampus
+    INSERT INTO public.titik_kumpul_aman (nama_lokasi, alamat_lengkap, deskripsi, latitude, longitude, jam_buka, jam_tutup, ada_satpam, ada_cctv, aktif)
+    VALUES
+        ('Pos Satpam Utama Gerbang Barat', 'Jl. Prof. Dr. Fuad Hassan, Gerbang Barat Kampus UI, Depok', 'Pos keamanan utama kampus dengan penjagaan personil satpam 24 jam dan pantauan CCTV aktif.', -6.36442, 106.82861, '00:00:00', '23:59:59', true, true, true),
+        ('Lobi Utama Gedung Rektorat (Lantai 1)', 'Gedung Pusat Administrasi & Rektorat, Kampus UI, Depok', 'Lobi ber-AC dan terang di depan meja resepsionis pelayanan terpadu civitas kampus.', -6.36284, 106.83115, '07:30:00', '17:30:00', true, true, true),
+        ('Perpustakaan Pusat (The Crystal of Knowledge)', 'Gedung Perpustakaan Pusat UI, Lingkar Danau Kenanga, Depok', 'Titik temu di samping loker penitipan & meja informasi lantai dasar perpustakaan.', -6.36531, 106.83182, '08:00:00', '20:00:00', true, true, true),
+        ('Pusat Kegiatan Mahasiswa (Hall Gedung PKM)', 'Gedung Pusat Kegiatan Mahasiswa (PKM), Kampus UI, Depok', 'Area terbuka dekat foodcourt mahasiswa, selalu ramai dan terpantau petugas gedung.', -6.36705, 106.82954, '08:00:00', '21:00:00', true, true, true)
+    ON CONFLICT DO NOTHING;
+
+    -- 10. Trigger Otomatis: Sinkronkan Auth Users ke Profil Pengguna
     CREATE OR REPLACE FUNCTION public.handle_new_user()
     RETURNS TRIGGER 
     SECURITY DEFINER
