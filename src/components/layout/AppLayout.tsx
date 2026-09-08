@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AppSidebar from './AppSidebar';
 import AppHeader from './AppHeader';
+import { createClient } from '@/src/lib/supabase/client';
+import { fetchUnreadCounts } from '@/src/lib/notifications';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -18,6 +20,63 @@ export default function AppLayout({
   fullHeight = false,
 }: AppLayoutProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  const loadCounts = useCallback(async () => {
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const counts = await fetchUnreadCounts(user.id);
+      setUnreadNotifs(counts.unreadNotifs);
+      setUnreadMessages(counts.unreadMessages);
+    } catch {
+      // silently ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCounts();
+
+    const handleStorageOrFocus = () => {
+      loadCounts();
+    };
+
+    window.addEventListener('focus', handleStorageOrFocus);
+    window.addEventListener('storage', handleStorageOrFocus);
+    window.addEventListener('findly:counts_updated', handleStorageOrFocus);
+
+    // Setup Supabase realtime subscriptions
+    const supabase = createClient();
+    const channel = supabase
+      .channel('app_layout_realtime_counts')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'klaim_barang' },
+        () => {
+          loadCounts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'pesan_chat' },
+        () => {
+          loadCounts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('focus', handleStorageOrFocus);
+      window.removeEventListener('storage', handleStorageOrFocus);
+      window.removeEventListener('findly:counts_updated', handleStorageOrFocus);
+      supabase.removeChannel(channel);
+    };
+  }, [loadCounts]);
 
   return (
     <div
@@ -29,6 +88,8 @@ export default function AppLayout({
       <AppSidebar
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
+        unreadNotifs={unreadNotifs}
+        unreadMessages={unreadMessages}
       />
 
       {/* Main Content Column */}
@@ -42,6 +103,8 @@ export default function AppLayout({
           onOpenMobileMenu={() => setMobileSidebarOpen(true)}
           searchQuery={searchQuery}
           onSearchChange={onSearchChange}
+          unreadNotifs={unreadNotifs}
+          unreadMessages={unreadMessages}
         />
 
         {/* Content Viewport */}

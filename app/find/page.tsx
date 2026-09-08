@@ -32,6 +32,7 @@ interface CampusItem {
   date: string;
   description: string;
   icon: any;
+  pelaporId?: string;
   colorScheme: {
     bg: string;
     text: string;
@@ -102,6 +103,7 @@ function formatRelativeTime(dateString: string) {
 export default function FindItemsPage() {
   const [items, setItems] = useState<CampusItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'lost' | 'found'>('all');
@@ -120,6 +122,13 @@ export default function FindItemsPage() {
       setLoading(true);
       try {
         const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          setCurrentUserId(user.id);
+        }
+
         const { data, error } = await supabase
           .from('laporan_barang')
           .select('*')
@@ -145,6 +154,7 @@ export default function FindItemsPage() {
               }),
               description: row.deskripsi || '',
               icon: getCategoryIcon(cat),
+              pelaporId: row.pelapor_id,
               colorScheme: getColorScheme(isFound ? 'found' : 'lost'),
             };
           });
@@ -415,7 +425,14 @@ export default function FindItemsPage() {
 
                     {/* Action Button without AI Slop Arrows */}
                     <div className="pt-2">
-                      {item.type === 'found' ? (
+                      {currentUserId && item.pelaporId === currentUserId ? (
+                        <Link
+                          href={`/find/${item.id}`}
+                          className="w-full inline-flex items-center justify-center py-2 px-3 rounded-xl border border-gray-200 bg-gray-50/70 hover:bg-gray-100 text-gray-700 text-xs font-semibold transition-all"
+                        >
+                          Laporan Milik Anda
+                        </Link>
+                      ) : item.type === 'found' ? (
                         <Link
                           href={`/claim/new?id=${item.id}`}
                           className="w-full inline-flex items-center justify-center py-2 px-3 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold transition-all shadow-2xs"

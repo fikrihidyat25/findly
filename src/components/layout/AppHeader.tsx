@@ -22,6 +22,8 @@ interface AppHeaderProps {
   onOpenMobileMenu?: () => void;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
+  unreadNotifs?: number;
+  unreadMessages?: number;
 }
 
 interface UserProfile {
@@ -38,6 +40,8 @@ export default function AppHeader({
   onOpenMobileMenu,
   searchQuery = '',
   onSearchChange,
+  unreadNotifs = 0,
+  unreadMessages = 0,
 }: AppHeaderProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -174,6 +178,11 @@ export default function AppHeader({
               aria-label="Notifications"
             >
               <Bell size={19} className="stroke-[1.75]" />
+              {unreadNotifs > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-rose-500 rounded-full border-2 border-white leading-none shadow-xs">
+                  {unreadNotifs > 9 ? '9+' : unreadNotifs}
+                </span>
+              )}
             </Link>
 
             {/* Messages */}
@@ -183,6 +192,11 @@ export default function AppHeader({
               aria-label="Messages"
             >
               <MessageSquare size={19} className="stroke-[1.75]" />
+              {unreadMessages > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-[#30AFFF] rounded-full border-2 border-white leading-none shadow-xs">
+                  {unreadMessages > 9 ? '9+' : unreadMessages}
+                </span>
+              )}
             </Link>
 
             {/* User Profile Pill & Dropdown */}

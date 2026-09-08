@@ -114,6 +114,7 @@ export default function ItemDetailPage() {
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Modal template state for "Saya Menemukan Barang Ini"
   const [showFoundModal, setShowFoundModal] = useState(false);
@@ -150,6 +151,13 @@ export default function ItemDetailPage() {
       setLoading(true);
       try {
         const supabase = createClient();
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
+        if (authUser) {
+          setCurrentUserId(authUser.id);
+        }
+
         const { data, error } = await supabase
           .from('laporan_barang')
           .select('*, profil_pengguna:pelapor_id(nama_lengkap, role_kampus, universitas, status_kampus_terverifikasi)')
@@ -623,7 +631,40 @@ export default function ItemDetailPage() {
 
           {/* Action Buttons */}
           <div className="pt-4 flex flex-col sm:flex-row gap-3">
-            {item.type === 'found' ? (
+            {currentUserId && item.pelaporId === currentUserId ? (
+              <div className="w-full p-4 rounded-2xl bg-blue-50/80 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 text-xs text-blue-900">
+                  <ShieldCheck size={20} className="text-[#30AFFF] shrink-0" />
+                  <div>
+                    <strong className="block font-semibold">
+                      {item.type === 'found'
+                        ? 'Anda adalah Penemu yang Melaporkan Barang Ini'
+                        : 'Ini adalah Laporan Kehilangan Milik Anda'}
+                    </strong>
+                    <span className="text-gray-600 text-[11px] sm:text-xs">
+                      {item.type === 'found'
+                        ? 'Anda tidak dapat mengklaim barang temuan yang Anda laporkan sendiri. Menunggu pemilik sah mengajukan klaim verifikasi.'
+                        : 'Anda tidak dapat melaporkan penemuan pada laporan kehilangan milik Anda sendiri. Menunggu civitas kampus yang menemukan memberikan respon.'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Link
+                    href="/messages"
+                    className="px-4 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-bold transition-colors shadow-2xs"
+                  >
+                    Lihat Pesan & Respon
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    className="px-3 py-2 rounded-xl border border-gray-200 hover:bg-white text-gray-700 text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    Bagikan
+                  </button>
+                </div>
+              </div>
+            ) : item.type === 'found' ? (
               <>
                 <Link
                   href={`/claim/new?id=${item.id}`}

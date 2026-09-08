@@ -28,9 +28,16 @@ import { createClient } from '@/src/lib/supabase/client';
 interface SidebarProps {
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
+  unreadNotifs?: number;
+  unreadMessages?: number;
 }
 
-export default function AppSidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
+export default function AppSidebar({
+  mobileOpen = false,
+  onCloseMobile,
+  unreadNotifs = 0,
+  unreadMessages = 0,
+}: SidebarProps) {
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -69,6 +76,9 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
     badge?: number | string;
   }
 
+  const msgBadge = unreadMessages > 0 ? (unreadMessages > 9 ? '9+' : unreadMessages) : undefined;
+  const notifBadge = unreadNotifs > 0 ? (unreadNotifs > 9 ? '9+' : unreadNotifs) : undefined;
+
   // 1. Navigation for Normal Student / Community User
   const userNavItems: NavItem[] = [
     { label: 'Beranda', href: '/dashboard', icon: Home },
@@ -76,9 +86,9 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
     { label: 'Saya Kehilangan', href: '/lost/new', icon: AlertCircle },
     { label: 'Saya Menemukan', href: '/found/new', icon: HelpCircle },
     { label: 'Klaim Saya', href: '/claims', icon: FileCheck2 },
-    { label: 'Pesan', href: '/messages', icon: MessageSquare },
+    { label: 'Pesan', href: '/messages', icon: MessageSquare, badge: msgBadge },
     { label: 'Disimpan', href: '/saved', icon: Bookmark },
-    { label: 'Notifikasi', href: '/notifications', icon: Bell },
+    { label: 'Notifikasi', href: '/notifications', icon: Bell, badge: notifBadge },
   ];
 
   // 2. Dedicated Navigation for Administrator (No personal reporting, focused on moderation & mediation)
@@ -86,10 +96,10 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
     { label: 'Dashboard Admin', href: '/admin', icon: LayoutDashboard },
     { label: 'Moderasi Laporan', href: '/admin/laporan', icon: FileText },
     { label: 'Mediasi Klaim', href: '/admin/klaim', icon: FileCheck2 },
-    { label: 'Pesan & Mediasi', href: '/messages', icon: MessageSquare },
+    { label: 'Pesan & Mediasi', href: '/messages', icon: MessageSquare, badge: msgBadge },
     { label: 'Verifikasi Civitas', href: '/admin/pengguna', icon: Users },
     { label: 'Katalog Barang', href: '/find', icon: Search },
-    { label: 'Notifikasi', href: '/notifications', icon: Bell },
+    { label: 'Notifikasi', href: '/notifications', icon: Bell, badge: notifBadge },
   ];
 
   const currentNavItems = isAdmin ? adminNavItems : userNavItems;
@@ -211,7 +221,11 @@ export default function AppSidebar({ mobileOpen = false, onCloseMobile }: Sideba
                   <span>{item.label}</span>
                 </div>
                 {item.badge && (
-                  <span className="bg-[#30AFFF] text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-2xs">
+                  <span
+                    className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-2xs ${
+                      item.label === 'Notifikasi' ? 'bg-rose-500' : 'bg-[#30AFFF]'
+                    }`}
+                  >
                     {item.badge}
                   </span>
                 )}

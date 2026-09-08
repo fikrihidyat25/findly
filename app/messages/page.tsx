@@ -541,6 +541,32 @@ export default function MessagesPage() {
               )
             );
           }
+
+          if (currentUserId && typeof window !== 'undefined') {
+            try {
+              const key = `findly_read_notifs_${currentUserId}`;
+              const readIds: string[] = JSON.parse(localStorage.getItem(key) || '[]');
+              let modified = false;
+              const incomingNotifId = `claim-in-${convId}`;
+              if (!readIds.includes(incomingNotifId)) {
+                readIds.push(incomingNotifId);
+                modified = true;
+              }
+              dbMsgs.forEach((m) => {
+                const chatNotifId = `chat-${convId}-${m.id}`;
+                if (!readIds.includes(chatNotifId)) {
+                  readIds.push(chatNotifId);
+                  modified = true;
+                }
+              });
+              if (modified) {
+                localStorage.setItem(key, JSON.stringify(readIds));
+                window.dispatchEvent(new Event('findly:counts_updated'));
+              }
+            } catch {
+              // ignore
+            }
+          }
         }
       } catch (err) {
         // graceful fallback if table not yet created

@@ -111,6 +111,7 @@ export default function ClaimSubmissionForm({ initialItem }: ClaimSubmissionForm
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isSelfReport, setIsSelfReport] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Form Fields - Step 1
@@ -131,6 +132,9 @@ export default function ClaimSubmissionForm({ initialItem }: ClaimSubmissionForm
       setIsLoadingItem(true);
       try {
         const supabase = createClient();
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
 
         let query = supabase
           .from('laporan_barang')
@@ -160,6 +164,10 @@ export default function ClaimSubmissionForm({ initialItem }: ClaimSubmissionForm
             });
           }
           return;
+        }
+
+        if (authUser && data.pelapor_id === authUser.id) {
+          setIsSelfReport(true);
         }
 
         const isFound = data.jenis_laporan === 'DITEMUKAN';
@@ -332,6 +340,38 @@ export default function ClaimSubmissionForm({ initialItem }: ClaimSubmissionForm
           >
             <CheckCircle2 size={14} />
             <span>Lihat di Klaim Saya</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (isSelfReport) {
+    return (
+      <div className="max-w-xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-gray-100 shadow-sm text-center space-y-5 animate-in fade-in duration-200 my-8">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+          <AlertCircle size={32} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+            Tidak Dapat Mengklaim Laporan Sendiri
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
+            Anda adalah pelapor dari barang <strong className="text-gray-900">&quot;{item.name}&quot;</strong>. Anda tidak dapat mengajukan klaim verifikasi atas barang yang Anda laporkan sendiri.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Link
+            href="/find"
+            className="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-all"
+          >
+            Kembali ke Katalog
+          </Link>
+          <Link
+            href="/messages"
+            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-sm transition-all"
+          >
+            Lihat Pesan & Klaim Masuk
           </Link>
         </div>
       </div>
