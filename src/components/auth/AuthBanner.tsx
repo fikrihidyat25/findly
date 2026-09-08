@@ -9,8 +9,8 @@ export default function AuthBanner() {
 
       {/* Brand Logo */}
       <div className="relative z-10">
-        <Link 
-          href="/" 
+        <Link
+          href="/"
           className="text-2xl font-black tracking-tight text-primary drop-shadow-sm hover:opacity-85 transition-opacity inline-block"
         >
           Findly.
@@ -33,7 +33,7 @@ export default function AuthBanner() {
       {/* Footer text */}
       <div className="relative z-10">
         <p className="text-xs text-white/75 font-normal tracking-wide">
-          © 2026 Findly Inc. Hak Cipta Dilindungi.
+          © 2026 Findly.
         </p>
       </div>
     </div>

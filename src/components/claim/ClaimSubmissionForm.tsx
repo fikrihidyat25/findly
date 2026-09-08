@@ -179,10 +179,10 @@ export default function ClaimSubmissionForm({ initialItem }: ClaimSubmissionForm
           location: data.lokasi_terakhir || 'Lingkungan Kampus',
           foundDate: data.dibuat_pada
             ? new Date(data.dibuat_pada).toLocaleDateString('id-ID', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-              })
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric',
+            })
             : 'Baru saja',
           category: data.kategori || (isFound ? 'Barang Ditemukan' : 'Barang Kehilangan'),
           type: isFound ? 'found' : 'lost',
@@ -453,26 +453,24 @@ export default function ClaimSubmissionForm({ initialItem }: ClaimSubmissionForm
                 <div key={step.num} className="flex flex-col items-center">
                   {/* Step Circle */}
                   <div
-                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs ${
-                      isCurrent
+                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs ${isCurrent
                         ? 'bg-[#30AFFF] text-white ring-4 ring-[#30AFFF]/20 scale-105 sm:scale-110'
                         : isCompleted
-                        ? 'bg-[#30AFFF] text-white'
-                        : 'bg-white text-gray-400 border border-gray-300'
-                    }`}
+                          ? 'bg-[#30AFFF] text-white'
+                          : 'bg-white text-gray-400 border border-gray-300'
+                      }`}
                   >
                     {isCompleted ? <Check size={14} className="stroke-[2.5]" /> : step.num}
                   </div>
 
                   {/* Step Label */}
                   <span
-                    className={`text-[10px] sm:text-xs font-semibold mt-1.5 sm:mt-2 text-center leading-tight max-w-[80px] sm:max-w-[120px] px-0.5 transition-colors ${
-                      isCurrent
+                    className={`text-[10px] sm:text-xs font-semibold mt-1.5 sm:mt-2 text-center leading-tight max-w-[80px] sm:max-w-[120px] px-0.5 transition-colors ${isCurrent
                         ? 'text-gray-900 font-bold'
                         : isCompleted
-                        ? 'text-[#30AFFF] font-medium'
-                        : 'text-gray-400'
-                    }`}
+                          ? 'text-[#30AFFF] font-medium'
+                          : 'text-gray-400'
+                      }`}
                   >
                     {step.label}
                   </span>

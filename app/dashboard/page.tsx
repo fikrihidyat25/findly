@@ -19,30 +19,27 @@ export default function DashboardPage() {
     async function loadUser() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.replace('/login?redirect=/dashboard');
-        return;
-      }
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profil_pengguna')
+          .select('nama_lengkap, tipe_akun, role_kampus')
+          .eq('id', user.id)
+          .single();
 
-      const { data: profile } = await supabase
-        .from('profil_pengguna')
-        .select('nama_lengkap, tipe_akun, role_kampus')
-        .eq('id', user.id)
-        .single();
+        if (
+          profile?.tipe_akun === 'admin' ||
+          profile?.role_kampus === 'admin' ||
+          user.user_metadata?.tipe_akun === 'admin'
+        ) {
+          router.replace('/admin');
+          return;
+        }
 
-      if (
-        profile?.tipe_akun === 'admin' ||
-        profile?.role_kampus === 'admin' ||
-        user.user_metadata?.tipe_akun === 'admin'
-      ) {
-        router.replace('/admin');
-        return;
-      }
-
-      const fullName = profile?.nama_lengkap || user.user_metadata?.nama_lengkap || user.user_metadata?.full_name || user.email?.split('@')[0];
-      if (fullName) {
-        const firstName = fullName.trim().split(' ')[0];
-        setDisplayName(firstName);
+        const fullName = profile?.nama_lengkap || user.user_metadata?.nama_lengkap || user.user_metadata?.full_name || user.email?.split('@')[0];
+        if (fullName) {
+          const firstName = fullName.trim().split(' ')[0];
+          setDisplayName(firstName);
+        }
       }
     }
     loadUser();
@@ -50,21 +47,21 @@ export default function DashboardPage() {
 
   return (
     <AppLayout searchQuery={searchQuery} onSearchChange={setSearchQuery}>
-      <div className="space-y-5 sm:space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         {/* Welcome Greeting Banner */}
-        <div className="pb-2 border-b border-slate-200">
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
             {displayName ? `Selamat datang kembali, ${displayName}!` : 'Selamat datang di Findly!'}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Pusat terpadu pelaporan dan penemuan barang hilang civitas kampus.
+          <p className="text-xs sm:text-sm text-gray-500 font-normal">
+            Mari bersama ciptakan lingkungan kampus yang aman, transparan, dan peduli sesama.
           </p>
         </div>
 
         {/* Quick Actions & Profile Widget Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
           {/* Left: Quick Actions (Saya Kehilangan & Saya Menemukan) */}
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 flex flex-col justify-between">
             <QuickActions />
           </div>
 

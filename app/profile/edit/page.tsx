@@ -317,11 +317,10 @@ export default function EditProfilePage() {
                   onKeyDown={(e) => handleNumberKeyDown(e, setPhoneError)}
                   onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="Contoh: 081234567890"
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm focus:outline-none transition-all ${
-                    phoneError
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm focus:outline-none transition-all ${phoneError
                       ? 'border-rose-400 ring-2 ring-rose-100'
                       : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
-                  }`}
+                    }`}
                 />
                 <span className="text-[10px] text-gray-400">
                   Digunakan untuk notifikasi klaim & koordinasi pengambilan aman.
@@ -357,113 +356,111 @@ export default function EditProfilePage() {
                 Data Civitas Akademika
               </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              {/* Universitas */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-gray-700 flex items-center gap-1.5">
-                  <Building size={13} className="text-[#30AFFF]" />
-                  <span>Asal Kampus / Universitas</span>
-                </label>
-                <input
-                  type="text"
-                  value={university}
-                  onChange={(e) => setUniversity(e.target.value)}
-                  placeholder="Contoh: Universitas ABC"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-xs sm:text-sm focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all"
-                />
-              </div>
-
-              {/* Fakultas */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-gray-700 flex items-center gap-1.5">
-                  <GraduationCap size={13} className="text-[#30AFFF]" />
-                  <span>Fakultas</span>
-                </label>
-                <input
-                  type="text"
-                  value={faculty}
-                  onChange={(e) => setFaculty(e.target.value)}
-                  placeholder="Contoh: Fakultas Ilmu Komputer"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-xs sm:text-sm focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all"
-                />
-              </div>
-
-              {/* Program Studi */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-gray-700 flex items-center gap-1.5">
-                  <BookOpen size={13} className="text-[#30AFFF]" />
-                  <span>Program Studi</span>
-                </label>
-                <input
-                  type="text"
-                  value={studyProgram}
-                  onChange={(e) => setStudyProgram(e.target.value)}
-                  placeholder="Contoh: Teknik Informatika"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-xs sm:text-sm focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all"
-                />
-              </div>
-
-              {/* Tahun Angkatan */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                {/* Universitas */}
+                <div className="space-y-1.5">
                   <label className="font-bold text-gray-700 flex items-center gap-1.5">
-                    <Hash size={13} className="text-[#30AFFF]" />
-                    <span>Tahun Angkatan</span>
+                    <Building size={13} className="text-[#30AFFF]" />
+                    <span>Asal Kampus / Universitas</span>
                   </label>
-                  {cohortError && (
-                    <span className="text-[11px] font-bold text-rose-500 flex items-center gap-1 animate-in fade-in">
-                      <AlertCircle size={12} /> Hanya angka
-                    </span>
-                  )}
+                  <input
+                    type="text"
+                    value={university}
+                    onChange={(e) => setUniversity(e.target.value)}
+                    placeholder="Contoh: Universitas ABC"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-xs sm:text-sm focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all"
+                  />
                 </div>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={cohortYear}
-                  onKeyDown={(e) => handleNumberKeyDown(e, setCohortError)}
-                  onChange={(e) => handleCohortChange(e.target.value)}
-                  placeholder="Contoh: 2022"
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm focus:outline-none transition-all ${
-                    cohortError
-                      ? 'border-rose-400 ring-2 ring-rose-100'
-                      : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
-                  }`}
-                />
-              </div>
 
-              {/* NIM */}
-              <div className="space-y-1.5 sm:col-span-2">
-                <div className="flex items-center justify-between">
+                {/* Fakultas */}
+                <div className="space-y-1.5">
                   <label className="font-bold text-gray-700 flex items-center gap-1.5">
-                    <Hash size={13} className="text-[#30AFFF]" />
-                    <span>Nomor Induk Mahasiswa (NIM)</span>
+                    <GraduationCap size={13} className="text-[#30AFFF]" />
+                    <span>Fakultas</span>
                   </label>
-                  {nimError && (
-                    <span className="text-[11px] font-bold text-rose-500 flex items-center gap-1 animate-in fade-in">
-                      <AlertCircle size={12} /> Hanya angka
-                    </span>
-                  )}
+                  <input
+                    type="text"
+                    value={faculty}
+                    onChange={(e) => setFaculty(e.target.value)}
+                    placeholder="Contoh: Fakultas Ilmu Komputer"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-xs sm:text-sm focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all"
+                  />
                 </div>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={nim}
-                  onKeyDown={(e) => handleNumberKeyDown(e, setNimError)}
-                  onChange={(e) => handleNimChange(e.target.value)}
-                  placeholder="Contoh: 2212345678"
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm font-mono focus:outline-none transition-all ${
-                    nimError
-                      ? 'border-rose-400 ring-2 ring-rose-100'
-                      : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
-                  }`}
-                />
-                <span className="text-[10px] text-gray-400">
-                  NIM disensor secara otomatis demi keamanan privasi Anda pada laporan publik.
-                </span>
+
+                {/* Program Studi */}
+                <div className="space-y-1.5">
+                  <label className="font-bold text-gray-700 flex items-center gap-1.5">
+                    <BookOpen size={13} className="text-[#30AFFF]" />
+                    <span>Program Studi</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={studyProgram}
+                    onChange={(e) => setStudyProgram(e.target.value)}
+                    placeholder="Contoh: Teknik Informatika"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-gray-800 text-xs sm:text-sm focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all"
+                  />
+                </div>
+
+                {/* Tahun Angkatan */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-gray-700 flex items-center gap-1.5">
+                      <Hash size={13} className="text-[#30AFFF]" />
+                      <span>Tahun Angkatan</span>
+                    </label>
+                    {cohortError && (
+                      <span className="text-[11px] font-bold text-rose-500 flex items-center gap-1 animate-in fade-in">
+                        <AlertCircle size={12} /> Hanya angka
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={cohortYear}
+                    onKeyDown={(e) => handleNumberKeyDown(e, setCohortError)}
+                    onChange={(e) => handleCohortChange(e.target.value)}
+                    placeholder="Contoh: 2022"
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm focus:outline-none transition-all ${cohortError
+                        ? 'border-rose-400 ring-2 ring-rose-100'
+                        : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
+                      }`}
+                  />
+                </div>
+
+                {/* NIM */}
+                <div className="space-y-1.5 sm:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-gray-700 flex items-center gap-1.5">
+                      <Hash size={13} className="text-[#30AFFF]" />
+                      <span>Nomor Induk Mahasiswa (NIM)</span>
+                    </label>
+                    {nimError && (
+                      <span className="text-[11px] font-bold text-rose-500 flex items-center gap-1 animate-in fade-in">
+                        <AlertCircle size={12} /> Hanya angka
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={nim}
+                    onKeyDown={(e) => handleNumberKeyDown(e, setNimError)}
+                    onChange={(e) => handleNimChange(e.target.value)}
+                    placeholder="Contoh: 2212345678"
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm font-mono focus:outline-none transition-all ${nimError
+                        ? 'border-rose-400 ring-2 ring-rose-100'
+                        : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
+                      }`}
+                  />
+                  <span className="text-[10px] text-gray-400">
+                    NIM disensor secara otomatis demi keamanan privasi Anda pada laporan publik.
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
           )}
 
           {/* Bio Singkat */}

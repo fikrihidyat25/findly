@@ -121,10 +121,31 @@ export default function MessagesPage() {
         const loadedConversations: ChatConversation[] = [];
 
         if (userIsAdmin) {
+          // Admin hanya menangani klaim yang memerlukan intervensi mediator (status = 'DITOLAK' / DISPUTED)
           const { data: allClaims } = await supabase
             .from('klaim_barang')
             .select('*, laporan_barang(*, profil_pengguna:pelapor_id(nama_lengkap, role_kampus, universitas)), profil_pengguna:pengklaim_id(nama_lengkap, role_kampus, universitas)')
+            .eq('status', 'DITOLAK')
             .order('dibuat_pada', { ascending: false });
+
+          // Ambil preview pesan terakhir untuk setiap tiket mediasi
+          const claimIds = (allClaims || []).map((c: any) => c.id);
+          const latestMessagesMap: Record<string, { text: string; time: string }> = {};
+          if (claimIds.length > 0) {
+            const { data: recentMsgs } = await supabase
+              .from('pesan_chat')
+              .select('klaim_id, pesan, tipe_pesan, dibuat_pada')
+              .in('klaim_id', claimIds)
+              .order('dibuat_pada', { ascending: true });
+
+            (recentMsgs || []).forEach((m: any) => {
+              const d = new Date(m.dibuat_pada);
+              const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+              const parsed = parseChatMessage(m.pesan);
+              const snippet = parsed.imageUrl ? (parsed.text ? `📷 ${parsed.text}` : '📷 Foto') : parsed.text.split('\n')[0];
+              latestMessagesMap[m.klaim_id] = { text: snippet, time: timeStr };
+            });
+          }
 
           (allClaims || []).forEach((c: any) => {
             const report = c.laporan_barang;
@@ -134,16 +155,17 @@ export default function MessagesPage() {
             const claimantName = claimant?.nama_lengkap || 'Pengklaim';
             const pelaporName = pelapor?.nama_lengkap || 'Pelapor';
             const counterpartName = `${claimantName} & ${pelaporName}`;
-            const counterpartRole = c.status === 'DITOLAK' ? 'Sengketa Mediasi' : 'Mediasi Kampus';
+            const counterpartRole = 'Sengketa Mediasi';
 
             const d = new Date(c.dibuat_pada);
             const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 
-            let convStatus: 'VERIFYING' | 'RESOLVED' | 'DISPUTED' = 'VERIFYING';
+            let convStatus: 'VERIFYING' | 'RESOLVED' | 'DISPUTED' = 'DISPUTED';
             if (c.status === 'SELESAI') convStatus = 'RESOLVED';
-            else if (c.status === 'DITOLAK') convStatus = 'DISPUTED';
 
-            const initialText = c.pesan_verifikasi || 'Pengajuan klaim baru untuk ditinjau mediator.';
+            const latest = latestMessagesMap[c.id];
+            const initialText = latest ? latest.text : (c.pesan_verifikasi || 'Permintaan mediasi sengketa baru.');
+            const lastTime = latest ? latest.time : timeStr;
 
             loadedConversations.push({
               id: c.id,
@@ -151,10 +173,14 @@ export default function MessagesPage() {
               counterpartRole,
               itemTitle: report?.nama_barang || 'Barang Kampus',
               lastMessage: initialText,
-              lastTime: timeStr,
+              lastTime,
               unread: false,
               status: convStatus,
               initialPesanVerifikasi: c.pesan_verifikasi,
+              pengklaimId: c.pengklaim_id,
+              pelaporId: report?.pelapor_id,
+              pengklaimName: claimantName,
+              pelaporName: pelaporName,
             });
           });
         } else {
@@ -183,6 +209,28 @@ export default function MessagesPage() {
             myIncomingClaims = incoming || [];
           }
 
+          // Ambil preview pesan terakhir untuk chat user
+          const allUserClaimIds = [
+            ...(myOutgoingClaims || []).map((c: any) => c.id),
+            ...(myIncomingClaims || []).map((c: any) => c.id),
+          ];
+          const userLatestMsgsMap: Record<string, { text: string; time: string }> = {};
+          if (allUserClaimIds.length > 0) {
+            const { data: userRecentMsgs } = await supabase
+              .from('pesan_chat')
+              .select('klaim_id, pesan, tipe_pesan, dibuat_pada')
+              .in('klaim_id', allUserClaimIds)
+              .order('dibuat_pada', { ascending: true });
+
+            (userRecentMsgs || []).forEach((m: any) => {
+              const d = new Date(m.dibuat_pada);
+              const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+              const parsed = parseChatMessage(m.pesan);
+              const snippet = parsed.imageUrl ? (parsed.text ? `📷 ${parsed.text}` : '📷 Foto') : parsed.text.split('\n')[0];
+              userLatestMsgsMap[m.klaim_id] = { text: snippet, time: timeStr };
+            });
+          }
+
           (myOutgoingClaims || []).forEach((c: any) => {
             const report = c.laporan_barang;
             const pelapor = report?.profil_pengguna;
@@ -196,13 +244,17 @@ export default function MessagesPage() {
             if (c.status === 'SELESAI') convStatus = 'RESOLVED';
             else if (c.status === 'DITOLAK') convStatus = 'DISPUTED';
 
+            const latest = userLatestMsgsMap[c.id];
+            const lastMsg = latest ? latest.text : (c.pesan_verifikasi || 'Halo, saya telah mengajukan klaim atas barang ini.');
+            const lastTime = latest ? latest.time : timeStr;
+
             loadedConversations.push({
               id: c.id,
               counterpartName,
               counterpartRole,
               itemTitle: report?.nama_barang || 'Barang Temuan',
-              lastMessage: c.pesan_verifikasi || 'Halo, saya telah mengajukan klaim atas barang ini.',
-              lastTime: timeStr,
+              lastMessage: lastMsg,
+              lastTime,
               unread: false,
               status: convStatus,
               initialPesanVerifikasi: c.pesan_verifikasi,
@@ -223,13 +275,17 @@ export default function MessagesPage() {
             if (c.status === 'SELESAI') convStatus = 'RESOLVED';
             else if (c.status === 'DITOLAK') convStatus = 'DISPUTED';
 
+            const latest = userLatestMsgsMap[c.id];
+            const lastMsg = latest ? latest.text : (c.pesan_verifikasi || 'Pengguna mengajukan klaim atas barang yang Anda laporkan.');
+            const lastTime = latest ? latest.time : timeStr;
+
             loadedConversations.push({
               id: c.id,
               counterpartName,
               counterpartRole,
               itemTitle: c.laporan_barang?.nama_barang || 'Barang Laporan Anda',
-              lastMessage: c.pesan_verifikasi || 'Pengguna mengajukan klaim atas barang yang Anda laporkan.',
-              lastTime: timeStr,
+              lastMessage: lastMsg,
+              lastTime,
               unread: true,
               status: convStatus,
               initialPesanVerifikasi: c.pesan_verifikasi,
@@ -241,6 +297,8 @@ export default function MessagesPage() {
           setConversations(loadedConversations);
           if (loadedConversations.length > 0) {
             setSelectedConv(loadedConversations[0]);
+          } else {
+            setSelectedConv(null);
           }
         }
       } catch (err) {
@@ -289,9 +347,27 @@ export default function MessagesPage() {
             const d = new Date(r.dibuat_pada);
             const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 
+            // For admin mediator: identify sender by matching participant IDs
+            let senderName: string | undefined;
+            let senderRole: 'pengklaim' | 'pelapor' | 'admin' | undefined;
+            if (isAdmin && selectedConv) {
+              if (r.pengirim_id === selectedConv.pengklaimId) {
+                senderName = selectedConv.pengklaimName || 'Pengklaim';
+                senderRole = 'pengklaim';
+              } else if (r.pengirim_id === selectedConv.pelaporId) {
+                senderName = selectedConv.pelaporName || 'Pelapor';
+                senderRole = 'pelapor';
+              } else if (r.pengirim_id === currentUserId) {
+                senderName = 'Admin';
+                senderRole = 'admin';
+              }
+            }
+
             return {
               id: r.id,
-              sender: isSystem ? 'system' : isMe ? 'me' : 'other',
+              sender: isSystem ? 'system' as const : (isAdmin ? (r.pengirim_id === currentUserId ? 'me' as const : 'other' as const) : (isMe ? 'me' as const : 'other' as const)),
+              senderName,
+              senderRole,
               text: parsed.text,
               imageUrl: parsed.imageUrl,
               time: timeStr,
@@ -782,9 +858,8 @@ export default function MessagesPage() {
             {/* Right Column: Active Chat Room */}
             {selectedConv && (
               <div
-                className={`lg:col-span-8 flex flex-col h-full min-h-0 bg-white ${
-                  !showMobileChat ? 'hidden lg:flex' : 'flex'
-                }`}
+                className={`lg:col-span-8 flex flex-col h-full min-h-0 bg-white ${!showMobileChat ? 'hidden lg:flex' : 'flex'
+                  }`}
               >
                 {/* Chat Room Top Bar */}
                 <ChatHeader
@@ -802,6 +877,7 @@ export default function MessagesPage() {
                 {/* Messages Scroll Area */}
                 <ChatMessageList
                   messages={currentMessages}
+                  isAdmin={isAdmin}
                   safePointsList={safePointsList}
                   onZoomImage={(url) => setZoomedImage(url)}
                   messagesContainerRef={messagesContainerRef}

@@ -29,7 +29,7 @@ export default function ConversationList({
           {isAdmin ? 'Kotak Masuk Mediasi' : 'Kotak Masuk Verifikasi'}
         </h2>
         <p className="text-[11px] text-slate-400 mt-0.5">
-          {conversations.length} {isAdmin ? 'sesi mediasi & klaim civitas' : 'sesi chat aktif'}
+          {conversations.length} {isAdmin ? 'sesi mediasi aktif' : 'sesi chat aktif'}
         </p>
       </div>
 
@@ -59,9 +59,16 @@ export default function ConversationList({
                   <span className="text-[10px] text-slate-400 shrink-0">{conv.lastTime}</span>
                 </div>
 
-                <p className="text-[11px] font-semibold text-sky-700 truncate mt-0.5">
-                  {conv.itemTitle}
-                </p>
+                <div className="flex items-center justify-between gap-1 mt-0.5">
+                  <p className="text-[11px] font-semibold text-sky-700 truncate">
+                    {conv.itemTitle}
+                  </p>
+                  {isAdmin && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-[4px] bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                      Sengketa Mediasi
+                    </span>
+                  )}
+                </div>
 
                 <p className="text-xs text-slate-500 truncate mt-1">{conv.lastMessage}</p>
               </div>

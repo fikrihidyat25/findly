@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const type = searchParams.get('type');
   const error = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
-  const next = searchParams.get('next') ?? '/login?verified=true';
+  const next = searchParams.get('next') ?? '/dashboard';
 
   // Jika provider mengembalikan error
   if (error || errorDescription) {
@@ -29,9 +29,6 @@ export async function GET(request: Request) {
       });
 
       if (!verifyError) {
-        if (next.includes('login') || type === 'signup' || type === 'email') {
-          await supabase.auth.signOut();
-        }
         return NextResponse.redirect(`${origin}${next}`);
       }
       console.error('Verify OTP error:', verifyError.message);
@@ -48,9 +45,6 @@ export async function GET(request: Request) {
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
       if (!exchangeError) {
-        if (next.includes('login') || type === 'signup' || type === 'email') {
-          await supabase.auth.signOut();
-        }
         const forwardedHost = request.headers.get('x-forwarded-host');
         const isLocalEnv = process.env.NODE_ENV === 'development';
 

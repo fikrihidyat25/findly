@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, GraduationCap, ShieldCheck, ArrowRight, LogIn, UserPlus, ShieldAlert, Users } from 'lucide-react';
+import { CheckCircle2, GraduationCap, ShieldCheck, ArrowUpRight, LogIn, UserPlus, ShieldAlert, Users } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 
 interface UserProfile {
@@ -72,18 +72,15 @@ export default function ProfileVerificationCard() {
 
   if (loading) {
     return (
-      <div className="bg-white p-5 rounded-[6px] border border-slate-200 h-full animate-pulse flex flex-col justify-between">
-        <div className="space-y-3">
-          <div className="h-4 bg-slate-100 rounded-[4px] w-1/3" />
-          <div className="flex gap-3 items-center pt-2">
-            <div className="w-10 h-10 rounded-[6px] bg-slate-100 shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 bg-slate-100 rounded-[4px] w-3/4" />
-              <div className="h-3 bg-slate-100 rounded-[4px] w-1/2" />
-            </div>
+      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-gray-100 shadow-2xs h-full animate-pulse">
+        <div className="h-5 bg-gray-100 rounded w-1/2 mb-4" />
+        <div className="flex gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-gray-100 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-gray-100 rounded w-3/4" />
+            <div className="h-3 bg-gray-100 rounded w-1/2" />
           </div>
         </div>
-        <div className="h-8 bg-slate-100 rounded-[4px] w-full mt-4" />
       </div>
     );
   }
@@ -91,39 +88,39 @@ export default function ProfileVerificationCard() {
   // Guest State
   if (!user) {
     return (
-      <div className="bg-white p-5 rounded-[6px] border border-slate-200 flex flex-col justify-between h-full">
+      <div className="bg-gradient-to-br from-white via-white to-blue-50/40 p-5 sm:p-6 rounded-2xl border border-gray-100 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between h-full">
         <div>
-          <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100 mb-3">
+          <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-gray-50">
             <div className="flex items-center gap-2">
-              <ShieldCheck size={16} className="text-slate-700" />
-              <h4 className="font-bold text-xs sm:text-sm text-slate-900 tracking-tight">
+              <ShieldCheck size={16} className="text-[#30AFFF]" />
+              <h4 className="font-bold text-xs sm:text-sm text-gray-900 tracking-tight">
                 Akses Civitas Kampus
               </h4>
             </div>
-            <span className="px-2 py-0.5 rounded-[4px] text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
               Mode Tamu
             </span>
           </div>
 
-          <div className="space-y-1.5">
-            <h5 className="font-bold text-xs text-slate-900">Belum masuk ke akun Anda?</h5>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Masuk atau daftarkan akun kampus untuk membuat laporan kehilangan, menemukan barang, dan klaim kepemilikan.
+          <div className="space-y-2">
+            <h5 className="font-bold text-sm text-gray-900">Belum masuk ke akun Anda?</h5>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Masuk atau daftarkan akun kampus untuk membuat laporan kehilangan, melaporkan barang temuan, serta memverifikasi klaim kepemilikan.
             </p>
           </div>
         </div>
 
-        <div className="pt-3 mt-3 border-t border-slate-100 flex items-center gap-2">
+        <div className="pt-4 mt-4 border-t border-gray-50 flex items-center gap-2">
           <Link
             href="/login"
-            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-[6px] border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-all"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold transition-all"
           >
             <LogIn size={13} />
             <span>Masuk</span>
           </Link>
           <Link
             href="/register"
-            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-[6px] bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition-all"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-all"
           >
             <UserPlus size={13} />
             <span>Daftar</span>
@@ -133,6 +130,13 @@ export default function ProfileVerificationCard() {
     );
   }
 
+  // Authenticated State
+  const roleDisplay = user.tipe_akun === 'admin'
+    ? 'Admin Mediator'
+    : user.role_kampus
+      ? user.role_kampus.charAt(0).toUpperCase() + user.role_kampus.slice(1)
+      : 'Warga Kampus';
+
   const maskedNIM = user.nim_nip
     ? user.nim_nip.length > 4
       ? `•••••${user.nim_nip.slice(-4)}`
@@ -140,88 +144,85 @@ export default function ProfileVerificationCard() {
     : '-';
 
   return (
-    <div className="bg-white p-5 rounded-[6px] border border-slate-200 flex flex-col justify-between h-full">
+    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-gray-100 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between h-full">
       <div>
         {/* Header Widget */}
-        <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100 mb-3.5">
+        <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-gray-50">
           <div className="flex items-center gap-2">
-            <ShieldCheck size={16} className="text-sky-600" />
-            <h4 className="font-bold text-xs sm:text-sm text-slate-900 tracking-tight">
-              Profil Pengguna
+            <ShieldCheck size={16} className="text-[#30AFFF]" />
+            <h4 className="font-bold text-xs sm:text-sm text-gray-900 tracking-tight">
+              Profil & Verifikasi
             </h4>
           </div>
-
           {user.tipe_akun === 'admin' ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-              Administrator
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+              <ShieldAlert size={11} className="text-amber-600" />
+              <span>Admin Mediator</span>
             </span>
           ) : user.status_kampus_terverifikasi ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
               <CheckCircle2 size={11} className="text-emerald-600" />
-              <span>Civitas Terverifikasi</span>
+              <span>University Verified</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-              <span>Warga Kampus</span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600">
+              <span>Community Member</span>
             </span>
           )}
         </div>
 
         {/* Profile Details */}
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3.5">
           {/* Avatar */}
-          <div className="w-10 h-10 rounded-[6px] bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
+          <div className={`w-12 h-12 rounded-2xl text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0 ${user.tipe_akun === 'admin'
+              ? 'bg-gradient-to-tr from-amber-500 to-orange-500'
+              : 'bg-gradient-to-tr from-[#30AFFF] to-[#5ec2ff]'
+            }`}>
             {getInitials(user.nama_lengkap)}
           </div>
 
           <div className="space-y-1 min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-bold text-sm text-gray-900 leading-tight">
                 {user.nama_lengkap}
               </span>
-              <span className="inline-flex items-center text-[10px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded-[4px]">
-                {user.tipe_akun === 'admin'
-                  ? 'Admin Platform'
-                  : user.tipe_akun === 'campus'
-                  ? (user.role_kampus ? user.role_kampus.charAt(0).toUpperCase() + user.role_kampus.slice(1) : 'Mahasiswa')
-                  : 'Anggota Komunitas'}
+              <span className="inline-flex items-center text-[10px] font-semibold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded-md border border-sky-100">
+                {user.tipe_akun === 'admin' ? 'Admin Mediator' : user.tipe_akun === 'campus' ? (user.role_kampus ? user.role_kampus.charAt(0).toUpperCase() + user.role_kampus.slice(1) : 'Civitas Kampus') : 'Anggota Komunitas'}
               </span>
             </div>
-
             {user.tipe_akun === 'campus' ? (
-              <p className="text-[11px] text-slate-500 flex items-center gap-1.5 truncate">
-                <GraduationCap size={12} className="text-slate-400 shrink-0" />
-                <span className="truncate">{user.universitas || 'Universitas'}</span>
+              <p className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
+                <GraduationCap size={13} className="text-[#30AFFF] shrink-0" />
+                <span className="truncate">{user.universitas || 'Civitas Kampus'}</span>
               </p>
             ) : user.tipe_akun === 'admin' ? (
-              <p className="text-[11px] text-amber-700 flex items-center gap-1.5 truncate">
-                <ShieldAlert size={12} className="text-amber-600 shrink-0" />
-                <span className="truncate">Mediator & Pengawas Kampus</span>
+              <p className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
+                <ShieldAlert size={13} className="text-amber-600 shrink-0" />
+                <span className="truncate">Administrator Platform</span>
               </p>
             ) : (
-              <p className="text-[11px] text-slate-500 flex items-center gap-1.5 truncate">
-                <Users size={12} className="text-slate-400 shrink-0" />
-                <span className="truncate">Pengguna Umum Kampus</span>
+              <p className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
+                <Users size={13} className="text-[#30AFFF] shrink-0" />
+                <span className="truncate">Masyarakat Umum / Tamu</span>
               </p>
             )}
-
             {user.tipe_akun === 'campus' && user.nim_nip && (
-              <p className="text-[11px] font-mono text-slate-400">
-                NIM: <span className="font-semibold text-slate-600">{maskedNIM}</span>
+              <p className="text-[11px] font-mono text-gray-400 pt-0.5">
+                NIM/NIP: <span className="tracking-widest">{maskedNIM}</span>
               </p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Action Link */}
-      <div className="pt-3 mt-3 border-t border-slate-100">
+      {/* Action Button */}
+      <div className="pt-4 mt-4 border-t border-gray-50">
         <Link
           href="/profile"
-          className="w-full inline-flex items-center justify-between py-2 px-3 rounded-[6px] border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-all group"
+          className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-[#30AFFF]/40 text-[#30AFFF] hover:bg-[#EFF8FF] text-xs font-semibold transition-all duration-200"
         >
-          <span>Buka Profil Lengkap</span>
-          <ArrowRight size={13} className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all" />
+          <span>Lihat Profil Lengkap</span>
+          <ArrowUpRight size={13} />
         </Link>
       </div>
     </div>

@@ -13,7 +13,6 @@ import {
   KeyRound,
   BookOpen,
   PackageSearch,
-  ArrowRight,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 
@@ -24,8 +23,12 @@ export interface RecentItem {
   category: string;
   location: string;
   timeAgo: string;
+  colorScheme: {
+    bg: string;
+    text: string;
+    border: string;
+  };
   icon: any;
-  foto_url?: string | null;
 }
 
 function getCategoryIcon(cat: string) {
@@ -49,6 +52,13 @@ function getCategoryIcon(cat: string) {
     return BookOpen;
   }
   return Briefcase;
+}
+
+function getColorScheme(type: 'lost' | 'found') {
+  if (type === 'found') {
+    return { bg: 'bg-emerald-50/70', text: 'text-emerald-700', border: 'border-emerald-200/80' };
+  }
+  return { bg: 'bg-rose-50/70', text: 'text-rose-700', border: 'border-rose-200/80' };
 }
 
 function formatRelativeTime(dateString: string) {
@@ -76,7 +86,6 @@ export default function RecentItemsFeed() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'lost' | 'found'>('all');
   const [savedItems, setSavedItems] = useState<string[]>([]);
-  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     try {
@@ -109,8 +118,8 @@ export default function RecentItemsFeed() {
               category: cat,
               location: row.lokasi_terakhir || 'Lingkungan Kampus',
               timeAgo: formatRelativeTime(row.dibuat_pada),
+              colorScheme: getColorScheme(isFound ? 'found' : 'lost'),
               icon: getCategoryIcon(cat),
-              foto_url: row.foto_url || null,
             };
           });
           setItems(mapped);
@@ -140,10 +149,6 @@ export default function RecentItemsFeed() {
     });
   };
 
-  const handleImageError = (id: string) => {
-    setFailedImages((prev) => ({ ...prev, [id]: true }));
-  };
-
   const filteredItems = items.filter((item) => {
     if (activeTab === 'all') return true;
     return item.type === activeTab;
@@ -152,44 +157,41 @@ export default function RecentItemsFeed() {
   return (
     <div className="space-y-4">
       {/* Feed Header & Filter Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-gray-100">
         <div>
-          <h3 className="font-bold text-base text-slate-900 tracking-tight">
+          <h3 className="font-bold text-base sm:text-lg text-gray-900 tracking-tight">
             Barang terbaru di sekitarmu
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-gray-400 mt-0.5">
             Laporan barang hilang dan temuan terkini di lingkungan kampus
           </p>
         </div>
 
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-[6px] self-start sm:self-auto border border-slate-200">
+        <div className="flex items-center gap-1.5 bg-gray-100/80 p-1 rounded-xl shrink-0 self-start sm:self-auto">
           <button
             onClick={() => setActiveTab('all')}
-            className={`px-3 py-1 rounded-[4px] text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'all'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeTab === 'all'
+                ? 'bg-white text-gray-900 shadow-2xs'
+                : 'text-gray-600 hover:text-gray-900'
+              }`}
           >
             Semua ({items.length})
           </button>
           <button
             onClick={() => setActiveTab('lost')}
-            className={`px-3 py-1 rounded-[4px] text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'lost'
-                ? 'bg-white text-rose-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeTab === 'lost'
+                ? 'bg-white text-rose-600 shadow-2xs'
+                : 'text-gray-600 hover:text-gray-900'
+              }`}
           >
             Hilang
           </button>
           <button
             onClick={() => setActiveTab('found')}
-            className={`px-3 py-1 rounded-[4px] text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'found'
-                ? 'bg-white text-emerald-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeTab === 'found'
+                ? 'bg-white text-emerald-600 shadow-2xs'
+                : 'text-gray-600 hover:text-gray-900'
+              }`}
           >
             Ditemukan
           </button>
@@ -199,127 +201,109 @@ export default function RecentItemsFeed() {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-[6px] border border-slate-200 p-4 space-y-3 animate-pulse">
-              <div className="h-28 bg-slate-100 rounded-[4px]" />
-              <div className="h-4 bg-slate-100 rounded-[4px] w-2/3" />
-              <div className="h-3 bg-slate-100 rounded-[4px] w-1/2" />
+            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3 animate-pulse">
+              <div className="h-28 bg-gray-100 rounded-xl" />
+              <div className="h-4 bg-gray-100 rounded w-2/3" />
+              <div className="h-3 bg-gray-100 rounded w-1/2" />
             </div>
           ))}
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="bg-white rounded-[6px] border border-slate-200 p-8 text-center space-y-3">
-          <div className="w-10 h-10 rounded-[6px] bg-slate-100 text-slate-600 flex items-center justify-center mx-auto">
-            <PackageSearch size={20} />
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center space-y-3 shadow-2xs">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#30AFFF] flex items-center justify-center mx-auto">
+            <PackageSearch size={24} />
           </div>
           <div className="space-y-1">
-            <h4 className="font-bold text-sm text-slate-900">Belum Ada Aktivitas Barang</h4>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Belum ada laporan barang pada kategori ini. Anda dapat mulai membuat laporan baru.
+            <h4 className="font-bold text-sm text-gray-900">Belum Ada Aktivitas Barang</h4>
+            <p className="text-xs text-gray-400 max-w-sm mx-auto">
+              Belum ada laporan barang terbaru. Anda dapat mulai melaporkan barang temuan atau kehilangan.
             </p>
           </div>
           <div className="flex justify-center gap-2 pt-1">
             <Link
               href="/lost/new"
-              className="px-3 py-1.5 rounded-[6px] border border-rose-200 text-rose-700 text-xs font-semibold hover:bg-rose-50 transition-colors"
+              className="px-3.5 py-1.5 rounded-xl border border-rose-200 text-rose-600 text-xs font-semibold hover:bg-rose-50 transition-colors"
             >
               Lapor Kehilangan
             </Link>
             <Link
               href="/found/new"
-              className="px-3 py-1.5 rounded-[6px] bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition-colors"
+              className="px-3.5 py-1.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-colors"
             >
               Lapor Temuan
             </Link>
           </div>
         </div>
       ) : (
-        /* Items Grid */
+        /* Items Cards Horizontal / Grid */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
           {filteredItems.map((item) => {
             const isSaved = savedItems.includes(item.id);
             const Icon = item.icon;
             const isLost = item.type === 'lost';
-            const isImageFailed = Boolean(failedImages[item.id]);
-
-            // Validate image URL: must be valid http/https or data URL and NOT a dead local blob
-            const hasValidImage = Boolean(
-              item.foto_url &&
-              !item.foto_url.startsWith('blob:') &&
-              (item.foto_url.startsWith('http://') ||
-               item.foto_url.startsWith('https://') ||
-               item.foto_url.startsWith('data:image/')) &&
-              !isImageFailed
-            );
 
             return (
               <div
                 key={item.id}
-                className="bg-white rounded-[6px] border border-slate-200 hover:border-slate-300 hover:shadow-xs transition-all duration-200 flex flex-col justify-between overflow-hidden group"
+                className="bg-white rounded-2xl border border-gray-100 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden group"
               >
-                {/* Visual Header */}
-                <div className="relative w-full h-28 bg-slate-50 border-b border-slate-100 flex items-center justify-center overflow-hidden">
+                {/* Card Visual / Thumbnail Header */}
+                <div
+                  className={`relative w-full h-32 ${item.colorScheme.bg} border-b ${item.colorScheme.border} flex items-center justify-center transition-colors group-hover:bg-opacity-90`}
+                >
                   {/* Status Badge */}
-                  <div className="absolute top-2 left-2 z-10">
+                  <div className="absolute top-2.5 left-2.5 z-10">
                     <span
-                      className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-[4px] shadow-2xs ${
-                        isLost
-                          ? 'bg-rose-600 text-white'
-                          : 'bg-emerald-600 text-white'
-                      }`}
+                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-2xs ${isLost
+                          ? 'bg-rose-500 text-white border-rose-600'
+                          : 'bg-emerald-500 text-white border-emerald-600'
+                        }`}
                     >
                       {isLost ? 'Hilang' : 'Ditemukan'}
                     </span>
                   </div>
 
-                  {/* Bookmark Button */}
+                  {/* Bookmark Toggle Button */}
                   <button
                     type="button"
                     onClick={(e) => toggleSave(item.id, e)}
                     aria-label="Simpan barang"
-                    className={`absolute top-2 right-2 z-10 w-7 h-7 rounded-[4px] bg-white border border-slate-200 flex items-center justify-center transition-colors cursor-pointer ${
-                      isSaved ? 'text-sky-600 border-sky-300' : 'text-slate-400 hover:text-slate-700'
-                    }`}
+                    className={`absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center shadow-2xs transition-all hover:scale-110 cursor-pointer ${isSaved ? 'text-[#30AFFF]' : 'text-gray-400 hover:text-gray-700'
+                      }`}
                   >
                     <Bookmark
-                      size={13}
-                      className={isSaved ? 'fill-sky-600 stroke-sky-600' : 'stroke-[2]'}
+                      size={14}
+                      className={isSaved ? 'fill-[#30AFFF] stroke-[#30AFFF]' : 'stroke-[2]'}
                     />
                   </button>
 
-                  {/* Display Image or Clean Category Icon */}
-                  {hasValidImage ? (
-                    <img
-                      src={item.foto_url!}
-                      alt=""
-                      onError={() => handleImageError(item.id)}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    />
-                  ) : (
-                    <div className="w-11 h-11 rounded-[6px] bg-white border border-slate-200 flex items-center justify-center text-slate-500 group-hover:scale-105 transition-transform duration-200 shadow-2xs">
-                      <Icon size={22} className="stroke-[1.75]" />
-                    </div>
-                  )}
+                  {/* Item Category Icon Illustration */}
+                  <div
+                    className={`w-14 h-14 rounded-2xl bg-white/90 shadow-2xs flex items-center justify-center ${item.colorScheme.text} group-hover:scale-110 transition-transform duration-300`}
+                  >
+                    <Icon size={28} className="stroke-[1.75]" />
+                  </div>
                 </div>
 
-                {/* Body Info */}
-                <div className="p-3 space-y-2 flex-1 flex flex-col justify-between">
+                {/* Card Body Info */}
+                <div className="p-3.5 space-y-2 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
                       {item.category}
                     </span>
-                    <Link href={`/find/${item.id}`} className="block mt-0.5">
-                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-sky-600 transition-colors line-clamp-1">
+                    <Link href={`/find/${item.id}`}>
+                      <h4 className="font-bold text-xs sm:text-sm text-gray-900 group-hover:text-[#30AFFF] transition-colors line-clamp-1 mt-0.5 hover:underline">
                         {item.title}
                       </h4>
                     </Link>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 space-y-1 text-[11px] text-slate-500">
+                  <div className="pt-2 border-t border-gray-50 space-y-1 text-[11px] text-gray-500">
                     <div className="flex items-center gap-1.5 truncate">
-                      <MapPin size={12} className="text-slate-400 shrink-0" />
+                      <MapPin size={12} className="text-gray-400 shrink-0" />
                       <span className="truncate">{item.location}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-slate-400">
+                    <div className="flex items-center gap-1.5 text-gray-400">
                       <Clock size={12} className="shrink-0" />
                       <span>{item.timeAgo}</span>
                     </div>
@@ -331,14 +315,13 @@ export default function RecentItemsFeed() {
         </div>
       )}
 
-      {/* View All Link */}
+      {/* Bottom View All Link */}
       <div className="text-center pt-2">
         <Link
           href="/find"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 hover:text-sky-800 py-1 px-3 rounded-[4px] hover:bg-sky-50 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8] py-1.5 px-3 rounded-lg hover:bg-blue-50/50 transition-colors"
         >
-          <span>Jelajahi seluruh laporan di Cari Barang</span>
-          <ArrowRight size={13} />
+          Jelajahi seluruh laporan di Cari Barang
         </Link>
       </div>
     </div>

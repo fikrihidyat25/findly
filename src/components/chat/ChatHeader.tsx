@@ -47,8 +47,18 @@ export default function ChatHeader({
             <h3 className="font-bold text-sm text-slate-900 truncate">
               {selectedConv.counterpartName}
             </h3>
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-[4px] bg-emerald-50 text-emerald-800 border border-emerald-300 shrink-0">
-              <CheckCircle2 size={10} className="text-emerald-700" />
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-[4px] shrink-0 ${
+                selectedConv.counterpartRole === 'Sengketa Mediasi'
+                  ? 'bg-amber-50 text-amber-800 border border-amber-300'
+                  : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+              }`}
+            >
+              {selectedConv.counterpartRole === 'Sengketa Mediasi' ? (
+                <AlertTriangle size={10} className="text-amber-700" />
+              ) : (
+                <CheckCircle2 size={10} className="text-emerald-700" />
+              )}
               {selectedConv.counterpartRole}
             </span>
           </div>

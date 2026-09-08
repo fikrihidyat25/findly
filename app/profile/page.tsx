@@ -162,10 +162,10 @@ export default function ProfilePage() {
   const roleDisplay = isAdmin
     ? 'Admin Mediator'
     : isCampus
-    ? user.role_kampus
-      ? user.role_kampus.charAt(0).toUpperCase() + user.role_kampus.slice(1)
-      : 'Civitas Kampus'
-    : 'Anggota Komunitas';
+      ? user.role_kampus
+        ? user.role_kampus.charAt(0).toUpperCase() + user.role_kampus.slice(1)
+        : 'Civitas Kampus'
+      : 'Anggota Komunitas';
 
   const maskedNIM = user.nim_nip
     ? user.nim_nip.length > 4
@@ -180,11 +180,10 @@ export default function ProfilePage() {
         <div className="bg-white rounded-3xl border border-gray-100 p-6 sm:p-8 shadow-2xs">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
             <div className="flex items-center gap-4 sm:gap-5">
-              <div className={`w-18 h-18 sm:w-20 sm:h-20 rounded-3xl text-white flex items-center justify-center font-extrabold text-2xl shadow-sm shrink-0 ${
-                user.tipe_akun === 'admin'
+              <div className={`w-18 h-18 sm:w-20 sm:h-20 rounded-3xl text-white flex items-center justify-center font-extrabold text-2xl shadow-sm shrink-0 ${user.tipe_akun === 'admin'
                   ? 'bg-gradient-to-tr from-amber-500 to-orange-500'
                   : 'bg-gradient-to-tr from-[#30AFFF] to-[#5ec2ff]'
-              }`}>
+                }`}>
                 {getInitials(user.nama_lengkap)}
               </div>
 
@@ -194,8 +193,9 @@ export default function ProfilePage() {
                     {user.nama_lengkap}
                   </h1>
                   {isAdmin ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                      <span>Administrator</span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                      <ShieldAlert size={12} className="text-amber-600" />
+                      <span>Admin Mediator</span>
                     </span>
                   ) : user.status_kampus_terverifikasi ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
@@ -216,7 +216,8 @@ export default function ProfilePage() {
                   </p>
                 ) : isAdmin ? (
                   <p className="text-xs sm:text-sm text-gray-500 font-medium flex items-center gap-1.5">
-                    <span>Administrator Findly</span>
+                    <ShieldAlert size={15} className="text-amber-600" />
+                    <span>Administrator Platform & Mediator</span>
                   </p>
                 ) : (
                   <p className="text-xs sm:text-sm text-gray-500 font-medium flex items-center gap-1.5">
@@ -271,8 +272,8 @@ export default function ProfilePage() {
                 {user.tipe_akun === 'admin'
                   ? 'Administrator Kampus'
                   : user.tipe_akun === 'campus'
-                  ? 'Civitas Kampus Aktif'
-                  : 'Anggota Komunitas'}
+                    ? 'Civitas Kampus Aktif'
+                    : 'Anggota Komunitas'}
               </span>
             </div>
           </div>

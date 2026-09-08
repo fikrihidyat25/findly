@@ -168,11 +168,10 @@ export default function AdminKlaimPage() {
       {/* Toast Feedback */}
       {feedbackMessage && (
         <div
-          className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between transition-all border ${
-            feedbackMessage.type === 'success'
+          className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between transition-all border ${feedbackMessage.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
               : 'bg-red-50 text-red-800 border-red-200'
-          }`}
+            }`}
         >
           <span>{feedbackMessage.text}</span>
           <button
@@ -294,15 +293,14 @@ export default function AdminKlaimPage() {
                     {/* Status */}
                     <td className="px-4 py-3.5">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                          item.status === 'SELESAI'
+                        className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${item.status === 'SELESAI'
                             ? 'bg-emerald-50 text-emerald-700'
                             : item.status === 'MENUNGGU'
-                            ? 'bg-amber-50 text-amber-800'
-                            : item.status === 'DITOLAK'
-                            ? 'bg-red-50 text-red-700'
-                            : 'bg-blue-50 text-[#30AFFF]'
-                        }`}
+                              ? 'bg-amber-50 text-amber-800'
+                              : item.status === 'DITOLAK'
+                                ? 'bg-red-50 text-red-700'
+                                : 'bg-blue-50 text-[#30AFFF]'
+                          }`}
                       >
                         {item.status}
                       </span>

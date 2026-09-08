@@ -50,7 +50,6 @@ interface ItemDetail {
   safePointObj?: SafePoint;
   pelaporId?: string;
   icon: any;
-  foto_url?: string | null;
   colorScheme: {
     bg: string;
     text: string;
@@ -205,7 +204,6 @@ export default function ItemDetailPage() {
           safePointObj: matchedSafe || safePoints[0],
           pelaporId: data.pelapor_id,
           icon: getCategoryIcon(cat),
-          foto_url: data.foto_url || null,
           colorScheme: getColorScheme(isFound ? 'found' : 'lost'),
         });
       } catch (err) {
@@ -427,11 +425,10 @@ export default function ItemDetailPage() {
             </button>
             <button
               onClick={toggleSave}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${
-                isSaved
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${isSaved
                   ? 'border-[#30AFFF] bg-[#EFF8FF] text-[#30AFFF]'
                   : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <Bookmark size={14} className={isSaved ? 'fill-[#30AFFF]' : ''} />
               <span>{isSaved ? 'Tersimpan' : 'Simpan'}</span>
@@ -445,11 +442,10 @@ export default function ItemDetailPage() {
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
-                  item.type === 'found'
+                className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${item.type === 'found'
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                     : 'bg-rose-50 text-rose-700 border border-rose-200'
-                }`}
+                  }`}
               >
                 {item.type === 'found' ? '✓ Ditemukan' : '! Dilaporkan Hilang'}
               </span>
@@ -468,32 +464,20 @@ export default function ItemDetailPage() {
           </div>
 
           {/* Visual Showcase Banner */}
-          <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100/80 border border-gray-100 overflow-hidden flex flex-col items-center justify-center text-center">
-            {item.foto_url ? (
-              <div className="w-full bg-black/5 flex items-center justify-center p-4 sm:p-6">
-                <img
-                  src={item.foto_url}
-                  alt={item.title}
-                  className="max-h-80 w-auto rounded-xl object-contain shadow-xs"
-                />
-              </div>
-            ) : (
-              <div className="p-8 sm:p-12 flex flex-col items-center justify-center text-center space-y-3">
-                <div
-                  className={`w-24 h-24 rounded-3xl ${item.colorScheme.bg} ${item.colorScheme.text} border ${item.colorScheme.border} flex items-center justify-center shadow-sm`}
-                >
-                  <Icon size={48} className="stroke-[1.75]" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Ilustrasi Kategori Barang
-                  </span>
-                  <p className="text-[11px] text-gray-400 mt-0.5">
-                    Pelapor tidak melampirkan foto fisik. Menampilkan representasi visual kategori {item.category}.
-                  </p>
-                </div>
-              </div>
-            )}
+          <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100/80 border border-gray-100 p-8 sm:p-12 flex flex-col items-center justify-center text-center space-y-3">
+            <div
+              className={`w-24 h-24 rounded-3xl ${item.colorScheme.bg} ${item.colorScheme.text} border ${item.colorScheme.border} flex items-center justify-center shadow-sm`}
+            >
+              <Icon size={48} className="stroke-[1.75]" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                Foto / Ikon Representasi Barang
+              </span>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Foto detail internal dirahasiakan oleh sistem untuk melindungi verifikasi klaim kepemilikan.
+              </p>
+            </div>
           </div>
 
           {/* Key Facts Grid */}
@@ -815,11 +799,10 @@ export default function ItemDetailPage() {
                           setStorageType('security');
                           setStorageNote(sp.nama_lokasi);
                         }}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                          isSelected
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${isSelected
                             ? 'border-[#30AFFF] bg-blue-50/70 text-gray-900 font-semibold ring-2 ring-[#30AFFF]/20'
                             : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         <div className="font-bold text-xs text-gray-900 line-clamp-1">
                           🛡️ {sp.nama_lokasi}
@@ -849,11 +832,10 @@ export default function ItemDetailPage() {
                       key={cond}
                       type="button"
                       onClick={() => setItemCondition(cond)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                        itemCondition === cond
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${itemCondition === cond
                           ? 'bg-emerald-600 text-white shadow-2xs'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
+                        }`}
                     >
                       {cond}
                     </button>

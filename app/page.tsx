@@ -338,11 +338,10 @@ export default function LandingPage() {
                       {/* Status Badge */}
                       <div className="absolute top-3 left-3 z-10">
                         <span
-                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${
-                            isLost
+                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${isLost
                               ? 'bg-rose-500 text-white border-rose-600'
                               : 'bg-emerald-500 text-white border-emerald-600'
-                          }`}
+                            }`}
                         >
                           {isLost ? 'Hilang' : 'Ditemukan'}
                         </span>
@@ -504,17 +503,15 @@ export default function LandingPage() {
       {/* Mobile Drawer Backdrop */}
       <div
         onClick={() => setMobileMenuOpen(false)}
-        className={`fixed inset-0 bg-black/50 backdrop-blur-xs z-[100] md:hidden transition-opacity duration-300 ${
-          mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 bg-black/50 backdrop-blur-xs z-[100] md:hidden transition-opacity duration-300 ${mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
         aria-hidden="true"
       />
 
       {/* Mobile Drawer Panel */}
       <div
-        className={`fixed inset-y-0 right-0 w-72 max-w-[85vw] bg-white z-[101] p-6 flex flex-col justify-between shadow-2xl md:hidden transform transition-transform duration-300 ease-in-out ${
-          mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed inset-y-0 right-0 w-72 max-w-[85vw] bg-white z-[101] p-6 flex flex-col justify-between shadow-2xl md:hidden transform transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
         role="dialog"
         aria-modal="true"
         aria-label="Menu Navigasi Mobile"

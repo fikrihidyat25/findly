@@ -56,12 +56,7 @@ export default function AppSidebar({
           .eq('id', user.id)
           .single();
 
-        if (
-          profile?.tipe_akun === 'admin' ||
-          profile?.role_kampus === 'admin' ||
-          user.user_metadata?.tipe_akun === 'admin' ||
-          user.email?.toLowerCase().includes('admin')
-        ) {
+        if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin' || user.user_metadata?.tipe_akun === 'admin') {
           setIsAdmin(true);
         } else {
           setIsAdmin(false);
@@ -103,6 +98,7 @@ export default function AppSidebar({
     { label: 'Mediasi Klaim', href: '/admin/klaim', icon: FileCheck2 },
     { label: 'Pesan & Mediasi', href: '/messages', icon: MessageSquare, badge: msgBadge },
     { label: 'Verifikasi Civitas', href: '/admin/pengguna', icon: Users },
+    { label: 'Katalog Barang', href: '/find', icon: Search },
     { label: 'Notifikasi', href: '/notifications', icon: Bell, badge: notifBadge },
   ];
 
@@ -182,6 +178,11 @@ export default function AppSidebar({
           <span className="text-2xl font-black tracking-tight text-[#30AFFF] group-hover:opacity-85 transition-opacity">
             Findly.
           </span>
+          {isAdmin && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#30AFFF] border border-blue-200 uppercase tracking-wider">
+              Admin
+            </span>
+          )}
         </Link>
         {onCloseMobile && (
           <button
@@ -206,11 +207,10 @@ export default function AppSidebar({
                 key={item.label}
                 href={item.href}
                 onClick={onCloseMobile}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
-                  active
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${active
                     ? 'bg-[#EFF8FF] text-[#30AFFF] font-semibold shadow-2xs'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon
@@ -221,9 +221,8 @@ export default function AppSidebar({
                 </div>
                 {item.badge && (
                   <span
-                    className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-2xs ${
-                      item.label === 'Notifikasi' ? 'bg-rose-500' : 'bg-[#30AFFF]'
-                    }`}
+                    className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-2xs ${item.label === 'Notifikasi' ? 'bg-rose-500' : 'bg-[#30AFFF]'
+                      }`}
                   >
                     {item.badge}
                   </span>
@@ -247,11 +246,10 @@ export default function AppSidebar({
                   key={item.label}
                   href={item.href}
                   onClick={onCloseMobile}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
-                    active
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${active
                       ? 'bg-[#EFF8FF] text-[#30AFFF] font-semibold'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   <Icon
                     size={18}
@@ -315,9 +313,8 @@ export default function AppSidebar({
 
       {/* Mobile Drawer Content */}
       <div
-        className={`fixed inset-y-0 left-0 w-72 z-50 md:hidden transform transition-transform duration-300 ease-in-out ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 w-72 z-50 md:hidden transform transition-transform duration-300 ease-in-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         {sidebarContent}
       </div>

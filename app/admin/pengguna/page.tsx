@@ -215,11 +215,10 @@ export default function AdminPenggunaPage() {
       {/* Toast Feedback */}
       {feedbackMessage && (
         <div
-          className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between transition-all border ${
-            feedbackMessage.type === 'success'
+          className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between transition-all border ${feedbackMessage.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
               : 'bg-red-50 text-red-800 border-red-200'
-          }`}
+            }`}
         >
           <span>{feedbackMessage.text}</span>
           <button
@@ -340,19 +339,18 @@ export default function AdminPenggunaPage() {
                     {/* Column 2: Account type badge */}
                     <td className="px-4 py-3.5">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                          item.tipe_akun === 'admin'
+                        className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${item.tipe_akun === 'admin'
                             ? 'bg-purple-50 text-purple-700 border border-purple-200'
                             : item.tipe_akun === 'campus'
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}
                       >
                         {item.tipe_akun === 'admin'
                           ? 'Administrator'
                           : item.tipe_akun === 'campus'
-                          ? 'Civitas Kampus'
-                          : 'Komunitas'}
+                            ? 'Civitas Kampus'
+                            : 'Komunitas'}
                       </span>
                     </td>
 

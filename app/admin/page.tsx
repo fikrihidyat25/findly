@@ -187,9 +187,9 @@ export default function AdminDashboardPage() {
       {/* Top Controls & Status Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:px-6 rounded-2xl border border-gray-100 shadow-2xs">
         <div>
-          <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">Dashboard Admin</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Ringkasan kondisi data laporan, mediasi klaim, dan pengguna kampus terkini.
+          <h2 className="text-sm font-bold text-gray-900">Ringkasan Sistem</h2>
+          <p className="text-xs text-gray-500">
+            Kondisi data laporan, klaim verifikasi, dan pengguna kampus terkini.
           </p>
         </div>
 
@@ -306,11 +306,10 @@ export default function AdminDashboardPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                          item.jenis_laporan === 'KEHILANGAN'
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${item.jenis_laporan === 'KEHILANGAN'
                             ? 'bg-red-50 text-red-700'
                             : 'bg-emerald-50 text-emerald-700'
-                        }`}
+                          }`}
                       >
                         {item.jenis_laporan === 'KEHILANGAN' ? 'Kehilangan' : 'Ditemukan'}
                       </span>
@@ -325,11 +324,10 @@ export default function AdminDashboardPage() {
 
                   <div className="text-right shrink-0">
                     <span
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${
-                        item.status === 'SELESAI'
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${item.status === 'SELESAI'
                           ? 'bg-gray-100 text-gray-700'
                           : 'bg-blue-50 text-[#30AFFF]'
-                      }`}
+                        }`}
                     >
                       {item.status === 'SELESAI' ? 'Selesai' : 'Mencari'}
                     </span>
@@ -375,15 +373,14 @@ export default function AdminDashboardPage() {
 
                   <div className="text-right shrink-0">
                     <span
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${
-                        item.status === 'SELESAI'
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${item.status === 'SELESAI'
                           ? 'bg-gray-100 text-gray-700'
                           : item.status === 'MENUNGGU'
-                          ? 'bg-amber-50 text-amber-800'
-                          : item.status === 'DITOLAK'
-                          ? 'bg-red-50 text-red-700'
-                          : 'bg-blue-50 text-[#30AFFF]'
-                      }`}
+                            ? 'bg-amber-50 text-amber-800'
+                            : item.status === 'DITOLAK'
+                              ? 'bg-red-50 text-red-700'
+                              : 'bg-blue-50 text-[#30AFFF]'
+                        }`}
                     >
                       {item.status}
                     </span>
