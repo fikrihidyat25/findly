@@ -33,6 +33,7 @@ import {
 import { createClient } from '@/src/lib/supabase/client';
 import LeafletSafeMap from '@/src/components/map/LeafletSafeMap';
 import { SafePoint, getSafePoints, DEFAULT_SAFE_POINTS } from '@/src/lib/safePoints';
+import { detectCategory } from '@/src/lib/categories';
 
 interface ItemDetail {
   id: string;
@@ -49,6 +50,7 @@ interface ItemDetail {
   safePoint: string;
   safePointObj?: SafePoint;
   pelaporId?: string;
+  foto_url?: string | null;
   icon: any;
   colorScheme: {
     bg: string;
@@ -170,8 +172,10 @@ export default function ItemDetailPage() {
         }
 
         const isFound = data.jenis_laporan === 'DITEMUKAN';
-        const cat = data.kategori || 'Barang Kampus';
+        const cat = detectCategory(data);
         const pelapor = data.profil_pengguna;
+        const rawPhoto = data.foto_url;
+        const foto_url = rawPhoto && !rawPhoto.startsWith('blob:') ? rawPhoto : null;
 
         // Fetch official campus safe meeting points
         const safePoints = await getSafePoints();
@@ -203,6 +207,7 @@ export default function ItemDetailPage() {
           safePoint: matchedSafe ? matchedSafe.nama_lokasi : 'Pos Satpam Utama Gerbang Barat',
           safePointObj: matchedSafe || safePoints[0],
           pelaporId: data.pelapor_id,
+          foto_url,
           icon: getCategoryIcon(cat),
           colorScheme: getColorScheme(isFound ? 'found' : 'lost'),
         });
@@ -426,8 +431,8 @@ export default function ItemDetailPage() {
             <button
               onClick={toggleSave}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${isSaved
-                  ? 'border-[#30AFFF] bg-[#EFF8FF] text-[#30AFFF]'
-                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                ? 'border-[#30AFFF] bg-[#EFF8FF] text-[#30AFFF]'
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
                 }`}
             >
               <Bookmark size={14} className={isSaved ? 'fill-[#30AFFF]' : ''} />
@@ -443,11 +448,11 @@ export default function ItemDetailPage() {
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${item.type === 'found'
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border border-rose-200'
                   }`}
               >
-                {item.type === 'found' ? '✓ Ditemukan' : '! Dilaporkan Hilang'}
+                {item.type === 'found' ? 'Ditemukan' : 'Dilaporkan Hilang'}
               </span>
               <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                 {item.category}
@@ -464,21 +469,31 @@ export default function ItemDetailPage() {
           </div>
 
           {/* Visual Showcase Banner */}
-          <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100/80 border border-gray-100 p-8 sm:p-12 flex flex-col items-center justify-center text-center space-y-3">
-            <div
-              className={`w-24 h-24 rounded-3xl ${item.colorScheme.bg} ${item.colorScheme.text} border ${item.colorScheme.border} flex items-center justify-center shadow-sm`}
-            >
-              <Icon size={48} className="stroke-[1.75]" />
+          {item.foto_url ? (
+            <div className="rounded-2xl border border-gray-100 overflow-hidden shadow-2xs max-h-96 flex items-center justify-center bg-gray-50">
+              <img
+                src={item.foto_url}
+                alt={item.title}
+                className="w-full h-auto max-h-96 object-contain"
+              />
             </div>
-            <div>
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Foto / Ikon Representasi Barang
-              </span>
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                Foto detail internal dirahasiakan oleh sistem untuk melindungi verifikasi klaim kepemilikan.
-              </p>
+          ) : (
+            <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100/80 border border-gray-100 p-8 sm:p-12 flex flex-col items-center justify-center text-center space-y-3">
+              <div
+                className={`w-24 h-24 rounded-3xl ${item.colorScheme.bg} ${item.colorScheme.text} border ${item.colorScheme.border} flex items-center justify-center shadow-sm`}
+              >
+                <Icon size={48} className="stroke-[1.75]" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Foto / Ikon Representasi Barang
+                </span>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Foto detail barang belum diunggah atau dirahasiakan oleh pelapor.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Key Facts Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -800,8 +815,8 @@ export default function ItemDetailPage() {
                           setStorageNote(sp.nama_lokasi);
                         }}
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${isSelected
-                            ? 'border-[#30AFFF] bg-blue-50/70 text-gray-900 font-semibold ring-2 ring-[#30AFFF]/20'
-                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                          ? 'border-[#30AFFF] bg-blue-50/70 text-gray-900 font-semibold ring-2 ring-[#30AFFF]/20'
+                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                           }`}
                       >
                         <div className="font-bold text-xs text-gray-900 line-clamp-1">
@@ -833,8 +848,8 @@ export default function ItemDetailPage() {
                       type="button"
                       onClick={() => setItemCondition(cond)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${itemCondition === cond
-                          ? 'bg-emerald-600 text-white shadow-2xs'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                     >
                       {cond}

@@ -92,7 +92,7 @@ export default function QuickStats() {
     {
       label: 'Total Laporan',
       value: totalReportsCount,
-      href: '/find',
+      href: '/my-reports',
       icon: FileText,
       iconColor: 'text-purple-600',
       bgColor: 'bg-purple-50/80',

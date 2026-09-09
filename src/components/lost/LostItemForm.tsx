@@ -22,6 +22,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
+import { compressImage } from '@/src/lib/imageUtils';
 
 export default function LostItemForm() {
   const router = useRouter();
@@ -54,7 +55,7 @@ export default function LostItemForm() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Handle Image Upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
@@ -62,12 +63,16 @@ export default function LostItemForm() {
         return;
       }
       setErrorMsg(null);
-      const url = URL.createObjectURL(file);
-      setPhotoPreview(url);
+      try {
+        const base64 = await compressImage(file);
+        setPhotoPreview(base64);
+      } catch (err: any) {
+        setErrorMsg(err.message || 'Gagal memproses gambar.');
+      }
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file) {
@@ -76,8 +81,12 @@ export default function LostItemForm() {
         return;
       }
       setErrorMsg(null);
-      const url = URL.createObjectURL(file);
-      setPhotoPreview(url);
+      try {
+        const base64 = await compressImage(file);
+        setPhotoPreview(base64);
+      } catch (err: any) {
+        setErrorMsg(err.message || 'Gagal memproses gambar.');
+      }
     }
   };
 
@@ -279,10 +288,10 @@ export default function LostItemForm() {
                   {/* Step Circle */}
                   <div
                     className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs ${isCurrent
-                        ? 'bg-rose-500 text-white ring-4 ring-rose-100 scale-105 sm:scale-110'
-                        : isCompleted
-                          ? 'bg-rose-500 text-white'
-                          : 'bg-white text-gray-400 border border-gray-300'
+                      ? 'bg-rose-500 text-white ring-4 ring-rose-100 scale-105 sm:scale-110'
+                      : isCompleted
+                        ? 'bg-rose-500 text-white'
+                        : 'bg-white text-gray-400 border border-gray-300'
                       }`}
                   >
                     {isCompleted ? <Check size={14} className="stroke-[2.5]" /> : step.num}
@@ -291,10 +300,10 @@ export default function LostItemForm() {
                   {/* Step Label */}
                   <span
                     className={`text-[10px] sm:text-xs font-semibold mt-1.5 sm:mt-2 text-center leading-tight max-w-[70px] sm:max-w-[110px] px-0.5 transition-colors ${isCurrent
-                        ? 'text-gray-900 font-bold'
-                        : isCompleted
-                          ? 'text-rose-600 font-medium'
-                          : 'text-gray-400'
+                      ? 'text-gray-900 font-bold'
+                      : isCompleted
+                        ? 'text-rose-600 font-medium'
+                        : 'text-gray-400'
                       }`}
                   >
                     {step.label}

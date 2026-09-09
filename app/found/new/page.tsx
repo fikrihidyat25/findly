@@ -20,6 +20,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
+import { compressImage } from '@/src/lib/imageUtils';
 
 export default function FoundItemWizardPage() {
   const router = useRouter();
@@ -39,42 +40,44 @@ export default function FoundItemWizardPage() {
             .eq('id', user.id)
             .single();
 
-          if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin') {
-            router.replace('/admin/laporan');
+          if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin' || user.user_metadata?.tipe_akun === 'admin') {
+            setIsAdmin(true);
           }
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        console.error('Error checking user role:', err);
       }
     }
     checkRole();
-  }, [router]);
+  }, []);
 
   // Stepper State (1 to 4)
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Step 1: Info Publik
+  // Form Fields
   const [category, setCategory] = useState('');
   const [itemName, setItemName] = useState('');
+  const [condition, setCondition] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
-  // Step 2: Detail Rahasia (Secret Attributes - GOLDEN RULE)
+  // Step 2: Verification Challenge (The core innovation)
   const [secretQuestion, setSecretQuestion] = useState('');
   const [secretAnswer, setSecretAnswer] = useState('');
 
-  // Step 3: Lokasi & Tempat Penyimpanan Fisik
+  // Step 3: Location & Custody
   const [foundLocation, setFoundLocation] = useState('');
   const [locationDetail, setLocationDetail] = useState('');
-  const [storageType, setStorageType] = useState('self'); // 'self' | 'security' | 'faculty'
+  const [storageType, setStorageType] = useState<'self' | 'security' | 'faculty'>('self');
   const [storageNote, setStorageNote] = useState('');
 
-  // Step 4: Agreement
+  // Step 4: Final Confirmation
+  const [isAdmin, setIsAdmin] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
@@ -82,7 +85,12 @@ export default function FoundItemWizardPage() {
         return;
       }
       setErrorMessage(null);
-      setPhotoPreview(URL.createObjectURL(file));
+      try {
+        const base64 = await compressImage(file);
+        setPhotoPreview(base64);
+      } catch (err: any) {
+        setErrorMessage(err.message || 'Gagal memproses gambar.');
+      }
     }
   };
 
@@ -297,10 +305,10 @@ export default function FoundItemWizardPage() {
                     {/* Step Circle */}
                     <div
                       className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs ${isCurrent
-                          ? 'bg-emerald-500 text-white ring-4 ring-emerald-100 scale-105 sm:scale-110'
-                          : isCompleted
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-white text-gray-400 border border-gray-300'
+                        ? 'bg-emerald-500 text-white ring-4 ring-emerald-100 scale-105 sm:scale-110'
+                        : isCompleted
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-white text-gray-400 border border-gray-300'
                         }`}
                     >
                       {isCompleted ? <Check size={14} className="stroke-[2.5]" /> : step.num}
@@ -309,10 +317,10 @@ export default function FoundItemWizardPage() {
                     {/* Step Label */}
                     <span
                       className={`text-[10px] sm:text-xs font-semibold mt-1.5 sm:mt-2 text-center leading-tight max-w-[70px] sm:max-w-[110px] px-0.5 transition-colors ${isCurrent
-                          ? 'text-gray-900 font-bold'
-                          : isCompleted
-                            ? 'text-emerald-600 font-medium'
-                            : 'text-gray-400'
+                        ? 'text-gray-900 font-bold'
+                        : isCompleted
+                          ? 'text-emerald-600 font-medium'
+                          : 'text-gray-400'
                         }`}
                     >
                       {step.label}

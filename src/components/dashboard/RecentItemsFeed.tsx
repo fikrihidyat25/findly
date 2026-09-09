@@ -6,15 +6,10 @@ import {
   Bookmark,
   MapPin,
   Clock,
-  Wallet,
-  Briefcase,
-  Smartphone,
-  CreditCard,
-  KeyRound,
-  BookOpen,
   PackageSearch,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
+import { detectCategory, getCategoryIcon } from '@/src/lib/categories';
 
 export interface RecentItem {
   id: string;
@@ -29,29 +24,6 @@ export interface RecentItem {
     border: string;
   };
   icon: any;
-}
-
-function getCategoryIcon(cat: string) {
-  const lower = (cat || '').toLowerCase();
-  if (lower.includes('elektronik') || lower.includes('hp') || lower.includes('gadget') || lower.includes('laptop')) {
-    return Smartphone;
-  }
-  if (lower.includes('dompet') || lower.includes('aksesoris')) {
-    return Wallet;
-  }
-  if (lower.includes('tas') || lower.includes('ransel')) {
-    return Briefcase;
-  }
-  if (lower.includes('dokumen') || lower.includes('kartu') || lower.includes('ktm')) {
-    return CreditCard;
-  }
-  if (lower.includes('kunci') || lower.includes('kendaraan') || lower.includes('motor')) {
-    return KeyRound;
-  }
-  if (lower.includes('buku') || lower.includes('tulis')) {
-    return BookOpen;
-  }
-  return Briefcase;
 }
 
 function getColorScheme(type: 'lost' | 'found') {
@@ -110,7 +82,7 @@ export default function RecentItemsFeed() {
         if (data) {
           const mapped: RecentItem[] = data.map((row: any) => {
             const isFound = row.jenis_laporan === 'DITEMUKAN';
-            const cat = row.kategori || 'Barang Kampus';
+            const cat = detectCategory(row);
             return {
               id: row.id,
               title: row.nama_barang,
