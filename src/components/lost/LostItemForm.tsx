@@ -22,7 +22,10 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
+<<<<<<< HEAD
 import { compressImage } from '@/src/lib/imageUtils';
+=======
+>>>>>>> 1f218a6 (niateams)
 
 export default function LostItemForm() {
   const router = useRouter();
@@ -55,7 +58,11 @@ export default function LostItemForm() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Handle Image Upload
+<<<<<<< HEAD
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+=======
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+>>>>>>> 1f218a6 (niateams)
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
@@ -63,6 +70,7 @@ export default function LostItemForm() {
         return;
       }
       setErrorMsg(null);
+<<<<<<< HEAD
       try {
         const base64 = await compressImage(file);
         setPhotoPreview(base64);
@@ -73,6 +81,14 @@ export default function LostItemForm() {
   };
 
   const handleDrop = async (e: React.DragEvent) => {
+=======
+      const url = URL.createObjectURL(file);
+      setPhotoPreview(url);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+>>>>>>> 1f218a6 (niateams)
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file) {
@@ -81,12 +97,17 @@ export default function LostItemForm() {
         return;
       }
       setErrorMsg(null);
+<<<<<<< HEAD
       try {
         const base64 = await compressImage(file);
         setPhotoPreview(base64);
       } catch (err: any) {
         setErrorMsg(err.message || 'Gagal memproses gambar.');
       }
+=======
+      const url = URL.createObjectURL(file);
+      setPhotoPreview(url);
+>>>>>>> 1f218a6 (niateams)
     }
   };
 
@@ -288,10 +309,17 @@ export default function LostItemForm() {
                   {/* Step Circle */}
                   <div
                     className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-2xs ${isCurrent
+<<<<<<< HEAD
                       ? 'bg-rose-500 text-white ring-4 ring-rose-100 scale-105 sm:scale-110'
                       : isCompleted
                         ? 'bg-rose-500 text-white'
                         : 'bg-white text-gray-400 border border-gray-300'
+=======
+                        ? 'bg-rose-500 text-white ring-4 ring-rose-100 scale-105 sm:scale-110'
+                        : isCompleted
+                          ? 'bg-rose-500 text-white'
+                          : 'bg-white text-gray-400 border border-gray-300'
+>>>>>>> 1f218a6 (niateams)
                       }`}
                   >
                     {isCompleted ? <Check size={14} className="stroke-[2.5]" /> : step.num}
@@ -300,10 +328,17 @@ export default function LostItemForm() {
                   {/* Step Label */}
                   <span
                     className={`text-[10px] sm:text-xs font-semibold mt-1.5 sm:mt-2 text-center leading-tight max-w-[70px] sm:max-w-[110px] px-0.5 transition-colors ${isCurrent
+<<<<<<< HEAD
                       ? 'text-gray-900 font-bold'
                       : isCompleted
                         ? 'text-rose-600 font-medium'
                         : 'text-gray-400'
+=======
+                        ? 'text-gray-900 font-bold'
+                        : isCompleted
+                          ? 'text-rose-600 font-medium'
+                          : 'text-gray-400'
+>>>>>>> 1f218a6 (niateams)
                       }`}
                   >
                     {step.label}

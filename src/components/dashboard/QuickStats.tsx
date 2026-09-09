@@ -92,7 +92,11 @@ export default function QuickStats() {
     {
       label: 'Total Laporan',
       value: totalReportsCount,
+<<<<<<< HEAD
       href: '/my-reports',
+=======
+      href: '/find',
+>>>>>>> 1f218a6 (niateams)
       icon: FileText,
       iconColor: 'text-purple-600',
       bgColor: 'bg-purple-50/80',

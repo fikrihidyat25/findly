@@ -5,6 +5,10 @@ import {
   Search,
   Filter,
   Eye,
+<<<<<<< HEAD
+=======
+  EyeOff,
+>>>>>>> 1f218a6 (niateams)
   CheckCircle2,
   Trash2,
   AlertTriangle,
@@ -42,10 +46,18 @@ export default function AdminLaporanPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterJenis, setFilterJenis] = useState<string>('semua');
   const [filterStatus, setFilterStatus] = useState<string>('semua');
+<<<<<<< HEAD
+=======
+  const [filterVisibilitas, setFilterVisibilitas] = useState<string>('semua');
+>>>>>>> 1f218a6 (niateams)
 
   // Modal Detail & Moderasi
   const [selectedItem, setSelectedItem] = useState<LaporanItem | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+<<<<<<< HEAD
+=======
+  const [moderasiReason, setModerasiReason] = useState('');
+>>>>>>> 1f218a6 (niateams)
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   async function fetchLaporan() {
@@ -102,8 +114,17 @@ export default function AdminLaporanPage() {
 
     const matchJenis = filterJenis === 'semua' || item.jenis_laporan === filterJenis;
     const matchStatus = filterStatus === 'semua' || item.status === filterStatus;
+<<<<<<< HEAD
 
     return matchSearch && matchJenis && matchStatus;
+=======
+    const matchVisibilitas =
+      filterVisibilitas === 'semua' ||
+      (filterVisibilitas === 'aktif' && item.aktif !== false) ||
+      (filterVisibilitas === 'sembunyi' && item.aktif === false);
+
+    return matchSearch && matchJenis && matchStatus && matchVisibilitas;
+>>>>>>> 1f218a6 (niateams)
   });
 
   // Action: Toggle Status Selesai / Mencari
@@ -137,6 +158,46 @@ export default function AdminLaporanPage() {
     }
   }
 
+<<<<<<< HEAD
+=======
+  // Action: Toggle Sembunyikan / Tampilkan
+  async function handleToggleAktif(item: LaporanItem) {
+    const nextAktif = !item.aktif;
+    setActionLoading(true);
+    try {
+      const supabase = createClient();
+      const payload: Record<string, any> = { aktif: nextAktif };
+      if (!nextAktif && moderasiReason) {
+        payload.alasan_moderasi = moderasiReason;
+      }
+
+      const { error } = await supabase
+        .from('laporan_barang')
+        .update(payload)
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      setLaporanList((prev) =>
+        prev.map((l) => (l.id === item.id ? { ...l, aktif: nextAktif, alasan_moderasi: payload.alasan_moderasi || l.alasan_moderasi } : l))
+      );
+      if (selectedItem?.id === item.id) {
+        setSelectedItem({ ...selectedItem, aktif: nextAktif });
+      }
+
+      setFeedbackMessage({
+        type: 'success',
+        text: `Laporan "${item.nama_barang}" berhasil ${nextAktif ? 'ditampilkan kembali' : 'disembunyikan'}.`,
+      });
+      setModerasiReason('');
+    } catch (err: any) {
+      setFeedbackMessage({ type: 'error', text: err.message || 'Gagal mengubah visibilitas laporan.' });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+>>>>>>> 1f218a6 (niateams)
   // Action: Hapus Laporan
   async function handleDeleteLaporan(item: LaporanItem) {
     if (!confirm(`Apakah Anda yakin ingin menghapus laporan "${item.nama_barang}" secara permanen?`)) {
@@ -184,8 +245,13 @@ export default function AdminLaporanPage() {
       {feedbackMessage && (
         <div
           className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between transition-all border ${feedbackMessage.type === 'success'
+<<<<<<< HEAD
             ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
             : 'bg-red-50 text-red-800 border-red-200'
+=======
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              : 'bg-red-50 text-red-800 border-red-200'
+>>>>>>> 1f218a6 (niateams)
             }`}
         >
           <span>{feedbackMessage.text}</span>
@@ -258,6 +324,22 @@ export default function AdminLaporanPage() {
               <option value="SELESAI">Selesai</option>
             </select>
           </div>
+<<<<<<< HEAD
+=======
+
+          {/* Filter Visibilitas */}
+          <div>
+            <select
+              value={filterVisibilitas}
+              onChange={(e) => setFilterVisibilitas(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-[#30AFFF] focus:outline-none transition-all cursor-pointer"
+            >
+              <option value="semua">Semua Visibilitas</option>
+              <option value="aktif">Laporan Aktif</option>
+              <option value="sembunyi">Disembunyikan</option>
+            </select>
+          </div>
+>>>>>>> 1f218a6 (niateams)
         </div>
       </div>
 
@@ -282,6 +364,10 @@ export default function AdminLaporanPage() {
                   <th className="px-4 py-3">Pelapor</th>
                   <th className="px-4 py-3">Lokasi</th>
                   <th className="px-4 py-3">Status</th>
+<<<<<<< HEAD
+=======
+                  <th className="px-4 py-3">Visibilitas</th>
+>>>>>>> 1f218a6 (niateams)
                   <th className="px-5 py-3 text-right">Tindakan</th>
                 </tr>
               </thead>
@@ -321,8 +407,13 @@ export default function AdminLaporanPage() {
                     <td className="px-4 py-3.5">
                       <span
                         className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${item.jenis_laporan === 'KEHILANGAN'
+<<<<<<< HEAD
                           ? 'bg-red-50 text-red-700'
                           : 'bg-emerald-50 text-emerald-700'
+=======
+                            ? 'bg-red-50 text-red-700'
+                            : 'bg-emerald-50 text-emerald-700'
+>>>>>>> 1f218a6 (niateams)
                           }`}
                       >
                         {item.jenis_laporan === 'KEHILANGAN' ? 'Kehilangan' : 'Ditemukan'}
@@ -348,15 +439,39 @@ export default function AdminLaporanPage() {
                     <td className="px-4 py-3.5">
                       <span
                         className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold ${item.status === 'SELESAI'
+<<<<<<< HEAD
                           ? 'bg-gray-100 text-gray-700'
                           : 'bg-blue-50 text-[#30AFFF]'
+=======
+                            ? 'bg-gray-100 text-gray-700'
+                            : 'bg-blue-50 text-[#30AFFF]'
+>>>>>>> 1f218a6 (niateams)
                           }`}
                       >
                         {item.status === 'SELESAI' ? 'Selesai' : 'Mencari'}
                       </span>
                     </td>
 
+<<<<<<< HEAD
                     {/* Column 6: Actions */}
+=======
+                    {/* Column 6: Visibilitas */}
+                    <td className="px-4 py-3.5">
+                      {item.aktif === false ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+                          <EyeOff size={11} />
+                          <span>Disembunyikan</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">
+                          <Eye size={11} />
+                          <span>Aktif</span>
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Column 7: Actions */}
+>>>>>>> 1f218a6 (niateams)
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
@@ -370,6 +485,22 @@ export default function AdminLaporanPage() {
 
                         <button
                           type="button"
+<<<<<<< HEAD
+=======
+                          onClick={() => handleToggleAktif(item)}
+                          disabled={actionLoading}
+                          className={`p-1.5 rounded-lg cursor-pointer transition-colors ${item.aktif === false
+                              ? 'text-emerald-600 hover:bg-emerald-50'
+                              : 'text-amber-600 hover:bg-amber-50'
+                            }`}
+                          title={item.aktif === false ? 'Tampilkan Laporan' : 'Sembunyikan Laporan'}
+                        >
+                          {item.aktif === false ? <Eye size={15} /> : <EyeOff size={15} />}
+                        </button>
+
+                        <button
+                          type="button"
+>>>>>>> 1f218a6 (niateams)
                           onClick={() => handleToggleStatus(item)}
                           disabled={actionLoading}
                           className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors"
@@ -405,8 +536,13 @@ export default function AdminLaporanPage() {
               <div className="flex items-center gap-2">
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${selectedItem.jenis_laporan === 'KEHILANGAN'
+<<<<<<< HEAD
                     ? 'bg-red-50 text-red-700'
                     : 'bg-emerald-50 text-emerald-700'
+=======
+                      ? 'bg-red-50 text-red-700'
+                      : 'bg-emerald-50 text-emerald-700'
+>>>>>>> 1f218a6 (niateams)
                     }`}
                 >
                   {selectedItem.jenis_laporan}
@@ -470,7 +606,23 @@ export default function AdminLaporanPage() {
             </div>
 
             {/* Action Buttons in Modal */}
+<<<<<<< HEAD
             <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-2">
+=======
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => handleToggleAktif(selectedItem)}
+                disabled={actionLoading}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer border transition-all ${selectedItem.aktif === false
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                    : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                  }`}
+              >
+                {selectedItem.aktif === false ? 'Tampilkan Kembali' : 'Sembunyikan'}
+              </button>
+
+>>>>>>> 1f218a6 (niateams)
               <button
                 type="button"
                 onClick={() => handleToggleStatus(selectedItem)}
