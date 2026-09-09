@@ -5,15 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import AppLayout from '@/src/components/layout/AppLayout';
 import {
-<<<<<<< HEAD
-=======
-  ShieldCheck,
-  LayoutDashboard,
-  FileText,
-  FileCheck2,
-  Users,
-  MapPin,
->>>>>>> 1f218a6 (niateams)
+
   Loader2,
   ShieldAlert,
   ArrowLeft,
@@ -70,17 +62,7 @@ export default function AdminLayout({
     verifyAdminAccess();
   }, [pathname]);
 
-<<<<<<< HEAD
-=======
-  const navTabs = [
-    { label: 'Ringkasan', href: '/admin', icon: LayoutDashboard },
-    { label: 'Moderasi Laporan', href: '/admin/laporan', icon: FileText },
-    { label: 'Kelola Klaim', href: '/admin/klaim', icon: FileCheck2 },
-    { label: 'Pengguna & Civitas', href: '/admin/pengguna', icon: Users },
-    { label: 'Titik Temu Kampus', href: '/safe-zones', icon: MapPin },
-  ];
 
->>>>>>> 1f218a6 (niateams)
   if (loading) {
     return (
       <AppLayout>
@@ -127,63 +109,7 @@ export default function AdminLayout({
   return (
     <AppLayout>
       <div className="space-y-6">
-<<<<<<< HEAD
-=======
-        {/* Formal Admin Page Header */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-2xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start sm:items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#30AFFF] shrink-0">
-                <ShieldCheck size={22} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">
-                    Panel Administrasi
-                  </h1>
-                  <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#30AFFF] border border-blue-100 text-[10px] font-semibold">
-                    Resmi
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Pusat kendali sistem, verifikasi civitas, dan mediasi laporan Findly.
-                </p>
-              </div>
-            </div>
 
-            <div className="text-left sm:text-right text-xs text-gray-400">
-              <p className="font-medium text-gray-700">Administrator</p>
-              <p className="text-[11px] truncate max-w-xs">{userEmail}</p>
-            </div>
-          </div>
-
-          {/* Clean Administrative Navigation Tabs */}
-          <div className="mt-6 pt-4 border-t border-gray-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-            {navTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive =
-                tab.href === '/admin'
-                  ? pathname === '/admin'
-                  : pathname.startsWith(tab.href);
-
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${isActive
-                      ? 'bg-[#EFF8FF] text-[#30AFFF] shadow-2xs'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                >
-                  <Icon size={15} className={isActive ? 'text-[#30AFFF]' : 'text-gray-400'} />
-                  <span>{tab.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-
->>>>>>> 1f218a6 (niateams)
         {/* Content Area */}
         <main>{children}</main>
       </div>

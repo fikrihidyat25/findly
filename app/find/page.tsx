@@ -9,25 +9,10 @@ import {
   MapPin,
   Clock,
   Bookmark,
-<<<<<<< HEAD
   PackageSearch,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 import { CATEGORIES, detectCategory, getCategoryIcon } from '@/src/lib/categories';
-=======
-  Wallet,
-  Briefcase,
-  Smartphone,
-  CreditCard,
-  KeyRound,
-  BookOpen,
-  PackageSearch,
-  PlusCircle,
-  AlertCircle,
-  HelpCircle,
-} from 'lucide-react';
-import { createClient } from '@/src/lib/supabase/client';
->>>>>>> 1f218a6 (niateams)
 
 interface CampusItem {
   id: string;
@@ -48,42 +33,7 @@ interface CampusItem {
   };
 }
 
-<<<<<<< HEAD
-=======
-const CATEGORIES = [
-  'Semua',
-  'Elektronik & Gadget',
-  'Dompet & Aksesoris',
-  'Tas & Ransel',
-  'Dokumen & Kartu',
-  'Kunci & Kendaraan',
-  'Buku & Alat Tulis',
-];
 
-function getCategoryIcon(cat: string) {
-  const lower = (cat || '').toLowerCase();
-  if (lower.includes('elektronik') || lower.includes('hp') || lower.includes('gadget') || lower.includes('laptop')) {
-    return Smartphone;
-  }
-  if (lower.includes('dompet') || lower.includes('aksesoris')) {
-    return Wallet;
-  }
-  if (lower.includes('tas') || lower.includes('ransel')) {
-    return Briefcase;
-  }
-  if (lower.includes('dokumen') || lower.includes('kartu') || lower.includes('ktm')) {
-    return CreditCard;
-  }
-  if (lower.includes('kunci') || lower.includes('kendaraan') || lower.includes('motor')) {
-    return KeyRound;
-  }
-  if (lower.includes('buku') || lower.includes('tulis')) {
-    return BookOpen;
-  }
-  return Briefcase;
-}
-
->>>>>>> 1f218a6 (niateams)
 function getColorScheme(type: 'lost' | 'found') {
   if (type === 'found') {
     return { bg: 'bg-emerald-50/70', text: 'text-emerald-700', border: 'border-emerald-200' };
@@ -111,7 +61,6 @@ function formatRelativeTime(dateString: string) {
   }
 }
 
-<<<<<<< HEAD
 function CardImage({
   src,
   alt,
@@ -145,21 +94,14 @@ function CardImage({
     </div>
   );
 }
-
-=======
->>>>>>> 1f218a6 (niateams)
 export default function FindItemsPage() {
   const [items, setItems] = useState<CampusItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-<<<<<<< HEAD
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
-=======
-  const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'lost' | 'found'>('all');
->>>>>>> 1f218a6 (niateams)
   const [savedItems, setSavedItems] = useState<string[]>([]);
 
   useEffect(() => {
@@ -201,13 +143,9 @@ export default function FindItemsPage() {
         if (data) {
           const mapped: CampusItem[] = data.map((row: any) => {
             const isFound = row.jenis_laporan === 'DITEMUKAN';
-<<<<<<< HEAD
             const cat = detectCategory(row);
             const rawPhoto = row.foto_url;
             const foto_url = rawPhoto && !rawPhoto.startsWith('blob:') ? rawPhoto : null;
-=======
-            const cat = row.kategori || 'Barang Kampus';
->>>>>>> 1f218a6 (niateams)
             return {
               id: row.id,
               title: row.nama_barang,
@@ -222,11 +160,7 @@ export default function FindItemsPage() {
               }),
               description: row.deskripsi || '',
               icon: getCategoryIcon(cat),
-<<<<<<< HEAD
               foto_url,
-=======
-              foto_url: row.foto_url || null,
->>>>>>> 1f218a6 (niateams)
               pelaporId: row.pelapor_id,
               colorScheme: getColorScheme(isFound ? 'found' : 'lost'),
             };
@@ -265,14 +199,10 @@ export default function FindItemsPage() {
     const matchesCategory =
       selectedCategory === 'Semua' || item.category.toLowerCase() === selectedCategory.toLowerCase();
 
-<<<<<<< HEAD
-    return matchesSearch && matchesCategory;
-=======
     const matchesStatus =
       selectedStatus === 'all' || item.type === selectedStatus;
 
     return matchesSearch && matchesCategory && matchesStatus;
->>>>>>> 1f218a6 (niateams)
   });
 
   return (
@@ -309,18 +239,6 @@ export default function FindItemsPage() {
 
         {/* Filter Controls Bar */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-2xs space-y-4">
-<<<<<<< HEAD
-          {/* Top Row: Full width search input */}
-          <div className="relative w-full">
-            <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Ketik nama barang, lokasi kampus, atau ciri khusus..."
-              className="w-full bg-gray-50/70 hover:bg-gray-50 focus:bg-white pl-10 pr-4 py-2.5 rounded-xl text-xs sm:text-sm text-gray-800 placeholder-gray-400 border border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all"
-            />
-=======
           {/* Top Row: Search input & Status toggle */}
           <div className="flex flex-col md:flex-row items-center gap-3">
             <div className="relative w-full flex-1">
@@ -367,7 +285,6 @@ export default function FindItemsPage() {
                 Hilang
               </button>
             </div>
->>>>>>> 1f218a6 (niateams)
           </div>
 
           {/* Category Chips Carousel / Row */}
@@ -380,18 +297,11 @@ export default function FindItemsPage() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-<<<<<<< HEAD
-                className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all cursor-pointer ${selectedCategory === cat
-                    ? 'bg-[#30AFFF] text-white font-semibold shadow-2xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-gray-900'
-                  }`}
-=======
                 className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all cursor-pointer ${
                   selectedCategory === cat
                     ? 'bg-[#30AFFF] text-white font-semibold shadow-2xs'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-gray-900'
                 }`}
->>>>>>> 1f218a6 (niateams)
               >
                 {cat}
               </button>
@@ -429,11 +339,7 @@ export default function FindItemsPage() {
                 Belum Ada Laporan Barang
               </h3>
               <p className="text-xs sm:text-sm text-gray-500 leading-relaxed max-w-md mx-auto">
-<<<<<<< HEAD
-                {searchQuery || selectedCategory !== 'Semua'
-=======
                 {searchQuery || selectedCategory !== 'Semua' || selectedStatus !== 'all'
->>>>>>> 1f218a6 (niateams)
                   ? 'Tidak ada barang yang cocok dengan kata kunci atau filter yang dipilih.'
                   : 'Belum ada barang hilang atau temuan yang dilaporkan. Mulai daftarkan barang untuk membantu sesama warga kampus.'}
               </p>
@@ -474,18 +380,11 @@ export default function FindItemsPage() {
                     {/* Status Badge */}
                     <div className="absolute top-3 left-3 z-10">
                       <span
-<<<<<<< HEAD
-                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${isLost
-                            ? 'bg-rose-500 text-white border-rose-600'
-                            : 'bg-emerald-500 text-white border-emerald-600'
-                          }`}
-=======
                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${
                           isLost
                             ? 'bg-rose-500 text-white border-rose-600'
                             : 'bg-emerald-500 text-white border-emerald-600'
                         }`}
->>>>>>> 1f218a6 (niateams)
                       >
                         {isLost ? 'Hilang' : 'Ditemukan'}
                       </span>
@@ -494,39 +393,20 @@ export default function FindItemsPage() {
                     {/* Bookmark Button */}
                     <button
                       onClick={() => toggleSave(item.id)}
-<<<<<<< HEAD
-                      className={`absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center shadow-2xs transition-all hover:scale-110 cursor-pointer ${isSaved ? 'text-[#30AFFF]' : 'text-gray-400 hover:text-gray-700'
-                        }`}
-=======
                       className={`absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center shadow-2xs transition-all hover:scale-110 cursor-pointer ${
                         isSaved ? 'text-[#30AFFF]' : 'text-gray-400 hover:text-gray-700'
                       }`}
->>>>>>> 1f218a6 (niateams)
                     >
                       <Bookmark size={15} className={isSaved ? 'fill-[#30AFFF] stroke-[#30AFFF]' : ''} />
                     </button>
 
                     {/* Photo or Category Fallback */}
-<<<<<<< HEAD
                     <CardImage
                       src={item.foto_url}
                       alt={item.title}
                       Icon={Icon}
                       colorScheme={item.colorScheme}
                     />
-=======
-                    {item.foto_url ? (
-                      <img
-                        src={item.foto_url}
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className={`w-16 h-16 rounded-2xl bg-white/90 shadow-2xs flex items-center justify-center ${item.colorScheme.text} group-hover:scale-110 transition-transform duration-300`}>
-                        <Icon size={32} className="stroke-[1.75]" />
-                      </div>
-                    )}
->>>>>>> 1f218a6 (niateams)
                   </div>
 
                   {/* Card Content */}

@@ -83,10 +83,7 @@ export default function AppSidebar({
   const userNavItems: NavItem[] = [
     { label: 'Beranda', href: '/dashboard', icon: Home },
     { label: 'Cari Barang', href: '/find', icon: Search },
-<<<<<<< HEAD
     { label: 'Laporan Saya', href: '/my-reports', icon: FileText },
-=======
->>>>>>> 1f218a6 (niateams)
     { label: 'Saya Kehilangan', href: '/lost/new', icon: AlertCircle },
     { label: 'Saya Menemukan', href: '/found/new', icon: HelpCircle },
     { label: 'Klaim Saya', href: '/claims', icon: FileCheck2 },
@@ -141,12 +138,9 @@ export default function AppSidebar({
     if (href === '/find') {
       return pathname.startsWith('/find') || pathname.startsWith('/cari-barang');
     }
-<<<<<<< HEAD
     if (href === '/my-reports') {
       return pathname.startsWith('/my-reports') || pathname.startsWith('/laporan-saya');
     }
-=======
->>>>>>> 1f218a6 (niateams)
     if (href === '/lost/new') {
       return pathname.startsWith('/lost') || pathname.startsWith('/saya-kehilangan');
     }
@@ -188,14 +182,11 @@ export default function AppSidebar({
           <span className="text-2xl font-black tracking-tight text-[#30AFFF] group-hover:opacity-85 transition-opacity">
             Findly.
           </span>
-<<<<<<< HEAD
-=======
           {isAdmin && (
             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#30AFFF] border border-blue-200 uppercase tracking-wider">
               Admin
             </span>
           )}
->>>>>>> 1f218a6 (niateams)
         </Link>
         {onCloseMobile && (
           <button
@@ -275,13 +266,8 @@ export default function AppSidebar({
           </nav>
         </div>
 
-<<<<<<< HEAD
         {/* Promo / Action Card (Only on dashboard for regular users, NOT on other pages or for admin) */}
         {!isAdmin && (pathname === '/dashboard' || pathname === '/beranda') && (
-=======
-        {/* Promo / Action Card (Only for regular users, NOT for admin) */}
-        {!isAdmin && (
->>>>>>> 1f218a6 (niateams)
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#EBF7FF] to-[#E0F2FE] p-4 border border-[#BAE6FD]/60 shadow-2xs">
             <div className="relative z-10 space-y-2">
               <div className="flex items-center gap-1.5 text-[#0369A1] text-xs font-semibold">

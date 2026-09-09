@@ -8,10 +8,7 @@ import {
   Users,
   CheckCircle2,
   Clock,
-<<<<<<< HEAD
-=======
   ArrowRight,
->>>>>>> 1f218a6 (niateams)
   TrendingUp,
   AlertCircle,
   Loader2,
@@ -291,16 +288,10 @@ export default function AdminDashboardPage() {
             </div>
             <Link
               href="/admin/laporan"
-<<<<<<< HEAD
-              className="text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8] hover:underline"
-            >
-              Kelola Semua
-=======
               className="inline-flex items-center gap-1 text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8]"
             >
               <span>Kelola Semua</span>
               <ArrowRight size={13} />
->>>>>>> 1f218a6 (niateams)
             </Link>
           </div>
 
@@ -315,15 +306,11 @@ export default function AdminDashboardPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${item.jenis_laporan === 'KEHILANGAN'
-<<<<<<< HEAD
-                          ? 'bg-red-50 text-red-700'
-                          : 'bg-emerald-50 text-emerald-700'
-=======
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                          item.jenis_laporan === 'KEHILANGAN'
                             ? 'bg-red-50 text-red-700'
                             : 'bg-emerald-50 text-emerald-700'
->>>>>>> 1f218a6 (niateams)
-                          }`}
+                        }`}
                       >
                         {item.jenis_laporan === 'KEHILANGAN' ? 'Kehilangan' : 'Ditemukan'}
                       </span>
@@ -338,15 +325,11 @@ export default function AdminDashboardPage() {
 
                   <div className="text-right shrink-0">
                     <span
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${item.status === 'SELESAI'
-<<<<<<< HEAD
-                        ? 'bg-gray-100 text-gray-700'
-                        : 'bg-blue-50 text-[#30AFFF]'
-=======
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${
+                        item.status === 'SELESAI'
                           ? 'bg-gray-100 text-gray-700'
                           : 'bg-blue-50 text-[#30AFFF]'
->>>>>>> 1f218a6 (niateams)
-                        }`}
+                      }`}
                     >
                       {item.status === 'SELESAI' ? 'Selesai' : 'Mencari'}
                     </span>
@@ -366,16 +349,10 @@ export default function AdminDashboardPage() {
             </div>
             <Link
               href="/admin/klaim"
-<<<<<<< HEAD
-              className="text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8] hover:underline"
-            >
-              Kelola Semua
-=======
               className="inline-flex items-center gap-1 text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8]"
             >
               <span>Kelola Semua</span>
               <ArrowRight size={13} />
->>>>>>> 1f218a6 (niateams)
             </Link>
           </div>
 
@@ -398,23 +375,15 @@ export default function AdminDashboardPage() {
 
                   <div className="text-right shrink-0">
                     <span
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${item.status === 'SELESAI'
-<<<<<<< HEAD
-                        ? 'bg-gray-100 text-gray-700'
-                        : item.status === 'MENUNGGU'
-                          ? 'bg-amber-50 text-amber-800'
-                          : item.status === 'DITOLAK'
-                            ? 'bg-red-50 text-red-700'
-                            : 'bg-blue-50 text-[#30AFFF]'
-=======
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${
+                        item.status === 'SELESAI'
                           ? 'bg-gray-100 text-gray-700'
                           : item.status === 'MENUNGGU'
                             ? 'bg-amber-50 text-amber-800'
                             : item.status === 'DITOLAK'
                               ? 'bg-red-50 text-red-700'
                               : 'bg-blue-50 text-[#30AFFF]'
->>>>>>> 1f218a6 (niateams)
-                        }`}
+                      }`}
                     >
                       {item.status}
                     </span>

@@ -6,22 +6,10 @@ import {
   Bookmark,
   MapPin,
   Clock,
-<<<<<<< HEAD
   PackageSearch,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 import { detectCategory, getCategoryIcon } from '@/src/lib/categories';
-=======
-  Wallet,
-  Briefcase,
-  Smartphone,
-  CreditCard,
-  KeyRound,
-  BookOpen,
-  PackageSearch,
-} from 'lucide-react';
-import { createClient } from '@/src/lib/supabase/client';
->>>>>>> 1f218a6 (niateams)
 
 export interface RecentItem {
   id: string;
@@ -38,32 +26,7 @@ export interface RecentItem {
   icon: any;
 }
 
-<<<<<<< HEAD
-=======
-function getCategoryIcon(cat: string) {
-  const lower = (cat || '').toLowerCase();
-  if (lower.includes('elektronik') || lower.includes('hp') || lower.includes('gadget') || lower.includes('laptop')) {
-    return Smartphone;
-  }
-  if (lower.includes('dompet') || lower.includes('aksesoris')) {
-    return Wallet;
-  }
-  if (lower.includes('tas') || lower.includes('ransel')) {
-    return Briefcase;
-  }
-  if (lower.includes('dokumen') || lower.includes('kartu') || lower.includes('ktm')) {
-    return CreditCard;
-  }
-  if (lower.includes('kunci') || lower.includes('kendaraan') || lower.includes('motor')) {
-    return KeyRound;
-  }
-  if (lower.includes('buku') || lower.includes('tulis')) {
-    return BookOpen;
-  }
-  return Briefcase;
-}
 
->>>>>>> 1f218a6 (niateams)
 function getColorScheme(type: 'lost' | 'found') {
   if (type === 'found') {
     return { bg: 'bg-emerald-50/70', text: 'text-emerald-700', border: 'border-emerald-200/80' };
@@ -120,11 +83,7 @@ export default function RecentItemsFeed() {
         if (data) {
           const mapped: RecentItem[] = data.map((row: any) => {
             const isFound = row.jenis_laporan === 'DITEMUKAN';
-<<<<<<< HEAD
             const cat = detectCategory(row);
-=======
-            const cat = row.kategori || 'Barang Kampus';
->>>>>>> 1f218a6 (niateams)
             return {
               id: row.id,
               title: row.nama_barang,
