@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, CheckCircle2, MapPin, Check, X, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, MapPin, Check, X, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { ChatConversation } from '@/src/types/chat';
 
 interface ChatHeaderProps {
@@ -135,8 +135,9 @@ export default function ChatHeader({
         )}
 
         {isDisputed && (
-          <span className="text-[11px] font-semibold text-purple-800 bg-purple-50 px-2.5 py-1 rounded-[4px] border border-purple-300">
-            Dalam Mediasi
+          <span className="text-[11px] font-semibold text-purple-800 bg-purple-50 px-2.5 py-1 rounded-[4px] border border-purple-300 flex items-center gap-1 shadow-2xs">
+            <ShieldCheck size={13} className="text-purple-600" />
+            <span>Dalam Mediasi Admin</span>
           </span>
         )}
       </div>
