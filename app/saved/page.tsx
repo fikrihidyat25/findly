@@ -7,14 +7,9 @@ import {
   Bookmark,
   MapPin,
   Trash2,
-  Briefcase,
-  Smartphone,
-  Wallet,
-  CreditCard,
-  KeyRound,
-  BookOpen,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
+import { detectCategory, getCategoryIcon } from '@/src/lib/categories';
 
 interface SavedItem {
   id: string;
@@ -22,30 +17,48 @@ interface SavedItem {
   type: 'lost' | 'found';
   category: string;
   location: string;
+  description?: string;
+  foto_url?: string | null;
   icon: any;
+  colorScheme: {
+    bg: string;
+    text: string;
+    border: string;
+  };
 }
 
-function getCategoryIcon(cat: string) {
-  const lower = (cat || '').toLowerCase();
-  if (lower.includes('elektronik') || lower.includes('hp') || lower.includes('gadget') || lower.includes('laptop')) {
-    return Smartphone;
+function CardImage({
+  src,
+  alt,
+  Icon,
+  colorScheme,
+}: {
+  src?: string | null;
+  alt: string;
+  Icon: any;
+  colorScheme: { bg: string; text: string; border: string };
+}) {
+  const [error, setError] = useState(false);
+  const isValid = Boolean(src && !src.startsWith('blob:') && !error);
+
+  if (isValid) {
+    return (
+      <img
+        src={src!}
+        alt={alt}
+        onError={() => setError(true)}
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+      />
+    );
   }
-  if (lower.includes('dompet') || lower.includes('aksesoris')) {
-    return Wallet;
-  }
-  if (lower.includes('tas') || lower.includes('ransel')) {
-    return Briefcase;
-  }
-  if (lower.includes('dokumen') || lower.includes('kartu') || lower.includes('ktm')) {
-    return CreditCard;
-  }
-  if (lower.includes('kunci') || lower.includes('kendaraan') || lower.includes('motor')) {
-    return KeyRound;
-  }
-  if (lower.includes('buku') || lower.includes('tulis')) {
-    return BookOpen;
-  }
-  return Briefcase;
+
+  return (
+    <div
+      className={`w-16 h-16 rounded-2xl bg-white/90 shadow-2xs flex items-center justify-center ${colorScheme.text} group-hover:scale-110 transition-transform duration-300`}
+    >
+      <Icon size={32} className="stroke-[1.75]" />
+    </div>
+  );
 }
 
 export default function SavedItemsPage() {
@@ -72,14 +85,25 @@ export default function SavedItemsPage() {
         if (error) throw error;
 
         if (data) {
-          const mapped: SavedItem[] = data.map((row: any) => ({
-            id: row.id,
-            title: row.nama_barang,
-            type: row.jenis_laporan === 'DITEMUKAN' ? 'found' : 'lost',
-            category: row.kategori || 'Barang Kampus',
-            location: row.lokasi_terakhir || 'Lingkungan Kampus',
-            icon: getCategoryIcon(row.kategori || ''),
-          }));
+          const mapped: SavedItem[] = data.map((row: any) => {
+            const isFound = row.jenis_laporan === 'DITEMUKAN';
+            const cat = detectCategory(row);
+            const rawPhoto = row.foto_url;
+            const foto_url = rawPhoto && !rawPhoto.startsWith('blob:') ? rawPhoto : null;
+            return {
+              id: row.id,
+              title: row.nama_barang,
+              type: isFound ? 'found' : 'lost',
+              category: cat,
+              location: row.lokasi_terakhir || 'Lingkungan Kampus',
+              description: row.deskripsi || '',
+              foto_url,
+              icon: getCategoryIcon(cat),
+              colorScheme: isFound
+                ? { bg: 'bg-emerald-50/70', text: 'text-emerald-700', border: 'border-emerald-200' }
+                : { bg: 'bg-rose-50/70', text: 'text-rose-700', border: 'border-rose-200' },
+            };
+          });
           setItems(mapped);
         }
       } catch (err) {
@@ -118,11 +142,14 @@ export default function SavedItemsPage() {
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[1, 2].map((i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3 animate-pulse">
-                <div className="h-12 w-12 bg-gray-100 rounded-xl" />
-                <div className="h-4 bg-gray-100 rounded w-1/3" />
-                <div className="h-5 bg-gray-100 rounded w-3/4" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden space-y-3 animate-pulse">
+                <div className="h-44 bg-gray-100 w-full" />
+                <div className="p-4 space-y-2">
+                  <div className="h-4 bg-gray-100 rounded w-1/3" />
+                  <div className="h-5 bg-gray-100 rounded w-3/4" />
+                  <div className="h-3 bg-gray-100 rounded w-full" />
+                </div>
               </div>
             ))}
           </div>
@@ -151,53 +178,75 @@ export default function SavedItemsPage() {
               return (
                 <div
                   key={item.id}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-2xs p-5 flex flex-col justify-between space-y-4 group hover:shadow-md transition-all"
+                  className="bg-white rounded-2xl border border-gray-100 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden group"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#30AFFF] flex items-center justify-center shrink-0">
-                      <Icon size={24} className="stroke-[1.75]" />
+                  {/* Visual Thumbnail */}
+                  <div
+                    className={`relative w-full h-44 ${item.foto_url ? 'bg-gray-100' : item.colorScheme.bg} border-b ${item.colorScheme.border} flex items-center justify-center overflow-hidden`}
+                  >
+                    {/* Status Badge */}
+                    <div className="absolute top-3 left-3 z-10">
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${
+                          isLost
+                            ? 'bg-rose-500 text-white border-rose-600'
+                            : 'bg-emerald-500 text-white border-emerald-600'
+                        }`}
+                      >
+                        {isLost ? 'Hilang' : 'Ditemukan'}
+                      </span>
                     </div>
-                    <span
-                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                        isLost
-                          ? 'bg-rose-50 text-rose-600 border-rose-200'
-                          : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                      }`}
-                    >
-                      {isLost ? 'Hilang' : 'Ditemukan'}
-                    </span>
-                  </div>
 
-                  <div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
-                      {item.category}
-                    </span>
-                    <Link href={`/find/${item.id}`}>
-                      <h3 className="font-bold text-sm sm:text-base text-gray-900 hover:text-[#30AFFF] transition-colors mt-0.5 cursor-pointer">
-                        {item.title}
-                      </h3>
-                    </Link>
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
-                      <MapPin size={12} className="text-gray-400 shrink-0" />
-                      <span className="truncate">{item.location}</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-gray-50 flex items-center justify-between gap-2">
+                    {/* Delete / Remove from Saved */}
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="p-2 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
+                      className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center shadow-2xs text-gray-400 hover:text-rose-600 hover:bg-white hover:scale-110 transition-all cursor-pointer"
                       title="Hapus dari simpanan"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={15} />
                     </button>
 
-                    <Link
-                      href={`/find/${item.id}`}
-                      className="px-4 py-1.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-all text-center cursor-pointer"
-                    >
-                      {item.type === 'found' ? 'Ajukan Klaim' : 'Lihat Detail'}
-                    </Link>
+                    {/* Photo or Category Fallback */}
+                    <CardImage
+                      src={item.foto_url}
+                      alt={item.title}
+                      Icon={Icon}
+                      colorScheme={item.colorScheme}
+                    />
+                  </div>
+
+                  {/* Card Content */}
+                  <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                        {item.category}
+                      </span>
+                      <Link href={`/find/${item.id}`}>
+                        <h3 className="font-bold text-sm sm:text-base text-gray-900 group-hover:text-[#30AFFF] transition-colors line-clamp-1 mt-0.5 hover:underline decoration-[#30AFFF]">
+                          {item.title}
+                        </h3>
+                      </Link>
+                      {item.description && (
+                        <p className="text-xs text-gray-500 line-clamp-2 mt-1 leading-relaxed">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-3 border-t border-gray-50 flex items-center gap-1.5 text-xs text-gray-500">
+                      <MapPin size={13} className="text-gray-400 shrink-0" />
+                      <span className="truncate">{item.location}</span>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="pt-2">
+                      <Link
+                        href={`/find/${item.id}`}
+                        className="w-full inline-flex items-center justify-center py-2 px-3 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-all text-center cursor-pointer"
+                      >
+                        {item.type === 'found' ? 'Ajukan Klaim' : 'Lihat Detail'}
+                      </Link>
+                    </div>
                   </div>
                 </div>
               );
