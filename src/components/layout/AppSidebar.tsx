@@ -41,9 +41,11 @@ export default function AppSidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(true);
 
   useEffect(() => {
     async function checkRole() {
+      setRoleLoading(true);
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -64,6 +66,8 @@ export default function AppSidebar({
         }
       } catch {
         setIsAdmin(false);
+      } finally {
+        setRoleLoading(false);
       }
     }
 
@@ -205,37 +209,47 @@ export default function AppSidebar({
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200">
         {/* Main Nav Items */}
         <nav className="space-y-1">
-          {currentNavItems.map((item) => {
-            const active = isItemActive(item.href);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={onCloseMobile}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${active
-                    ? 'bg-[#EFF8FF] text-[#30AFFF] font-semibold shadow-2xs'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon
-                    size={18}
-                    className={active ? 'text-[#30AFFF] stroke-[2.2]' : 'text-gray-400 stroke-[1.75]'}
-                  />
-                  <span>{item.label}</span>
-                </div>
-                {item.badge && (
-                  <span
-                    className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-2xs ${item.label === 'Notifikasi' ? 'bg-rose-500' : 'bg-[#30AFFF]'
-                      }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+          {roleLoading ? (
+            /* Skeleton placeholders while role is being verified */
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl">
+                <div className="w-[18px] h-[18px] rounded bg-gray-100 animate-pulse" />
+                <div className={`h-3.5 rounded bg-gray-100 animate-pulse ${i % 2 === 0 ? 'w-24' : 'w-20'}`} />
+              </div>
+            ))
+          ) : (
+            currentNavItems.map((item) => {
+              const active = isItemActive(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={onCloseMobile}
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${active
+                      ? 'bg-[#EFF8FF] text-[#30AFFF] font-semibold shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon
+                      size={18}
+                      className={active ? 'text-[#30AFFF] stroke-[2.2]' : 'text-gray-400 stroke-[1.75]'}
+                    />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <span
+                      className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-2xs ${item.label === 'Notifikasi' ? 'bg-rose-500' : 'bg-[#30AFFF]'
+                        }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })
+          )}
         </nav>
 
         {/* Divider & Secondary Nav Items */}
