@@ -22,6 +22,7 @@ import {
   LayoutDashboard,
   FileText,
   Users,
+  MapPin,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 
@@ -97,6 +98,7 @@ export default function AppSidebar({
     { label: 'Dashboard Admin', href: '/admin', icon: LayoutDashboard },
     { label: 'Moderasi Laporan', href: '/admin/laporan', icon: FileText },
     { label: 'Mediasi Klaim', href: '/admin/klaim', icon: FileCheck2 },
+    { label: 'Titik Temu', href: '/admin/titik-temu', icon: MapPin },
     { label: 'Pesan & Mediasi', href: '/messages', icon: MessageSquare, badge: msgBadge },
     { label: 'Verifikasi Civitas', href: '/admin/pengguna', icon: Users },
     { label: 'Katalog Barang', href: '/find', icon: Search },
