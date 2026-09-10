@@ -44,14 +44,14 @@ export default function AdminTitikTemuPage() {
     nama_lokasi: '',
     deskripsi: '',
     alamat_lengkap: '',
-    latitude: -6.36442,
-    longitude: 106.82861,
+    latitude: -0.95772,
+    longitude: 100.39579,
     jam_buka: '08:00',
     jam_tutup: '21:00',
     ada_satpam: true,
     ada_cctv: true,
     aktif: true,
-    kampus: 'Universitas Indonesia',
+    kampus: 'UPI YPTK Padang',
   });
 
   async function fetchPoints() {
@@ -88,14 +88,14 @@ export default function AdminTitikTemuPage() {
       nama_lokasi: '',
       deskripsi: '',
       alamat_lengkap: '',
-      latitude: -6.36442,
-      longitude: 106.82861,
+      latitude: -0.95772,
+      longitude: 100.39579,
       jam_buka: '08:00',
       jam_tutup: '21:00',
       ada_satpam: true,
       ada_cctv: true,
       aktif: true,
-      kampus: 'Universitas Indonesia',
+      kampus: 'UPI YPTK Padang',
     });
     setIsModalOpen(true);
   };
@@ -453,7 +453,7 @@ export default function AdminTitikTemuPage() {
                         type="number"
                         step="any"
                         name="latitude"
-                        value={formData.latitude}
+                        value={formData.latitude ?? ''}
                         onChange={handleFormChange}
                         readOnly
                         className="w-full px-2 py-1.5 bg-gray-100 border border-gray-200 rounded-lg text-xs focus:outline-none"
@@ -465,7 +465,7 @@ export default function AdminTitikTemuPage() {
                         type="number"
                         step="any"
                         name="longitude"
-                        value={formData.longitude}
+                        value={formData.longitude ?? ''}
                         onChange={handleFormChange}
                         readOnly
                         className="w-full px-2 py-1.5 bg-gray-100 border border-gray-200 rounded-lg text-xs focus:outline-none"
