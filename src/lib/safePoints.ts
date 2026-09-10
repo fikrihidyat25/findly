@@ -86,13 +86,22 @@ export async function getSafePoints(): Promise<SafePoint[]> {
       .order('dibuat_pada', { ascending: true });
 
     if (!error && data && data.length > 0) {
-      return data.map((item: any) => ({
+      const uniqueData = [];
+      const seen = new Set();
+      for (const item of data) {
+        if (!seen.has(item.nama_lokasi)) {
+          seen.add(item.nama_lokasi);
+          uniqueData.push(item);
+        }
+      }
+
+      return uniqueData.map((item: any) => ({
         id: item.id,
         nama_lokasi: item.nama_lokasi,
         deskripsi: item.deskripsi || 'Titik temu resmi kampus.',
         alamat_lengkap: item.alamat_lengkap || 'Area Kampus',
-        latitude: typeof item.latitude === 'number' ? item.latitude : -6.36442,
-        longitude: typeof item.longitude === 'number' ? item.longitude : 106.82861,
+        latitude: item.latitude ? Number(item.latitude) : -6.36442,
+        longitude: item.longitude ? Number(item.longitude) : 106.82861,
         jam_buka: (item.jam_buka || '08:00').slice(0, 5),
         jam_tutup: (item.jam_tutup || '21:00').slice(0, 5),
         ada_satpam: item.ada_satpam ?? true,

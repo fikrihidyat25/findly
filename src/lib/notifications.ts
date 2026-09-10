@@ -145,33 +145,69 @@ export async function fetchUserNotifications(userId: string): Promise<AppNotific
     if (uniqueClaimIds.length > 0) {
       const { data: recentMessages } = await supabase
         .from('pesan_chat')
-        .select('*')
+        .select('*, klaim_barang(laporan_barang(nama_barang))')
         .in('klaim_id', uniqueClaimIds)
         .neq('pengirim_id', userId)
         .order('dibuat_pada', { ascending: false })
-        .limit(10);
+        .limit(50);
 
+      const messagesByClaim: Record<string, any[]> = {};
       (recentMessages || []).forEach((m: any) => {
-        const notifId = `msg-${m.id}`;
-        const createdMs = new Date(m.dibuat_pada).getTime();
-        let snippet = m.pesan;
+        if (!messagesByClaim[m.klaim_id]) {
+          messagesByClaim[m.klaim_id] = [];
+        }
+        messagesByClaim[m.klaim_id].push(m);
+      });
+
+      Object.entries(messagesByClaim).forEach(([klaimId, msgs]) => {
+        const latestMessage = msgs[0];
+        const notifId = `msg-group-${klaimId}-${latestMessage.id}`;
+        
+        let unreadCount = 0;
+        for (const m of msgs) {
+          const legacyId = `msg-${m.id}`;
+          const groupId = `msg-group-${klaimId}-${m.id}`;
+          if (!readIds.includes(legacyId) && !readIds.includes(groupId)) {
+            unreadCount++;
+          } else {
+            break;
+          }
+        }
+
+        const isUnread = !readIds.includes(notifId) && unreadCount > 0;
+
+        const createdMs = new Date(latestMessage.dibuat_pada).getTime();
+        let snippet = latestMessage.pesan;
         try {
-          const parsed = JSON.parse(m.pesan);
+          const parsed = JSON.parse(latestMessage.pesan);
           snippet = parsed.text || (parsed.imageUrl ? '📷 Mengirim foto verifikasi' : 'Pesan baru');
         } catch {
           // regular text
         }
         if (snippet.length > 60) snippet = snippet.substring(0, 60) + '...';
 
+        const itemName = latestMessage.klaim_barang?.laporan_barang?.nama_barang;
+        let title = 'Pesan Verifikasi Baru';
+        if (itemName) {
+          title = unreadCount > 1 
+            ? `${unreadCount} Pesan Baru: ${itemName}`
+            : `Pesan Baru: ${itemName}`;
+        } else {
+          title = unreadCount > 1 
+            ? `${unreadCount} Pesan Verifikasi Baru`
+            : 'Pesan Verifikasi Baru';
+        }
+
         notifs.push({
           id: notifId,
-          title: 'Pesan Verifikasi Baru',
+          title,
           desc: snippet,
-          timeAgo: formatRelativeTime(m.dibuat_pada),
+          timeAgo: formatRelativeTime(latestMessage.dibuat_pada),
           timestamp: createdMs,
           type: 'chat',
-          unread: !readIds.includes(notifId),
-          link: `/messages?id=${m.klaim_id}`,
+          unread: isUnread,
+          link: `/messages?id=${klaimId}`,
+          itemTitle: itemName || 'Barang',
         });
       });
     }

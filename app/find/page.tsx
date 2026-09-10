@@ -455,7 +455,7 @@ export default function FindItemsPage() {
                       ) : (
                         <Link
                           href={`/find/${item.id}`}
-                          className="w-full inline-flex items-center justify-center py-2 px-3 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-all"
+                          className="w-full inline-flex items-center justify-center py-2 px-3 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold shadow-2xs transition-all"
                         >
                           Saya Menemukan Ini
                         </Link>
