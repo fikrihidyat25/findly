@@ -269,10 +269,9 @@ export default function AdminDashboardPage() {
             </div>
             <Link
               href="/admin/laporan"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8]"
+              className="text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8] hover:underline decoration-[#30AFFF] underline-offset-2"
             >
-              <span>Kelola Semua</span>
-              <ArrowRight size={13} />
+              Kelola Semua
             </Link>
           </div>
 
@@ -330,10 +329,9 @@ export default function AdminDashboardPage() {
             </div>
             <Link
               href="/admin/klaim"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8]"
+              className="text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8] hover:underline decoration-[#30AFFF] underline-offset-2"
             >
-              <span>Kelola Semua</span>
-              <ArrowRight size={13} />
+              Kelola Semua
             </Link>
           </div>
 
