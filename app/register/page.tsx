@@ -18,7 +18,6 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  Sparkles,
   Info,
   ShieldCheck,
 } from 'lucide-react';
@@ -465,10 +464,6 @@ function RegisterFormContent() {
                     {/* Khusus Campus Member: Universitas, Peran Kampus, NIM/NIP */}
                     {accountType === 'campus' && (
                       <div className="p-3 bg-gray-50/70 rounded-2xl border border-gray-100 space-y-3">
-                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#30AFFF]">
-                          <Sparkles size={13} />
-                          <span>Identitas Kampus untuk Badge Terverifikasi</span>
-                        </div>
 
                         {/* Asal Universitas */}
                         <div>
