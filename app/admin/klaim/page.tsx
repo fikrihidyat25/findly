@@ -43,6 +43,7 @@ export default function AdminKlaimPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [noMediationModal, setNoMediationModal] = useState<KlaimItem | null>(null);
+  const [checkingChatId, setCheckingChatId] = useState<string | null>(null);
 
   async function fetchKlaimData() {
     setLoading(true);
@@ -88,7 +89,7 @@ export default function AdminKlaimPage() {
         const rep = reportMap.get(c.laporan_id);
         const pengklaim = profileMap.get(c.pengklaim_id);
         const pelapor = rep?.pelapor_id ? profileMap.get(rep.pelapor_id) : null;
-        const hasMessages = claimsWithMessages.has(c.id) || c.status === 'DITOLAK';
+        const hasMessages = claimsWithMessages.has(c.id);
 
         return {
           id: c.id,
@@ -176,6 +177,32 @@ export default function AdminKlaimPage() {
       return dateStr;
     }
   };
+
+  // Action: Buka chat mediasi jika ada pesan, atau tampilkan pop-up jika tidak ada
+  async function handleOpenChat(item: KlaimItem) {
+    setCheckingChatId(item.id);
+    try {
+      const supabase = createClient();
+      const { data: messages, error } = await supabase
+        .from('pesan_chat')
+        .select('id')
+        .eq('klaim_id', item.id)
+        .limit(1);
+
+      if (error || !messages || messages.length === 0) {
+        // Belum ada riwayat pesan mediasi untuk klaim ini: tampilkan pop-up dan jangan buka halaman pesan!
+        setNoMediationModal(item);
+        return;
+      }
+
+      // Ada pesan mediasi yang sah untuk klaim ini: buka halaman pesan
+      router.push(`/messages?id=${item.id}`);
+    } catch {
+      setNoMediationModal(item);
+    } finally {
+      setCheckingChatId(null);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -331,21 +358,20 @@ export default function AdminKlaimPage() {
                         {/* Go to chat button */}
                         <button
                           type="button"
-                          onClick={() => {
-                            if (!item.hasMessages) {
-                              setNoMediationModal(item);
-                            } else {
-                              router.push(`/messages?id=${item.id}`);
-                            }
-                          }}
+                          onClick={() => handleOpenChat(item)}
+                          disabled={checkingChatId === item.id}
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                             item.hasMessages
                               ? 'text-[#30AFFF] hover:bg-sky-50'
                               : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                           }`}
-                          title={item.hasMessages ? 'Buka Chat Mediasi' : 'Tidak Ada Pesan Mediasi'}
+                          title={item.hasMessages ? 'Buka Chat Mediasi' : 'Tidak Ada Pesan Mediasi (Klik untuk info)'}
                         >
-                          <MessageSquare size={15} />
+                          {checkingChatId === item.id ? (
+                            <Loader2 size={15} className="animate-spin text-gray-400" />
+                          ) : (
+                            <MessageSquare size={15} />
+                          )}
                         </button>
 
                         {/* Approve button */}
@@ -383,26 +409,63 @@ export default function AdminKlaimPage() {
         )}
       </div>
 
-      {/* Modal Tidak Ada Pesan Mediasi */}
+      {/* Modal / Pop-up Tidak Ada Pesan Mediasi */}
       {noMediationModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 max-w-sm w-full shadow-xl text-center space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
-              <MessageSquareOff size={22} />
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setNoMediationModal(null)}
+        >
+          <div
+            className="bg-white rounded-3xl border border-gray-100 p-6 sm:p-7 max-w-sm w-full shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
+              <MessageSquareOff size={26} />
             </div>
-            <div className="space-y-1">
-              <h3 className="text-sm font-bold text-gray-900">Tidak Ada Pesan Mediasi</h3>
+
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-gray-900">
+                Tidak Ada Pesan Mediasi
+              </h3>
               <p className="text-xs text-gray-500 leading-relaxed">
-                Klaim untuk barang <strong className="text-gray-800">&quot;{noMediationModal.nama_barang}&quot;</strong> oleh <strong className="text-gray-800">{noMediationModal.pengklaim_nama}</strong> belum memiliki pesan atau sesi mediasi aktif.
+                Pengguna yang bersangkutan belum memulai obrolan atau belum ada sesi mediasi aktif untuk laporan klaim barang ini.
               </p>
             </div>
-            <div className="pt-2 flex items-center justify-center gap-2">
+
+            <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100 text-left text-xs space-y-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-400">Nama Barang:</span>
+                <span className="font-bold text-gray-800 truncate max-w-[170px]">
+                  {noMediationModal.nama_barang}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-400">Pengklaim:</span>
+                <span className="font-semibold text-gray-700">
+                  {noMediationModal.pengklaim_nama}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-400">Status Klaim:</span>
+                <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] ${
+                  noMediationModal.status === 'SELESAI'
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : noMediationModal.status === 'DITOLAK'
+                      ? 'bg-red-50 text-red-700'
+                      : 'bg-amber-50 text-amber-700'
+                }`}>
+                  {noMediationModal.status}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={() => setNoMediationModal(null)}
-                className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+                className="w-full py-2.5 bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-xs"
               >
-                Tutup
+                Tutup Pemberitahuan
               </button>
             </div>
           </div>
