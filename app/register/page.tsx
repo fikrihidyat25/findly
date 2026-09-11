@@ -171,6 +171,10 @@ function RegisterFormContent() {
           throw new Error('Email ini sudah terdaftar. Silakan login ke akun Anda.');
         }
 
+        if (signUpError.message.toLowerCase().includes('confirmation email')) {
+          throw new Error('Gagal mengirim email verifikasi (SMTP ditolak oleh provider). Jika memakai Resend, domain pengirim tidak boleh @gmail.com (harus custom domain). Atau ganti SMTP ke Gmail (smtp.gmail.com).');
+        }
+
         const isSmtpFailure =
           signUpError.message.toLowerCase().includes('rate limit') ||
           signUpError.message.includes('504') ||
