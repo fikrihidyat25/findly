@@ -192,7 +192,7 @@ export default function EditProfilePage() {
           </Link>
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">
-              Edit Profil {accountType === 'campus' ? 'Civitas Kampus' : 'Pengguna'}
+              Edit Profil {accountType === 'campus' ? 'Warga Kampus' : 'Pengguna'}
             </h1>
             <p className="text-xs sm:text-sm text-gray-500">
               {accountType === 'campus'
@@ -353,7 +353,7 @@ export default function EditProfilePage() {
           {accountType === 'campus' && (
             <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-2xs space-y-4">
               <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Data Civitas Akademika
+                Data Warga Kampus
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">

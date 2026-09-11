@@ -164,8 +164,8 @@ export default function ProfilePage() {
     : isCampus
       ? user.role_kampus
         ? user.role_kampus.charAt(0).toUpperCase() + user.role_kampus.slice(1)
-        : 'Civitas Kampus'
-      : 'Anggota Komunitas';
+        : 'Warga Kampus'
+      : 'Masyarakat Umum';
 
   const maskedNIM = user.nim_nip
     ? user.nim_nip.length > 4
@@ -212,7 +212,7 @@ export default function ProfilePage() {
                 {isCampus ? (
                   <p className="text-xs sm:text-sm text-gray-500 font-medium flex items-center gap-1.5">
                     <GraduationCap size={15} className="text-[#30AFFF]" />
-                    <span>{user.universitas || 'Civitas Akademika'} · {roleDisplay}</span>
+                    <span>{user.universitas || 'Warga Kampus'} · {roleDisplay}</span>
                   </p>
                 ) : isAdmin ? (
                   <p className="text-xs sm:text-sm text-gray-500 font-medium flex items-center gap-1.5">
@@ -272,8 +272,8 @@ export default function ProfilePage() {
                 {user.tipe_akun === 'admin'
                   ? 'Administrator Kampus'
                   : user.tipe_akun === 'campus'
-                    ? 'Civitas Kampus Aktif'
-                    : 'Anggota Komunitas'}
+                    ? 'Warga Kampus Aktif'
+                  : 'Masyarakat Umum'}
               </span>
             </div>
           </div>
@@ -295,7 +295,7 @@ export default function ProfilePage() {
 
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-2xs space-y-1">
             <span className="text-xs text-gray-500 font-medium">
-              {isCampus ? 'Status Akun Civitas' : isAdmin ? 'Status Akun Admin' : 'Status Akun Komunitas'}
+              {isCampus ? 'Status Akun Warga Kampus' : isAdmin ? 'Status Akun Admin' : 'Status Akun Masyarakat Umum'}
             </span>
             <p className="text-2xl font-extrabold text-[#30AFFF]">Aktif</p>
             <span className="text-[11px] text-gray-400">Terdaftar resmi di Findly</span>

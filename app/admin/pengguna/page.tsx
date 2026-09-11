@@ -271,7 +271,7 @@ export default function AdminPenggunaPage() {
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-[#30AFFF] focus:outline-none transition-all cursor-pointer"
             >
               <option value="semua">Semua Tipe Akun</option>
-              <option value="campus">Civitas Kampus</option>
+              <option value="campus">Warga Kampus</option>
               <option value="community">Masyarakat Umum</option>
               <option value="admin">Administrator</option>
             </select>
@@ -349,8 +349,8 @@ export default function AdminPenggunaPage() {
                         {item.tipe_akun === 'admin'
                           ? 'Administrator'
                           : item.tipe_akun === 'campus'
-                            ? 'Civitas Kampus'
-                            : 'Komunitas'}
+                            ? 'Warga Kampus'
+                            : 'Masyarakat Umum'}
                       </span>
                     </td>
 
@@ -472,7 +472,7 @@ export default function AdminPenggunaPage() {
                   onChange={(e) => setEditTipeAkun(e.target.value as any)}
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:border-[#30AFFF] focus:outline-none transition-all cursor-pointer"
                 >
-                  <option value="campus">Civitas Kampus</option>
+                  <option value="campus">Warga Kampus</option>
                   <option value="community">Masyarakat Umum</option>
                   <option value="admin">Administrator</option>
                 </select>
@@ -482,7 +482,7 @@ export default function AdminPenggunaPage() {
               {editTipeAkun === 'campus' && (
                 <div className="space-y-3 p-3.5 bg-blue-50/40 rounded-2xl border border-blue-100/60">
                   <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider block">
-                    Data Civitas Akademika
+                    Data Warga Kampus
                   </span>
 
                   <div>
