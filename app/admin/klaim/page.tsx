@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   FileCheck2,
   Search,
@@ -9,6 +10,7 @@ import {
   XCircle,
   Clock,
   MessageSquare,
+  MessageSquareOff,
   Loader2,
   RefreshCw,
   X,
@@ -29,15 +31,18 @@ interface KlaimItem {
   pesan_verifikasi: string;
   status: 'MENUNGGU' | 'DIVERIFIKASI' | 'JADWAL_DIBUAT' | 'DITOLAK' | 'SELESAI' | string;
   dibuat_pada: string;
+  hasMessages?: boolean;
 }
 
 export default function AdminKlaimPage() {
+  const router = useRouter();
   const [klaimList, setKlaimList] = useState<KlaimItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('semua');
   const [actionLoading, setActionLoading] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [noMediationModal, setNoMediationModal] = useState<KlaimItem | null>(null);
 
   async function fetchKlaimData() {
     setLoading(true);
@@ -72,10 +77,18 @@ export default function AdminKlaimPage() {
         profileMap.set(p.id, { nama: p.nama_lengkap || 'Pengguna', email: p.email || '' });
       });
 
+      // 4. Fetch claims that have messages in pesan_chat
+      const { data: chatData } = await supabase
+        .from('pesan_chat')
+        .select('klaim_id');
+
+      const claimsWithMessages = new Set((chatData || []).map((m: any) => m.klaim_id));
+
       const formatted: KlaimItem[] = (claims || []).map((c) => {
         const rep = reportMap.get(c.laporan_id);
         const pengklaim = profileMap.get(c.pengklaim_id);
         const pelapor = rep?.pelapor_id ? profileMap.get(rep.pelapor_id) : null;
+        const hasMessages = claimsWithMessages.has(c.id) || c.status === 'DITOLAK';
 
         return {
           id: c.id,
@@ -89,6 +102,7 @@ export default function AdminKlaimPage() {
           pesan_verifikasi: c.pesan_verifikasi || 'Tidak ada pesan sertaan.',
           status: c.status || 'MENUNGGU',
           dibuat_pada: c.dibuat_pada,
+          hasMessages,
         };
       });
 
@@ -315,13 +329,24 @@ export default function AdminKlaimPage() {
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {/* Go to chat button */}
-                        <Link
-                          href={`/messages?id=${item.id}`}
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                          title="Buka Chat Terkait"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!item.hasMessages) {
+                              setNoMediationModal(item);
+                            } else {
+                              router.push(`/messages?id=${item.id}`);
+                            }
+                          }}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            item.hasMessages
+                              ? 'text-[#30AFFF] hover:bg-sky-50'
+                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                          }`}
+                          title={item.hasMessages ? 'Buka Chat Mediasi' : 'Tidak Ada Pesan Mediasi'}
                         >
                           <MessageSquare size={15} />
-                        </Link>
+                        </button>
 
                         {/* Approve button */}
                         {item.status !== 'SELESAI' && (
@@ -357,6 +382,32 @@ export default function AdminKlaimPage() {
           </div>
         )}
       </div>
+
+      {/* Modal Tidak Ada Pesan Mediasi */}
+      {noMediationModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 max-w-sm w-full shadow-xl text-center space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
+              <MessageSquareOff size={22} />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-gray-900">Tidak Ada Pesan Mediasi</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Klaim untuk barang <strong className="text-gray-800">&quot;{noMediationModal.nama_barang}&quot;</strong> oleh <strong className="text-gray-800">{noMediationModal.pengklaim_nama}</strong> belum memiliki pesan atau sesi mediasi aktif.
+              </p>
+            </div>
+            <div className="pt-2 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setNoMediationModal(null)}
+                className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

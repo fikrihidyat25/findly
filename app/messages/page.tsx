@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import AppLayout from '@/src/components/layout/AppLayout';
 import {
   MessageSquare,
+  MessageSquareOff,
   Search,
   Loader2,
   LogIn,
@@ -21,7 +23,10 @@ import ChatInput from '@/src/components/chat/ChatInput';
 import SafePointModal from '@/src/components/chat/SafePointModal';
 import ImageLightbox from '@/src/components/chat/ImageLightbox';
 
-export default function MessagesPage() {
+function MessagesContent() {
+  const searchParams = useSearchParams();
+  const targetClaimId = searchParams.get('id');
+  const [emptyNotice, setEmptyNotice] = useState<{ claimTitle: string; claimId: string } | null>(null);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConv, setSelectedConv] = useState<ChatConversation | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
@@ -302,10 +307,69 @@ export default function MessagesPage() {
 
         if (isMounted) {
           setConversations(loadedConversations);
-          if (loadedConversations.length > 0) {
-            setSelectedConv(loadedConversations[0]);
+
+          if (targetClaimId) {
+            const matched = loadedConversations.find((c) => c.id === targetClaimId);
+            if (matched) {
+              setSelectedConv(matched);
+              setEmptyNotice(null);
+            } else {
+              // Cek apakah klaim spesifik ini ada di database
+              const { data: targetClaim } = await supabase
+                .from('klaim_barang')
+                .select('*, laporan_barang(*, profil_pengguna:pelapor_id(nama_lengkap, role_kampus, universitas)), profil_pengguna:pengklaim_id(nama_lengkap, role_kampus, universitas)')
+                .eq('id', targetClaimId)
+                .maybeSingle();
+
+              // Cek apakah klaim ini benar-benar memiliki riwayat pesan
+              const { count: msgCount } = await supabase
+                .from('pesan_chat')
+                .select('id', { count: 'exact', head: true })
+                .eq('klaim_id', targetClaimId);
+
+              if (targetClaim && (msgCount ?? 0) > 0) {
+                const report = targetClaim.laporan_barang;
+                const claimant = targetClaim.profil_pengguna;
+                const pelapor = report?.profil_pengguna;
+                const claimantName = claimant?.nama_lengkap || 'Pengklaim';
+                const pelaporName = pelapor?.nama_lengkap || 'Pelapor';
+                const counterpartName = userIsAdmin ? `${claimantName} & ${pelaporName}` : pelaporName;
+
+                const customConv: ChatConversation = {
+                  id: targetClaim.id,
+                  counterpartName,
+                  counterpartRole: userIsAdmin ? 'Mediasi Klaim' : (pelapor?.role_kampus || 'Warga Kampus'),
+                  itemTitle: report?.nama_barang || 'Barang Laporan',
+                  lastMessage: targetClaim.pesan_verifikasi || 'Percakapan terkait klaim.',
+                  lastTime: 'Baru',
+                  unread: false,
+                  status: targetClaim.status === 'SELESAI' ? 'RESOLVED' : targetClaim.status === 'DITOLAK' ? 'DISPUTED' : 'VERIFYING',
+                  initialPesanVerifikasi: targetClaim.pesan_verifikasi,
+                  pengklaimId: targetClaim.pengklaim_id,
+                  pelaporId: report?.pelapor_id,
+                  pengklaimName: claimantName,
+                  pelaporName: pelaporName,
+                };
+
+                setConversations((prev) => [customConv, ...prev.filter((p) => p.id !== customConv.id)]);
+                setSelectedConv(customConv);
+                setEmptyNotice(null);
+              } else {
+                // Klaim ini TIDAK memiliki riwayat pesan mediasi. JANGAN buka mediasi orang lain!
+                setSelectedConv(null);
+                setEmptyNotice({
+                  claimTitle: targetClaim?.laporan_barang?.nama_barang || 'Klaim Terkait',
+                  claimId: targetClaimId,
+                });
+              }
+            }
           } else {
-            setSelectedConv(null);
+            if (loadedConversations.length > 0) {
+              setSelectedConv(loadedConversations[0]);
+            } else {
+              setSelectedConv(null);
+            }
+            setEmptyNotice(null);
           }
         }
       } catch (err) {
@@ -319,7 +383,7 @@ export default function MessagesPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [targetClaimId]);
 
   // Update conversation status
   useEffect(() => {
@@ -881,12 +945,18 @@ export default function MessagesPage() {
 
             <div className="space-y-1.5">
               <h3 className="text-xl font-bold text-slate-900 tracking-tight">
-                {isAdmin ? 'Belum Ada Sesi Mediasi Aktif' : 'Belum Ada Sesi Pesan & Verifikasi'}
+                {emptyNotice
+                  ? 'Tidak Ada Pesan Mediasi'
+                  : isAdmin
+                    ? 'Belum Ada Sesi Mediasi Aktif'
+                    : 'Belum Ada Sesi Pesan & Verifikasi'}
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
-                {isAdmin
-                  ? 'Saat ini seluruh verifikasi klaim civitas berjalan lancar atau belum ada laporan sengketa yang membutuhkan intervensi mediator kampus.'
-                  : 'Sesi diskusi verifikasi peer-to-peer akan muncul secara otomatis saat Anda mengajukan klaim atas barang temuan, atau saat ada pengguna lain yang mengklaim barang yang Anda laporkan.'}
+                {emptyNotice
+                  ? `Klaim untuk barang "${emptyNotice.claimTitle}" belum memiliki riwayat atau sesi pesan mediasi aktif.`
+                  : isAdmin
+                    ? 'Saat ini seluruh verifikasi klaim warga kampus berjalan lancar atau belum ada laporan sengketa yang membutuhkan intervensi mediator kampus.'
+                    : 'Sesi diskusi verifikasi peer-to-peer akan muncul secara otomatis saat Anda mengajukan klaim atas barang temuan, atau saat ada pengguna lain yang mengklaim barang yang Anda laporkan.'}
               </p>
             </div>
 
@@ -895,10 +965,10 @@ export default function MessagesPage() {
                 <>
                   <Link
                     href="/admin/klaim"
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-[6px] bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-2"
                   >
                     <FileCheck2 size={14} />
-                    <span>Kelola Klaim Civitas</span>
+                    <span>Kembali ke Kelola Klaim</span>
                   </Link>
                   <Link
                     href="/admin/laporan"
@@ -941,8 +1011,8 @@ export default function MessagesPage() {
               showMobileChat={showMobileChat}
             />
 
-            {/* Right Column: Active Chat Room */}
-            {selectedConv && (
+            {/* Right Column: Active Chat Room or Empty State */}
+            {selectedConv ? (
               <div
                 className={`lg:col-span-8 flex flex-col h-full min-h-0 bg-white ${!showMobileChat ? 'hidden lg:flex' : 'flex'
                   }`}
@@ -990,6 +1060,33 @@ export default function MessagesPage() {
                   inputRef={inputRef}
                 />
               </div>
+            ) : (
+              <div
+                className={`lg:col-span-8 flex flex-col items-center justify-center p-8 text-center bg-gray-50/50 ${
+                  !showMobileChat ? 'hidden lg:flex' : 'flex'
+                }`}
+              >
+                <div className="w-16 h-16 rounded-2xl bg-sky-50 text-[#30AFFF] border border-sky-100 flex items-center justify-center mb-3">
+                  <MessageSquareOff size={28} />
+                </div>
+                <h4 className="text-base font-bold text-gray-900 mb-1">
+                  {emptyNotice ? 'Tidak Ada Pesan Mediasi' : 'Pilih Sesi Percakapan'}
+                </h4>
+                <p className="text-xs text-gray-500 max-w-md leading-relaxed mb-5">
+                  {emptyNotice
+                    ? `Klaim untuk barang "${emptyNotice.claimTitle}" belum memiliki riwayat atau sesi pesan mediasi aktif.`
+                    : 'Pilih salah satu sesi percakapan dari daftar di sebelah kiri untuk membaca atau membalas pesan.'}
+                </p>
+                {isAdmin && (
+                  <Link
+                    href="/admin/klaim"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold transition-all shadow-xs"
+                  >
+                    <FileCheck2 size={14} />
+                    <span>Kembali ke Kelola Klaim</span>
+                  </Link>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -1011,5 +1108,19 @@ export default function MessagesPage() {
         />
       </div>
     </AppLayout>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#f4f7fb] flex items-center justify-center p-4">
+          <Loader2 size={24} className="animate-spin text-[#30AFFF]" />
+        </div>
+      }
+    >
+      <MessagesContent />
+    </Suspense>
   );
 }
