@@ -12,7 +12,7 @@ import {
   PackageSearch,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
-import { CATEGORIES, detectCategory, getCategoryIcon } from '@/src/lib/categories';
+import { CATEGORIES, detectCategory, getCategoryIcon, cleanDescription } from '@/src/lib/categories';
 
 interface CampusItem {
   id: string;
@@ -158,7 +158,7 @@ export default function FindItemsPage() {
                 month: 'short',
                 year: 'numeric',
               }),
-              description: row.deskripsi || '',
+              description: cleanDescription(row.deskripsi),
               icon: getCategoryIcon(cat),
               foto_url,
               pelaporId: row.pelapor_id,

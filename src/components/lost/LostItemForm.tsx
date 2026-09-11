@@ -156,7 +156,8 @@ export default function LostItemForm() {
         return;
       }
 
-      const fullDesc = `${description || ''}${specialFeatures ? `. Ciri rahasia/khusus: ${specialFeatures}` : ''}`;
+      const catTag = category ? `[Kategori: ${category}] ` : '';
+      const fullDesc = `${catTag}${description || ''}${specialFeatures ? `. Ciri rahasia/khusus: ${specialFeatures}` : ''}`;
       const locationFull = `${building}${locationDetail ? ` - ${locationDetail}` : ''}`;
 
       const { error } = await supabase

@@ -161,7 +161,8 @@ export default function FoundItemWizardPage() {
           ? 'Dititipkan ke Pos Satpam Kampus'
           : 'Dititipkan ke Tata Usaha Fakultas';
 
-      const fullDescription = `${storageDesc}${locationDetail ? ` (${locationDetail})` : ''}${storageNote ? `. Catatan: ${storageNote}` : ''}`;
+      const catTag = category ? `[Kategori: ${category}] ` : '';
+      const fullDescription = `${catTag}${storageDesc}${locationDetail ? ` (${locationDetail})` : ''}${storageNote ? `. Catatan: ${storageNote}` : ''}`;
       const ciriRahasiaCombined = `Pertanyaan: ${secretQuestion} | Jawaban: ${secretAnswer}`;
 
       const { error } = await supabase
@@ -363,6 +364,7 @@ export default function FoundItemWizardPage() {
                         <option value="" disabled hidden>Pilih Kategori</option>
                         <option value="Elektronik & Gadget">Elektronik & Gadget</option>
                         <option value="Dompet & Aksesoris">Dompet & Aksesoris</option>
+                        <option value="Pakaian & Jaket">Pakaian & Jaket</option>
                         <option value="Tas & Ransel">Tas & Ransel</option>
                         <option value="Dokumen & Kartu">Dokumen & Kartu</option>
                         <option value="Kunci & Kendaraan">Kunci & Kendaraan</option>

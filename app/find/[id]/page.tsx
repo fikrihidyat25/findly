@@ -33,7 +33,7 @@ import {
 import { createClient } from '@/src/lib/supabase/client';
 import LeafletSafeMap from '@/src/components/map/LeafletSafeMap';
 import { SafePoint, getSafePoints, DEFAULT_SAFE_POINTS } from '@/src/lib/safePoints';
-import { detectCategory } from '@/src/lib/categories';
+import { detectCategory, cleanDescription } from '@/src/lib/categories';
 
 interface ItemDetail {
   id: string;
@@ -198,7 +198,7 @@ export default function ItemDetailPage() {
             month: 'long',
             year: 'numeric',
           }),
-          description: data.deskripsi || 'Tidak ada deskripsi tambahan.',
+          description: cleanDescription(data.deskripsi) || 'Tidak ada deskripsi tambahan.',
           finderName: pelapor?.nama_lengkap || 'Civitas Kampus',
           finderRole: pelapor?.role_kampus
             ? pelapor.role_kampus.charAt(0).toUpperCase() + pelapor.role_kampus.slice(1)

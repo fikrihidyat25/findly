@@ -6,12 +6,14 @@ import {
   KeyRound,
   BookOpen,
   Package,
+  Shirt,
 } from 'lucide-react';
 
 export const CATEGORIES = [
   'Semua',
   'Elektronik & Gadget',
   'Dompet & Aksesoris',
+  'Pakaian & Jaket',
   'Tas & Ransel',
   'Dokumen & Kartu',
   'Kunci & Kendaraan',
@@ -19,18 +21,40 @@ export const CATEGORIES = [
   'Lainnya',
 ] as const;
 
+export function cleanDescription(desc?: string | null): string {
+  if (!desc) return '';
+  return desc.replace(/^\[Kategori:\s*[^\]]+\]\s*/i, '').trim();
+}
+
 export function detectCategory(item: {
   nama_barang?: string | null;
   deskripsi?: string | null;
   kategori?: string | null;
 }): string {
+  // 1. Jika ada kolom/properti kategori eksplisit
   if (item.kategori && item.kategori !== 'Barang Kampus' && item.kategori !== 'Lainnya') {
     return item.kategori;
   }
+
+  const descRaw = item.deskripsi || '';
+
+  // 2. Deteksi jika kategori tersimpan dalam tag deskripsi: [Kategori: ...]
+  const tagMatch = descRaw.match(/\[Kategori:\s*([^\]]+)\]/i);
+  if (tagMatch && tagMatch[1]) {
+    const matched = tagMatch[1].trim();
+    if (matched && matched !== 'Lainnya') {
+      return matched;
+    }
+  }
+
   const name = (item.nama_barang || '').toLowerCase();
-  const desc = (item.deskripsi || '').toLowerCase();
+  const desc = descRaw.toLowerCase();
 
   const rules: { cat: string; regex: RegExp }[] = [
+    {
+      cat: 'Pakaian & Jaket',
+      regex: /\b(jaket|jacket|hoodie|sweater|pakaian|baju|kaos|t-shirt|tshirt|celana|jeans|topi|sepatu|sandal|kemeja|jas|almamater|rompi|outer|cardigan|syal|jersey)\b/i,
+    },
     {
       cat: 'Elektronik & Gadget',
       regex: /\b(elektronik|hp|handphone|iphone|android|laptop|ipad|macbook|headset|earphone|airpod|airpods|charger|powerbank|kamera|mouse|keyboard|gadget|tablet|tws|smartwatch)\b/i,
@@ -45,7 +69,7 @@ export function detectCategory(item: {
     },
     {
       cat: 'Dompet & Aksesoris',
-      regex: /\b(dompet|wallet|uang|duit|perhiasan|cincin|kalung|gelang|kacamata|aksesoris|jam tangan|jacket|jaket)\b/i,
+      regex: /\b(dompet|wallet|uang|duit|perhiasan|cincin|kalung|gelang|kacamata|aksesoris|jam tangan)\b/i,
     },
     {
       cat: 'Tas & Ransel',
@@ -68,6 +92,16 @@ export function detectCategory(item: {
 
 export function getCategoryIcon(cat: string) {
   const lower = (cat || '').toLowerCase();
+  if (
+    lower.includes('pakaian') ||
+    lower.includes('jaket') ||
+    lower.includes('jacket') ||
+    lower.includes('baju') ||
+    lower.includes('hoodie') ||
+    lower.includes('sweater')
+  ) {
+    return Shirt;
+  }
   if (
     lower.includes('elektronik') ||
     lower.includes('hp') ||
