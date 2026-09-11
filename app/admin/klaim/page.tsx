@@ -43,7 +43,6 @@ export default function AdminKlaimPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [noMediationModal, setNoMediationModal] = useState<KlaimItem | null>(null);
-  const [checkingChatId, setCheckingChatId] = useState<string | null>(null);
 
   async function fetchKlaimData() {
     setLoading(true);
@@ -89,7 +88,7 @@ export default function AdminKlaimPage() {
         const rep = reportMap.get(c.laporan_id);
         const pengklaim = profileMap.get(c.pengklaim_id);
         const pelapor = rep?.pelapor_id ? profileMap.get(rep.pelapor_id) : null;
-        const hasMessages = claimsWithMessages.has(c.id);
+        const hasMessages = c.status === 'DITOLAK';
 
         return {
           id: c.id,
@@ -178,30 +177,21 @@ export default function AdminKlaimPage() {
     }
   };
 
-  // Action: Buka chat mediasi jika ada pesan, atau tampilkan pop-up jika tidak ada
-  async function handleOpenChat(item: KlaimItem) {
-    setCheckingChatId(item.id);
-    try {
-      const supabase = createClient();
-      const { data: messages, error } = await supabase
-        .from('pesan_chat')
-        .select('id')
-        .eq('klaim_id', item.id)
-        .limit(1);
-
-      if (error || !messages || messages.length === 0) {
-        // Belum ada riwayat pesan mediasi untuk klaim ini: tampilkan pop-up dan jangan buka halaman pesan!
-        setNoMediationModal(item);
-        return;
-      }
-
-      // Ada pesan mediasi yang sah untuk klaim ini: buka halaman pesan
-      router.push(`/messages?id=${item.id}`);
-    } catch {
+  // Action: Buka chat mediasi jika klaim ini berstatus sengketa/mediasi (DITOLAK)
+  function handleOpenChat(item: KlaimItem) {
+    if (item.status !== 'DITOLAK') {
+      // TIDAK ADA SESI MEDIASI UNTUK KLAIM INI:
+      // Tampilkan Modal Pop-up + Feedback Alert, dan JANGAN buka halaman pesan!
       setNoMediationModal(item);
-    } finally {
-      setCheckingChatId(null);
+      setFeedbackMessage({
+        type: 'error',
+        text: `Belum ada sesi mediasi aktif untuk klaim "${item.nama_barang}" (Status saat ini: ${item.status}).`,
+      });
+      return;
     }
+
+    // Jika klaim berstatus DITOLAK, memang ada sesi mediasi aktif: buka halaman pesan
+    router.push(`/messages?id=${item.id}`);
   }
 
   return (
@@ -359,19 +349,18 @@ export default function AdminKlaimPage() {
                         <button
                           type="button"
                           onClick={() => handleOpenChat(item)}
-                          disabled={checkingChatId === item.id}
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            item.hasMessages
-                              ? 'text-[#30AFFF] hover:bg-sky-50'
-                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                            item.status === 'DITOLAK'
+                              ? 'text-[#30AFFF] bg-sky-50 hover:bg-sky-100 ring-1 ring-sky-200'
+                              : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
                           }`}
-                          title={item.hasMessages ? 'Buka Chat Mediasi' : 'Tidak Ada Pesan Mediasi (Klik untuk info)'}
+                          title={
+                            item.status === 'DITOLAK'
+                              ? 'Buka Sesi Mediasi Sengketa'
+                              : 'Belum Ada Sesi Mediasi (Klik untuk info)'
+                          }
                         >
-                          {checkingChatId === item.id ? (
-                            <Loader2 size={15} className="animate-spin text-gray-400" />
-                          ) : (
-                            <MessageSquare size={15} />
-                          )}
+                          <MessageSquare size={15} />
                         </button>
 
                         {/* Approve button */}
@@ -425,10 +414,10 @@ export default function AdminKlaimPage() {
 
             <div className="space-y-1.5">
               <h3 className="text-base font-bold text-gray-900">
-                Tidak Ada Pesan Mediasi
+                Belum Ada Sesi Mediasi
               </h3>
               <p className="text-xs text-gray-500 leading-relaxed">
-                Pengguna yang bersangkutan belum memulai obrolan atau belum ada sesi mediasi aktif untuk laporan klaim barang ini.
+                Klaim ini saat ini berstatus <strong className="text-gray-800">{noMediationModal.status}</strong> dan belum ada sesi mediasi aktif. Sesi mediasi administrator hanya tersedia untuk klaim yang mengalami sengketa kepemilikan (status DITOLAK).
               </p>
             </div>
 
