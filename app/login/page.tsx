@@ -80,6 +80,33 @@ function LoginFormContent() {
       return;
     }
 
+    // 🌟 Fitur Admin Credentials ala Laravel via .env:
+    const envAdminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@findly.com').trim().toLowerCase();
+    const envAdminPassword = (process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'AdminPassword123!').trim();
+
+    if (cleanEmail.toLowerCase() === envAdminEmail && password === envAdminPassword) {
+      setIsLoading(true);
+      document.cookie = `findly_admin_session=true; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('findly_admin_session', 'true');
+        localStorage.setItem('findly_admin_email', cleanEmail);
+      }
+
+      try {
+        await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+      } catch {
+        // Abaikan jika akun auth belum dibuat/terkonfirmasi di Supabase, sesi env sudah aktif
+      }
+
+      const redirect = searchParams.get('redirect') || '/admin';
+      router.push(redirect);
+      router.refresh();
+      return;
+    }
+
     setIsLoading(true);
 
     try {

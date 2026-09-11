@@ -26,6 +26,17 @@ export default function AdminLayout({
   useEffect(() => {
     async function verifyAdminAccess() {
       try {
+        const isAdminSession = typeof document !== 'undefined' && document.cookie.includes('findly_admin_session=true');
+        const envAdminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@findly.com';
+
+        if (isAdminSession) {
+          const storedEmail = typeof localStorage !== 'undefined' ? localStorage.getItem('findly_admin_email') : null;
+          setUserEmail(storedEmail || envAdminEmail);
+          setIsAdmin(true);
+          setLoading(false);
+          return;
+        }
+
         const supabase = createClient();
         const {
           data: { user },
@@ -39,6 +50,8 @@ export default function AdminLayout({
 
         setUserEmail(user.email || '');
 
+        const isEnvAdmin = user.email?.toLowerCase() === envAdminEmail.toLowerCase();
+
         const { data: profile } = await supabase
           .from('profil_pengguna')
           .select('tipe_akun, role_kampus')
@@ -46,6 +59,7 @@ export default function AdminLayout({
           .single();
 
         const hasAdminRole =
+          isEnvAdmin ||
           profile?.tipe_akun === 'admin' ||
           profile?.role_kampus === 'admin' ||
           user.user_metadata?.tipe_akun === 'admin';

@@ -85,8 +85,10 @@ export async function updateSession(request: NextRequest) {
         pathname.startsWith("/login") ||
         pathname.startsWith("/register");
 
+    const isAdminSession = request.cookies.get('findly_admin_session')?.value === 'true';
+
     // 1. Guest attempting to access protected routes (dashboard, subpaths, admin, messages, etc.)
-    if (!user && !isPublicRoute && !isAuthRoute) {
+    if (!user && !isAdminSession && !isPublicRoute && !isAuthRoute) {
         const url = request.nextUrl.clone();
         url.pathname = "/login";
 
@@ -102,15 +104,15 @@ export async function updateSession(request: NextRequest) {
         return redirectResponse;
     }
 
-    // 2. Logged-in user visiting /login or /register -> Redirect to /dashboard
+    // 2. Logged-in user visiting /login or /register -> Redirect to /admin or /dashboard
     // Kecuali jika terdapat parameter notice seperti verified=true atau registered=true
     const hasAuthNotice =
         request.nextUrl.searchParams.has("verified") ||
         request.nextUrl.searchParams.has("registered");
 
-    if (user && isAuthRoute && !hasAuthNotice) {
+    if ((user || isAdminSession) && isAuthRoute && !hasAuthNotice) {
         const url = request.nextUrl.clone();
-        url.pathname = "/dashboard";
+        url.pathname = isAdminSession ? "/admin" : "/dashboard";
         url.search = "";
         return NextResponse.redirect(url);
     }

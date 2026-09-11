@@ -52,12 +52,32 @@ export default function AppHeader({
   useEffect(() => {
     async function loadUser() {
       try {
+        const isAdminSession = typeof document !== 'undefined' && document.cookie.includes('findly_admin_session=true');
+        const envAdminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@findly.com';
+
+        if (isAdminSession) {
+          const storedEmail = typeof localStorage !== 'undefined' ? localStorage.getItem('findly_admin_email') : null;
+          setUser({
+            id: 'admin-env-user',
+            nama_lengkap: 'Super Administrator',
+            email: storedEmail || envAdminEmail,
+            tipe_akun: 'admin',
+            role_kampus: 'Administrator',
+            universitas: 'Findly System',
+            status_kampus_terverifikasi: true,
+          });
+          setLoading(false);
+          return;
+        }
+
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (!authUser) {
           setUser(null);
           setLoading(false);
           return;
         }
+
+        const isEnvAdmin = authUser.email?.toLowerCase() === envAdminEmail.toLowerCase();
 
         const { data: profile } = await supabase
           .from('profil_pengguna')
@@ -69,7 +89,7 @@ export default function AppHeader({
 
         const rawTipe = profile?.tipe_akun || authUser.user_metadata?.tipe_akun || 'community';
         const isCampus = rawTipe === 'campus';
-        const isAdmin = rawTipe === 'admin';
+        const isAdmin = rawTipe === 'admin' || isEnvAdmin;
         const tipeAkun = isAdmin ? 'admin' : isCampus ? 'campus' : 'community';
 
         setUser({
@@ -77,7 +97,7 @@ export default function AppHeader({
           nama_lengkap: nama,
           email: authUser.email || '',
           tipe_akun: tipeAkun,
-          role_kampus: isCampus ? (profile?.role_kampus || authUser.user_metadata?.role_kampus || 'Mahasiswa') : '',
+          role_kampus: isCampus ? (profile?.role_kampus || authUser.user_metadata?.role_kampus || 'Mahasiswa') : (isAdmin ? 'Administrator' : ''),
           universitas: isCampus ? (profile?.universitas || authUser.user_metadata?.universitas || '') : '',
           status_kampus_terverifikasi: isCampus ? (profile?.status_kampus_terverifikasi ?? false) : false,
         });
@@ -93,7 +113,10 @@ export default function AppHeader({
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
-        setUser(null);
+        const isAdminSession = typeof document !== 'undefined' && document.cookie.includes('findly_admin_session=true');
+        if (!isAdminSession) {
+          setUser(null);
+        }
       } else {
         loadUser();
       }
@@ -106,6 +129,11 @@ export default function AppHeader({
 
   const handleSignOut = async () => {
     setProfileDropdownOpen(false);
+    document.cookie = 'findly_admin_session=; path=/; max-age=0';
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('findly_admin_session');
+      localStorage.removeItem('findly_admin_email');
+    }
     await supabase.auth.signOut();
     setUser(null);
     router.push('/login');

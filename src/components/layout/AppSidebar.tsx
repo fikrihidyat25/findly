@@ -47,19 +47,30 @@ export default function AppSidebar({
     async function checkRole() {
       setRoleLoading(true);
       try {
+        const isAdminSession = typeof document !== 'undefined' && document.cookie.includes('findly_admin_session=true');
+        const envAdminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@findly.com';
+
+        if (isAdminSession) {
+          setIsAdmin(true);
+          return;
+        }
+
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           setIsAdmin(false);
           return;
         }
+
+        const isEnvAdmin = user.email?.toLowerCase() === envAdminEmail.toLowerCase();
+
         const { data: profile } = await supabase
           .from('profil_pengguna')
           .select('tipe_akun, role_kampus')
           .eq('id', user.id)
           .single();
 
-        if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin' || user.user_metadata?.tipe_akun === 'admin') {
+        if (isEnvAdmin || profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin' || user.user_metadata?.tipe_akun === 'admin') {
           setIsAdmin(true);
         } else {
           setIsAdmin(false);
