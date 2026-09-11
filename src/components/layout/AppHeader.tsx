@@ -260,7 +260,7 @@ export default function AppHeader({
                       </div>
                     ) : (
                       <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-[10px] font-semibold">
-                        <span>Community Member</span>
+                        <span>Masyarakat Umum</span>
                       </div>
                     )}
                   </div>

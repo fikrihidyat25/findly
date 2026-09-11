@@ -200,11 +200,11 @@ export default function ProfilePage() {
                   ) : user.status_kampus_terverifikasi ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
                       <CheckCircle2 size={12} className="text-emerald-600" />
-                      <span>University Verified</span>
+                      <span>Terverifikasi Kampus</span>
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
-                      <span>Community Member</span>
+                      <span>Masyarakat Umum</span>
                     </span>
                   )}
                 </div>

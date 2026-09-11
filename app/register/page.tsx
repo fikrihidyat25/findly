@@ -139,7 +139,7 @@ function RegisterFormContent() {
     }
 
     if (accountType === 'campus' && !nimNip.trim()) {
-      setErrorMessage('NIM / NIP wajib diisi untuk verifikasi akun Campus Member.');
+      setErrorMessage('NIM / NIP wajib diisi untuk verifikasi akun Warga Kampus.');
       return;
     }
 
@@ -376,7 +376,7 @@ function RegisterFormContent() {
                   {/* Selector Tipe Akun (Campus Member vs Community Member) */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-2">
-                      Pilih Tipe Keanggotaan
+                      Pilih Jenis Akun
                     </label>
                     <div className="grid grid-cols-2 gap-2.5">
                       {/* Option 1: Campus Member */}
@@ -403,7 +403,7 @@ function RegisterFormContent() {
                           </span>
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-gray-900">Campus Member</p>
+                          <p className="text-xs font-bold text-gray-900">Warga Kampus</p>
                           <p className="text-[11px] text-gray-500 line-clamp-1">
                             Mahasiswa, Dosen, Staff
                           </p>
@@ -429,9 +429,9 @@ function RegisterFormContent() {
                           </span>
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-gray-900">Community Member</p>
+                          <p className="text-xs font-bold text-gray-900">Masyarakat Umum</p>
                           <p className="text-[11px] text-gray-500 line-clamp-1">
-                            Masyarakat / Tamu
+                            Warga Sekitar / Tamu
                           </p>
                         </div>
                       </button>
@@ -636,7 +636,7 @@ function RegisterFormContent() {
                         </>
                       ) : (
                         <span>
-                          Daftar sebagai {accountType === 'campus' ? 'Campus Member' : 'Community Member'}
+                          Daftar sebagai {accountType === 'campus' ? 'Warga Kampus' : 'Masyarakat Umum'}
                         </span>
                       )}
                     </button>
