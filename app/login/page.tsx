@@ -29,9 +29,16 @@ function LoginFormContent() {
     const errorParam = searchParams.get('error');
     const verifiedParam = searchParams.get('verified');
     const emailParam = searchParams.get('email');
+    const registeredParam = searchParams.get('registered');
 
     if (emailParam) {
       setEmail(emailParam);
+    }
+
+    if (registeredParam === 'true') {
+      setSuccessMessage('Pendaftaran akun berhasil! Silakan masukkan kata sandi untuk masuk ke Findly.');
+      setErrorMessage(null);
+      return;
     }
 
     if (verifiedParam === 'true') {

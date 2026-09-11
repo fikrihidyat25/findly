@@ -199,25 +199,10 @@ function RegisterFormContent() {
             throw new Error(rpcData.message || 'Gagal mendaftarkan akun.');
           }
 
-          // Otomatis login ke sesi yang baru didaftarkan
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password: password,
-          });
-
-          if (signInError) {
-            setSuccessMessage('Pendaftaran berhasil! Silakan login dengan email dan password Anda.');
-            setTimeout(() => {
-              router.push('/login');
-            }, 1200);
-            return;
-          }
-
-          setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke Dashboard...');
+          setSuccessMessage('Pendaftaran akun berhasil! Mengalihkan ke halaman login...');
           setTimeout(() => {
-            router.push('/dashboard');
-            router.refresh();
-          }, 1000);
+            router.push(`/login?email=${encodeURIComponent(email.trim())}&registered=true`);
+          }, 1200);
           return;
         }
 
@@ -243,13 +228,13 @@ function RegisterFormContent() {
         }
       }
 
-      // Evaluasi apakah sesi langsung aktif atau harus konfirmasi email terlebih dahulu
+      // Jika sesi langsung terbentuk, sign out dan arahkan ke halaman login
       if (data.session) {
-        setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke Dashboard...');
+        await supabase.auth.signOut();
+        setSuccessMessage('Pendaftaran akun berhasil! Mengalihkan ke halaman login...');
         setTimeout(() => {
-          router.push('/dashboard');
-          router.refresh();
-        }, 1000);
+          router.push(`/login?email=${encodeURIComponent(email.trim())}&registered=true`);
+        }, 1200);
       } else {
         // Tampilkan layar notifikasi "Periksa Link Konfirmasi di Email"
         setEmailSentNotice(email.trim());
