@@ -229,8 +229,8 @@ export default function AppHeader({
                     {user.tipe_akun === 'admin'
                       ? '🛡️ Admin Mediator'
                       : user.tipe_akun === 'campus'
-                        ? (user.role_kampus ? user.role_kampus.charAt(0).toUpperCase() + user.role_kampus.slice(1) : 'Civitas Kampus')
-                        : 'Anggota Komunitas'}
+                        ? (user.role_kampus ? user.role_kampus.charAt(0).toUpperCase() + user.role_kampus.slice(1) : 'Warga Kampus')
+                        : 'Masyarakat Umum'}
                   </span>
                 </div>
 
@@ -260,7 +260,7 @@ export default function AppHeader({
                       </div>
                     ) : (
                       <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-[10px] font-semibold">
-                        <span>Community Member</span>
+                        <span>Masyarakat Umum</span>
                       </div>
                     )}
                   </div>

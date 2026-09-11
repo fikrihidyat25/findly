@@ -5,7 +5,7 @@ import {
   Search,
   Filter,
   Eye,
-  EyeOff,
+  Pencil,
   CheckCircle2,
   Trash2,
   AlertTriangle,
@@ -17,6 +17,7 @@ import {
   Calendar,
   User,
   Shield,
+  Save
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 
@@ -33,8 +34,6 @@ interface LaporanItem {
   pelapor_id: string;
   pelapor_nama?: string;
   pelapor_email?: string;
-  aktif?: boolean;
-  alasan_moderasi?: string | null;
 }
 
 export default function AdminLaporanPage() {
@@ -43,13 +42,20 @@ export default function AdminLaporanPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterJenis, setFilterJenis] = useState<string>('semua');
   const [filterStatus, setFilterStatus] = useState<string>('semua');
-  const [filterVisibilitas, setFilterVisibilitas] = useState<string>('semua');
 
-  // Modal Detail & Moderasi
+  // Modal Detail
   const [selectedItem, setSelectedItem] = useState<LaporanItem | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [moderasiReason, setModerasiReason] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Edit State
+  const [editItem, setEditItem] = useState<LaporanItem | null>(null);
+  const [editForm, setEditForm] = useState({
+    nama_barang: '',
+    deskripsi: '',
+    lokasi_terakhir: '',
+    ciri_rahasia: ''
+  });
 
   async function fetchLaporan() {
     setLoading(true);
@@ -78,7 +84,6 @@ export default function AdminLaporanPage() {
           ...item,
           pelapor_nama: prof?.nama || 'Anonim',
           pelapor_email: prof?.email || '',
-          aktif: item.aktif !== undefined ? item.aktif : true,
         };
       });
 
@@ -105,12 +110,8 @@ export default function AdminLaporanPage() {
 
     const matchJenis = filterJenis === 'semua' || item.jenis_laporan === filterJenis;
     const matchStatus = filterStatus === 'semua' || item.status === filterStatus;
-    const matchVisibilitas =
-      filterVisibilitas === 'semua' ||
-      (filterVisibilitas === 'aktif' && item.aktif !== false) ||
-      (filterVisibilitas === 'sembunyi' && item.aktif === false);
 
-    return matchSearch && matchJenis && matchStatus && matchVisibilitas;
+    return matchSearch && matchJenis && matchStatus;
   });
 
   // Action: Toggle Status Selesai / Mencari
@@ -144,43 +145,49 @@ export default function AdminLaporanPage() {
     }
   }
 
+  // Edit Action
+  const openEditModal = (item: LaporanItem) => {
+    setEditItem(item);
+    setEditForm({
+      nama_barang: item.nama_barang || '',
+      deskripsi: item.deskripsi || '',
+      lokasi_terakhir: item.lokasi_terakhir || '',
+      ciri_rahasia: item.ciri_rahasia || ''
+    });
+  };
 
-  // Action: Toggle Sembunyikan / Tampilkan
-  async function handleToggleAktif(item: LaporanItem) {
-    const nextAktif = !item.aktif;
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
+  };
+
+  const submitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editItem) return;
     setActionLoading(true);
     try {
       const supabase = createClient();
-      const payload: Record<string, any> = { aktif: nextAktif };
-      if (!nextAktif && moderasiReason) {
-        payload.alasan_moderasi = moderasiReason;
-      }
-
       const { error } = await supabase
         .from('laporan_barang')
-        .update(payload)
-        .eq('id', item.id);
+        .update({
+          nama_barang: editForm.nama_barang,
+          deskripsi: editForm.deskripsi,
+          lokasi_terakhir: editForm.lokasi_terakhir,
+          ciri_rahasia: editForm.ciri_rahasia
+        })
+        .eq('id', editItem.id);
 
       if (error) throw error;
-
       setLaporanList((prev) =>
-        prev.map((l) => (l.id === item.id ? { ...l, aktif: nextAktif, alasan_moderasi: payload.alasan_moderasi || l.alasan_moderasi } : l))
+        prev.map((l) => (l.id === editItem.id ? { ...l, ...editForm } : l))
       );
-      if (selectedItem?.id === item.id) {
-        setSelectedItem({ ...selectedItem, aktif: nextAktif });
-      }
-
-      setFeedbackMessage({
-        type: 'success',
-        text: `Laporan "${item.nama_barang}" berhasil ${nextAktif ? 'ditampilkan kembali' : 'disembunyikan'}.`,
-      });
-      setModerasiReason('');
+      setFeedbackMessage({ type: 'success', text: 'Laporan berhasil diperbarui.' });
+      setEditItem(null);
     } catch (err: any) {
-      setFeedbackMessage({ type: 'error', text: err.message || 'Gagal mengubah visibilitas laporan.' });
+      setFeedbackMessage({ type: 'error', text: err.message || 'Gagal menyimpan perubahan.' });
     } finally {
       setActionLoading(false);
     }
-  }
+  };
 
   // Action: Hapus Laporan
   async function handleDeleteLaporan(item: LaporanItem) {
@@ -248,7 +255,7 @@ export default function AdminLaporanPage() {
       <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-bold text-gray-900">Daftar Moderasi Laporan</h2>
+            <h2 className="text-sm font-bold text-gray-900">Daftar Laporan</h2>
             <p className="text-xs text-gray-500">
               Total {filteredList.length} laporan ditampilkan.
             </p>
@@ -266,7 +273,7 @@ export default function AdminLaporanPage() {
         </div>
 
         {/* Filter Inputs Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-gray-50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 border-t border-gray-50">
           {/* Search Box */}
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -304,18 +311,6 @@ export default function AdminLaporanPage() {
               <option value="SELESAI">Selesai</option>
             </select>
           </div>
-          {/* Filter Visibilitas */}
-          <div>
-            <select
-              value={filterVisibilitas}
-              onChange={(e) => setFilterVisibilitas(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-[#30AFFF] focus:outline-none transition-all cursor-pointer"
-            >
-              <option value="semua">Semua Visibilitas</option>
-              <option value="aktif">Laporan Aktif</option>
-              <option value="sembunyi">Disembunyikan</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -340,7 +335,6 @@ export default function AdminLaporanPage() {
                   <th className="px-4 py-3">Pelapor</th>
                   <th className="px-4 py-3">Lokasi</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Visibilitas</th>
                   <th className="px-5 py-3 text-right">Tindakan</th>
                 </tr>
               </thead>
@@ -417,22 +411,7 @@ export default function AdminLaporanPage() {
                       </span>
                     </td>
 
-                    {/* Column 6: Visibilitas */}
-                    <td className="px-4 py-3.5">
-                      {item.aktif === false ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
-                          <EyeOff size={11} />
-                          <span>Disembunyikan</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">
-                          <Eye size={11} />
-                          <span>Aktif</span>
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Column 7: Actions */}
+                    {/* Column 6: Actions */}
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
@@ -446,17 +425,14 @@ export default function AdminLaporanPage() {
 
                         <button
                           type="button"
-                          onClick={() => handleToggleAktif(item)}
+                          onClick={() => openEditModal(item)}
                           disabled={actionLoading}
-                          className={`p-1.5 rounded-lg cursor-pointer transition-colors ${item.aktif === false
-                              ? 'text-emerald-600 hover:bg-emerald-50'
-                              : 'text-amber-600 hover:bg-amber-50'
-                            }`}
-                          title={item.aktif === false ? 'Tampilkan Laporan' : 'Sembunyikan Laporan'}
+                          className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 cursor-pointer transition-colors"
+                          title="Edit Laporan"
                         >
-                          {item.aktif === false ? <Eye size={15} /> : <EyeOff size={15} />}
+                          <Pencil size={15} />
                         </button>
-
+                        
                         <button
                           type="button"
                           onClick={() => handleToggleStatus(item)}
@@ -486,10 +462,10 @@ export default function AdminLaporanPage() {
         )}
       </div>
 
-      {/* Detail & Moderation Modal Dialog */}
+      {/* Detail Modal Dialog */}
       {selectedItem && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-5">
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div className="flex items-center gap-2">
                 <span
@@ -560,27 +536,19 @@ export default function AdminLaporanPage() {
             </div>
 
             {/* Action Buttons in Modal */}
-            <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => handleToggleAktif(selectedItem)}
+                onClick={() => {
+                  setSelectedItem(null);
+                  openEditModal(selectedItem);
+                }}
                 disabled={actionLoading}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer border transition-all ${selectedItem.aktif === false
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                    : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-                  }`}
+                className="px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer border bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 transition-all flex items-center gap-1.5"
               >
-                {selectedItem.aktif === false ? 'Tampilkan Kembali' : 'Sembunyikan'}
+                <Pencil size={14} />
+                <span>Edit Laporan</span>
               </button>
-              <button
-                type="button"
-                onClick={() => handleToggleStatus(selectedItem)}
-                disabled={actionLoading}
-                className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold cursor-pointer transition-all"
-              >
-                {selectedItem.status === 'SELESAI' ? 'Set Status Mencari' : 'Tandai Selesai'}
-              </button>
-
               <button
                 type="button"
                 onClick={() => setSelectedItem(null)}
@@ -589,6 +557,88 @@ export default function AdminLaporanPage() {
                 Tutup
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal Dialog */}
+      {editItem && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-xl max-w-lg w-full p-6 space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="text-sm font-bold text-gray-900">Edit Laporan</h3>
+              <button
+                onClick={() => setEditItem(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={submitEdit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Barang</label>
+                <input
+                  type="text"
+                  name="nama_barang"
+                  value={editForm.nama_barang}
+                  onChange={handleEditChange}
+                  required
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#30AFFF] transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Deskripsi</label>
+                <textarea
+                  name="deskripsi"
+                  value={editForm.deskripsi}
+                  onChange={handleEditChange}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#30AFFF] transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Lokasi Terakhir</label>
+                <input
+                  type="text"
+                  name="lokasi_terakhir"
+                  value={editForm.lokasi_terakhir}
+                  onChange={handleEditChange}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#30AFFF] transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Ciri Rahasia / Khusus</label>
+                <textarea
+                  name="ciri_rahasia"
+                  value={editForm.ciri_rahasia}
+                  onChange={handleEditChange}
+                  rows={2}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#30AFFF] transition-all font-mono"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditItem(null)}
+                  className="px-4 py-2 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="px-4 py-2 bg-[#30AFFF] text-white rounded-xl text-xs font-semibold hover:bg-[#2196E8] flex items-center gap-1.5 transition-colors disabled:opacity-70 cursor-pointer"
+                >
+                  {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  <span>Simpan Perubahan</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

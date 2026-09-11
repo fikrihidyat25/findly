@@ -29,9 +29,16 @@ function LoginFormContent() {
     const errorParam = searchParams.get('error');
     const verifiedParam = searchParams.get('verified');
     const emailParam = searchParams.get('email');
+    const registeredParam = searchParams.get('registered');
 
     if (emailParam) {
       setEmail(emailParam);
+    }
+
+    if (registeredParam === 'true') {
+      setSuccessMessage('Pendaftaran akun berhasil! Silakan masukkan kata sandi untuk masuk ke Findly.');
+      setErrorMessage(null);
+      return;
     }
 
     if (verifiedParam === 'true') {
@@ -380,18 +387,6 @@ function LoginFormContent() {
             </div>
           </div>
 
-          {/* Footer Legal Links */}
-          <div className="flex items-center justify-center gap-6 pt-6 text-[11px] text-gray-400">
-            <Link href="/privacy" className="hover:text-gray-600 transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-gray-600 transition-colors">
-              Term of Service
-            </Link>
-            <Link href="/help" className="hover:text-gray-600 transition-colors">
-              Help Center
-            </Link>
-          </div>
         </div>
       </div>
     </div>

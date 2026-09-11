@@ -184,25 +184,6 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Controls & Status Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:px-6 rounded-2xl border border-gray-100 shadow-2xs">
-        <div>
-          <h2 className="text-sm font-bold text-gray-900">Ringkasan Sistem</h2>
-          <p className="text-xs text-gray-500">
-            Kondisi data laporan, klaim verifikasi, dan pengguna kampus terkini.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleManualRefresh}
-          disabled={refreshing}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 self-start sm:self-auto"
-        >
-          <RefreshCw size={13} className={refreshing ? 'animate-spin text-[#30AFFF]' : ''} />
-          <span>{refreshing ? 'Memperbarui...' : 'Segarkan Data'}</span>
-        </button>
-      </div>
 
       {/* Main Metric Cards Grid (Clean, Standard, Non-AI Slop) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -288,10 +269,9 @@ export default function AdminDashboardPage() {
             </div>
             <Link
               href="/admin/laporan"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8]"
+              className="text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8] hover:underline decoration-[#30AFFF] underline-offset-2"
             >
-              <span>Kelola Semua</span>
-              <ArrowRight size={13} />
+              Kelola Semua
             </Link>
           </div>
 
@@ -349,10 +329,9 @@ export default function AdminDashboardPage() {
             </div>
             <Link
               href="/admin/klaim"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8]"
+              className="text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8] hover:underline decoration-[#30AFFF] underline-offset-2"
             >
-              <span>Kelola Semua</span>
-              <ArrowRight size={13} />
+              Kelola Semua
             </Link>
           </div>
 

@@ -22,6 +22,7 @@ export interface ChatMessage {
   text: string;
   time: string;
   imageUrl?: string;
+  isAdminSender?: boolean;
 }
 
 export interface SelectedImageAttachment {

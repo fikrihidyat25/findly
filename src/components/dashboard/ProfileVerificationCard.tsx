@@ -94,7 +94,7 @@ export default function ProfileVerificationCard() {
             <div className="flex items-center gap-2">
               <ShieldCheck size={16} className="text-[#30AFFF]" />
               <h4 className="font-bold text-xs sm:text-sm text-gray-900 tracking-tight">
-                Akses Civitas Kampus
+                Akses Warga Kampus
               </h4>
             </div>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
@@ -162,11 +162,11 @@ export default function ProfileVerificationCard() {
           ) : user.status_kampus_terverifikasi ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
               <CheckCircle2 size={11} className="text-emerald-600" />
-              <span>University Verified</span>
+              <span>Terverifikasi Kampus</span>
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600">
-              <span>Community Member</span>
+              <span>Masyarakat Umum</span>
             </span>
           )}
         </div>
@@ -187,13 +187,13 @@ export default function ProfileVerificationCard() {
                 {user.nama_lengkap}
               </span>
               <span className="inline-flex items-center text-[10px] font-semibold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded-md border border-sky-100">
-                {user.tipe_akun === 'admin' ? 'Admin Mediator' : user.tipe_akun === 'campus' ? (user.role_kampus ? user.role_kampus.charAt(0).toUpperCase() + user.role_kampus.slice(1) : 'Civitas Kampus') : 'Anggota Komunitas'}
+                {user.tipe_akun === 'admin' ? 'Admin Mediator' : user.tipe_akun === 'campus' ? (user.role_kampus ? user.role_kampus.charAt(0).toUpperCase() + user.role_kampus.slice(1) : 'Warga Kampus') : 'Masyarakat Umum'}
               </span>
             </div>
             {user.tipe_akun === 'campus' ? (
               <p className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
                 <GraduationCap size={13} className="text-[#30AFFF] shrink-0" />
-                <span className="truncate">{user.universitas || 'Civitas Kampus'}</span>
+                <span className="truncate">{user.universitas || 'Warga Kampus'}</span>
               </p>
             ) : user.tipe_akun === 'admin' ? (
               <p className="text-xs font-medium text-gray-700 flex items-center gap-1.5">

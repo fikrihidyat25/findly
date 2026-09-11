@@ -8,6 +8,7 @@ import { SafePoint } from '@/src/lib/safePoints';
 interface ChatMessageListProps {
   messages: ChatMessage[];
   isAdmin?: boolean;
+  isDisputed?: boolean;
   safePointsList: SafePoint[];
   onZoomImage: (url: string) => void;
   messagesContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -21,12 +22,13 @@ interface ChatMessageListProps {
 const SENDER_COLORS: Record<string, { name: string; bg: string; border: string; text: string }> = {
   pengklaim: { name: 'Pengklaim', bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-700' },
   pelapor: { name: 'Pelapor/Penemu', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
-  admin: { name: 'Admin', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' },
+  admin: { name: 'Admin Mediator', bg: 'bg-purple-50', border: 'border-purple-300', text: 'text-purple-800' },
 };
 
 export default function ChatMessageList({
   messages,
   isAdmin = false,
+  isDisputed = false,
   safePointsList,
   onZoomImage,
   messagesContainerRef,
@@ -59,17 +61,26 @@ export default function ChatMessageList({
         const prevMsg = mIdx > 0 ? deduped[mIdx - 1] : null;
         const nextMsg = mIdx < deduped.length - 1 ? deduped[mIdx + 1] : null;
 
-        // WhatsApp-style grouping: same sender in consecutive messages
-        const isSameSenderAsPrev = prevMsg && prevMsg.sender === msg.sender && prevMsg.sender !== 'system' && msg.sender !== 'system';
-        const isSameSenderAsNext = nextMsg && nextMsg.sender === msg.sender && nextMsg.sender !== 'system' && msg.sender !== 'system';
+        const isAdminMsg = Boolean(msg.senderRole === 'admin' || msg.isAdminSender);
 
-        // For admin: group by senderName (not just me/other)
-        const isSamePersonAsPrev = isAdmin
-          ? (prevMsg && prevMsg.senderName === msg.senderName && prevMsg.sender !== 'system' && msg.sender !== 'system')
-          : isSameSenderAsPrev;
-        const isSamePersonAsNext = isAdmin
-          ? (nextMsg && nextMsg.senderName === msg.senderName && nextMsg.sender !== 'system' && msg.sender !== 'system')
-          : isSameSenderAsNext;
+        // Grouping: same sender and role in consecutive messages
+        const isSamePersonAsPrev = Boolean(
+          prevMsg &&
+          prevMsg.sender === msg.sender &&
+          prevMsg.sender !== 'system' &&
+          msg.sender !== 'system' &&
+          prevMsg.senderRole === msg.senderRole &&
+          prevMsg.senderName === msg.senderName
+        );
+
+        const isSamePersonAsNext = Boolean(
+          nextMsg &&
+          nextMsg.sender === msg.sender &&
+          nextMsg.sender !== 'system' &&
+          msg.sender !== 'system' &&
+          nextMsg.senderRole === msg.senderRole &&
+          nextMsg.senderName === msg.senderName
+        );
 
         // System messages
         if (msg.sender === 'system') {
@@ -91,8 +102,13 @@ export default function ChatMessageList({
         const topSpacing = isSamePersonAsPrev ? 'mt-0.5' : 'mt-3.5';
         // Only show time on last message of a group
         const showTime = !isSamePersonAsNext;
-        // Show sender name label on first message of a group (admin mediator only)
-        const showSenderLabel = isAdmin && msg.senderName && !isSamePersonAsPrev;
+
+        // Show sender name tag on first message of a group:
+        // - ALWAYS if sender is admin
+        // - In mediation mode (isDisputed) or when viewer is admin, for other participants
+        const showSenderLabel =
+          !isSamePersonAsPrev &&
+          (isAdminMsg || ((isAdmin || isDisputed) && !isMe && Boolean(msg.senderName)));
 
         // Bubble border-radius: WhatsApp-style connected bubbles
         const isFirst = !isSamePersonAsPrev;
@@ -101,8 +117,8 @@ export default function ChatMessageList({
           ? `${isFirst ? 'rounded-tl-[12px] rounded-tr-[4px]' : 'rounded-tl-[12px] rounded-tr-[4px]'} ${isLast ? 'rounded-bl-[12px] rounded-br-[12px]' : 'rounded-bl-[12px] rounded-br-[4px]'}`
           : `${isFirst ? 'rounded-tl-[4px] rounded-tr-[12px]' : 'rounded-tl-[4px] rounded-tr-[12px]'} ${isLast ? 'rounded-bl-[12px] rounded-br-[12px]' : 'rounded-bl-[4px] rounded-br-[12px]'}`;
 
-        // Color scheme for admin mediator view (color-code by sender)
-        const roleColor = isAdmin && msg.senderRole ? SENDER_COLORS[msg.senderRole] : null;
+        // Color scheme for sender role
+        const roleColor = msg.senderRole ? SENDER_COLORS[msg.senderRole] : null;
 
         // Meeting point card
         if (isMeetingCard) {
@@ -114,17 +130,40 @@ export default function ChatMessageList({
               className={`${topSpacing} flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200`}
             >
               {showSenderLabel && (
-                <span className={`text-[10px] font-bold mb-0.5 px-1 ${roleColor?.text || 'text-slate-500'}`}>
-                  {msg.senderName}
-                </span>
+                <div className="flex items-center gap-1.5 mb-1 px-1">
+                  {isAdminMsg ? (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-r from-purple-100 via-indigo-100 to-purple-50 text-purple-950 border border-purple-300 shadow-2xs">
+                      <ShieldCheck size={13} className="text-purple-700 shrink-0" />
+                      <span>{isMe ? 'Anda (Admin Mediasi)' : (msg.senderName || 'Admin Mediasi Kampus')}</span>
+                      <span className="bg-purple-700 text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded-full tracking-wider uppercase shadow-2xs">
+                        ADMIN
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold text-slate-800">
+                        {msg.senderName}
+                      </span>
+                      {msg.senderRole && roleColor && (
+                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-[4px] border ${roleColor.bg} ${roleColor.border} ${roleColor.text}`}>
+                          {roleColor.name}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
               <div
                 className={`max-w-md p-4 rounded-[6px] text-xs sm:text-sm shadow-2xs ${
-                  isMe
-                    ? 'bg-[#0369A1] text-white'
-                    : isAdmin && roleColor
-                      ? `${roleColor.bg} text-slate-800 border ${roleColor.border}`
-                      : 'bg-white text-slate-800 border border-slate-200'
+                  isAdminMsg
+                    ? isMe
+                      ? 'bg-gradient-to-r from-purple-700 to-indigo-700 text-white'
+                      : 'bg-gradient-to-b from-purple-50/90 to-white text-slate-900 border border-purple-200'
+                    : isMe
+                      ? 'bg-[#0369A1] text-white'
+                      : isAdmin && roleColor
+                        ? `${roleColor.bg} text-slate-800 border ${roleColor.border}`
+                        : 'bg-white text-slate-800 border border-slate-200'
                 }`}
               >
                 <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] mb-1.5 opacity-90">
@@ -176,27 +215,43 @@ export default function ChatMessageList({
             key={`msg-body-${msg.id || mIdx}-${mIdx}`}
             className={`${topSpacing} flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200`}
           >
-            {/* Sender label (admin mediator view only, first message of group) */}
+            {/* Sender label / Name Tag */}
             {showSenderLabel && (
-              <div className={`flex items-center gap-1.5 mb-0.5 px-1`}>
-                <span className={`text-[10px] font-bold ${roleColor?.text || 'text-slate-500'}`}>
-                  {msg.senderName}
-                </span>
-                {msg.senderRole && msg.senderRole !== 'admin' && (
-                  <span className={`text-[9px] font-semibold px-1.5 py-0 rounded-[3px] border ${roleColor?.bg || ''} ${roleColor?.border || ''} ${roleColor?.text || ''}`}>
-                    {roleColor?.name || msg.senderRole}
-                  </span>
+              <div className="flex items-center gap-1.5 mb-1 px-1">
+                {isAdminMsg ? (
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-r from-purple-100 via-indigo-100 to-purple-50 text-purple-950 border border-purple-300 shadow-2xs">
+                    <ShieldCheck size={13} className="text-purple-700 shrink-0" />
+                    <span>{isMe ? 'Anda (Admin Mediasi)' : (msg.senderName || 'Admin Mediasi Kampus')}</span>
+                    <span className="bg-purple-700 text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded-full tracking-wider uppercase shadow-2xs">
+                      ADMIN
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-slate-800">
+                      {msg.senderName}
+                    </span>
+                    {msg.senderRole && roleColor && (
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-[4px] border ${roleColor.bg} ${roleColor.border} ${roleColor.text}`}>
+                        {roleColor.name}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             )}
 
             <div
               className={`max-w-md p-3 text-xs sm:text-sm leading-relaxed shadow-2xs whitespace-pre-wrap ${bubbleRadius} ${
-                isMe
-                  ? 'bg-[#0284C7] text-white'
-                  : isAdmin && roleColor
-                    ? `${roleColor.bg} text-slate-800 border ${roleColor.border}`
-                    : 'bg-white text-slate-800 border border-slate-200'
+                isAdminMsg
+                  ? isMe
+                    ? 'bg-gradient-to-r from-purple-700 to-indigo-700 text-white shadow-xs'
+                    : 'bg-gradient-to-b from-purple-50/90 to-white text-slate-900 border border-purple-200/90 shadow-2xs ring-1 ring-purple-100/70'
+                  : isMe
+                    ? 'bg-[#0284C7] text-white'
+                    : isAdmin && roleColor
+                      ? `${roleColor.bg} text-slate-800 border ${roleColor.border}`
+                      : 'bg-white text-slate-800 border border-slate-200'
               }`}
             >
               {msg.imageUrl && (

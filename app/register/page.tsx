@@ -18,7 +18,6 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  Sparkles,
   Info,
   ShieldCheck,
 } from 'lucide-react';
@@ -139,7 +138,7 @@ function RegisterFormContent() {
     }
 
     if (accountType === 'campus' && !nimNip.trim()) {
-      setErrorMessage('NIM / NIP wajib diisi untuk verifikasi akun Campus Member.');
+      setErrorMessage('NIM / NIP wajib diisi untuk verifikasi akun Warga Kampus.');
       return;
     }
 
@@ -180,46 +179,8 @@ function RegisterFormContent() {
           signUpError.message.toLowerCase().includes('connection') ||
           signUpError.message.toLowerCase().includes('failed to send');
 
-        // Jika terjadi kendala SMTP / rate limit / 504 timeout, otomatis fallback daftarkan langsung via database RPC
         if (isSmtpFailure) {
-          const { data: rpcData, error: rpcError } = await supabase.rpc('daftar_pengguna_cepat', {
-            p_email: email.trim(),
-            p_password: password,
-            p_nama_lengkap: fullName.trim(),
-            p_tipe_akun: accountType,
-            p_universitas: accountType === 'campus' ? university.trim() : '',
-            p_role_kampus: accountType === 'campus' ? campusRole : '',
-            p_nim_nip: accountType === 'campus' ? nimNip.trim() : '',
-          });
-
-          if (rpcError) {
-            throw new Error('Gagal mendaftarkan akun. Silakan periksa koneksi atau coba beberapa saat lagi.');
-          }
-
-          if (rpcData && !rpcData.success) {
-            throw new Error(rpcData.message || 'Gagal mendaftarkan akun.');
-          }
-
-          // Otomatis login ke sesi yang baru didaftarkan
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password: password,
-          });
-
-          if (signInError) {
-            setSuccessMessage('Pendaftaran berhasil! Silakan login dengan email dan password Anda.');
-            setTimeout(() => {
-              router.push('/login');
-            }, 1200);
-            return;
-          }
-
-          setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke Dashboard...');
-          setTimeout(() => {
-            router.push('/dashboard');
-            router.refresh();
-          }, 1000);
-          return;
+          throw new Error('Pengiriman email verifikasi gagal (Koneksi SMTP Supabase mengalami Timeout atau Rate Limit). Pastikan kredensial SMTP di Supabase Dashboard sudah benar.');
         }
 
         throw signUpError;
@@ -244,13 +205,13 @@ function RegisterFormContent() {
         }
       }
 
-      // Evaluasi apakah sesi langsung aktif atau harus konfirmasi email terlebih dahulu
+      // Jika sesi langsung terbentuk, sign out dan arahkan ke halaman login
       if (data.session) {
-        setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke Dashboard...');
+        await supabase.auth.signOut();
+        setSuccessMessage('Pendaftaran akun berhasil! Mengalihkan ke halaman login...');
         setTimeout(() => {
-          router.push('/dashboard');
-          router.refresh();
-        }, 1000);
+          router.push(`/login?email=${encodeURIComponent(email.trim())}&registered=true`);
+        }, 1200);
       } else {
         // Tampilkan layar notifikasi "Periksa Link Konfirmasi di Email"
         setEmailSentNotice(email.trim());
@@ -376,7 +337,7 @@ function RegisterFormContent() {
                   {/* Selector Tipe Akun (Campus Member vs Community Member) */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-2">
-                      Pilih Tipe Keanggotaan
+                      Pilih Jenis Akun
                     </label>
                     <div className="grid grid-cols-2 gap-2.5">
                       {/* Option 1: Campus Member */}
@@ -403,7 +364,7 @@ function RegisterFormContent() {
                           </span>
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-gray-900">Campus Member</p>
+                          <p className="text-xs font-bold text-gray-900">Warga Kampus</p>
                           <p className="text-[11px] text-gray-500 line-clamp-1">
                             Mahasiswa, Dosen, Staff
                           </p>
@@ -429,9 +390,9 @@ function RegisterFormContent() {
                           </span>
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-gray-900">Community Member</p>
+                          <p className="text-xs font-bold text-gray-900">Masyarakat Umum</p>
                           <p className="text-[11px] text-gray-500 line-clamp-1">
-                            Masyarakat / Tamu
+                            Warga Sekitar / Tamu
                           </p>
                         </div>
                       </button>
@@ -465,10 +426,6 @@ function RegisterFormContent() {
                     {/* Khusus Campus Member: Universitas, Peran Kampus, NIM/NIP */}
                     {accountType === 'campus' && (
                       <div className="p-3 bg-gray-50/70 rounded-2xl border border-gray-100 space-y-3">
-                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#30AFFF]">
-                          <Sparkles size={13} />
-                          <span>Identitas Kampus untuk Badge Terverifikasi</span>
-                        </div>
 
                         {/* Asal Universitas */}
                         <div>
@@ -636,7 +593,7 @@ function RegisterFormContent() {
                         </>
                       ) : (
                         <span>
-                          Daftar sebagai {accountType === 'campus' ? 'Campus Member' : 'Community Member'}
+                          Daftar sebagai {accountType === 'campus' ? 'Warga Kampus' : 'Masyarakat Umum'}
                         </span>
                       )}
                     </button>
@@ -657,18 +614,6 @@ function RegisterFormContent() {
             )}
           </div>
 
-          {/* Footer Legal Links */}
-          <div className="flex items-center justify-center gap-6 pt-5 text-[11px] text-gray-400 border-t border-gray-50 mt-4">
-            <Link href="/privacy" className="hover:text-gray-600 transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-gray-600 transition-colors">
-              Terms of Service
-            </Link>
-            <Link href="/help" className="hover:text-gray-600 transition-colors">
-              Bantuan
-            </Link>
-          </div>
         </div>
       </div>
     </div>

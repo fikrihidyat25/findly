@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, CheckCircle2, MapPin, Check, X, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, MapPin, Check, X, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { ChatConversation } from '@/src/types/chat';
 
 interface ChatHeaderProps {
@@ -27,8 +27,8 @@ export default function ChatHeader({
   onRejectByAdmin,
 }: ChatHeaderProps) {
   return (
-    <div className="p-3 sm:p-3.5 border-b border-slate-200 flex items-center justify-between gap-2 sm:gap-3 bg-white shrink-0">
-      <div className="flex items-center gap-3 min-w-0">
+    <div className="p-3 sm:p-3.5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white shrink-0">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full md:w-auto">
         <button
           type="button"
           onClick={onBackToConversations}
@@ -42,9 +42,9 @@ export default function ChatHeader({
           {selectedConv.counterpartName.substring(0, 2).toUpperCase()}
         </div>
 
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <h3 className="font-bold text-sm text-slate-900 truncate">
+            <h3 className="font-bold text-sm text-slate-900 truncate max-w-full">
               {selectedConv.counterpartName}
             </h3>
             <span
@@ -62,13 +62,13 @@ export default function ChatHeader({
               {selectedConv.counterpartRole}
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 truncate">
+          <p className="text-[11px] text-slate-500 truncate mt-0.5">
             Membahas barang: <strong className="text-slate-800 font-semibold">{selectedConv.itemTitle}</strong>
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 shrink-0 w-full md:w-auto pl-10 md:pl-0">
         {/* Titik Temu Aman */}
         <button
           type="button"
@@ -135,8 +135,9 @@ export default function ChatHeader({
         )}
 
         {isDisputed && (
-          <span className="text-[11px] font-semibold text-purple-800 bg-purple-50 px-2.5 py-1 rounded-[4px] border border-purple-300">
-            Dalam Mediasi
+          <span className="text-[11px] font-semibold text-purple-800 bg-purple-50 px-2.5 py-1 rounded-[4px] border border-purple-300 flex items-center gap-1 shadow-2xs">
+            <ShieldCheck size={13} className="text-purple-600" />
+            <span>Dalam Mediasi Admin</span>
           </span>
         )}
       </div>

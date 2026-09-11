@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ShieldCheck } from 'lucide-react';
 import { ChatConversation } from '@/src/types/chat';
 
 interface ConversationListProps {
@@ -63,11 +63,16 @@ export default function ConversationList({
                   <p className="text-[11px] font-semibold text-sky-700 truncate">
                     {conv.itemTitle}
                   </p>
-                  {isAdmin && (
+                  {isAdmin ? (
                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-[4px] bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
                       Sengketa Mediasi
                     </span>
-                  )}
+                  ) : conv.status === 'DISPUTED' ? (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-[4px] bg-purple-50 text-purple-700 border border-purple-200 shrink-0 flex items-center gap-1">
+                      <ShieldCheck size={10} />
+                      <span>Mediasi</span>
+                    </span>
+                  ) : null}
                 </div>
 
                 <p className="text-xs text-slate-500 truncate mt-1">{conv.lastMessage}</p>

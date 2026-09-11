@@ -21,8 +21,8 @@ interface LeafletSafeMapProps {
 }
 
 export default function LeafletSafeMap({
-  lat = -6.36442,
-  lng = 106.82861,
+  lat = -0.95772,
+  lng = 100.39579,
   locationName,
   address,
   points,

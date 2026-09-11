@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import AppLayout from '@/src/components/layout/AppLayout';
 import {
   MessageSquare,
+  MessageSquareOff,
   Search,
   Loader2,
   LogIn,
@@ -21,7 +23,10 @@ import ChatInput from '@/src/components/chat/ChatInput';
 import SafePointModal from '@/src/components/chat/SafePointModal';
 import ImageLightbox from '@/src/components/chat/ImageLightbox';
 
-export default function MessagesPage() {
+function MessagesContent() {
+  const searchParams = useSearchParams();
+  const targetClaimId = searchParams.get('id');
+  const [emptyNotice, setEmptyNotice] = useState<{ claimTitle: string; claimId: string } | null>(null);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConv, setSelectedConv] = useState<ChatConversation | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
@@ -50,6 +55,7 @@ export default function MessagesPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const profilesCacheRef = useRef<Record<string, { id: string; nama_lengkap: string; tipe_akun?: string; role_kampus?: string; email?: string }>>({});
 
   // Fetch safe points
   useEffect(() => {
@@ -105,7 +111,7 @@ export default function MessagesPage() {
 
         const { data: profile } = await supabase
           .from('profil_pengguna')
-          .select('tipe_akun, role_kampus')
+          .select('tipe_akun, role_kampus, nama_lengkap')
           .eq('id', user.id)
           .single();
 
@@ -246,7 +252,6 @@ export default function MessagesPage() {
 
             const latest = userLatestMsgsMap[c.id];
             const lastMsg = latest ? latest.text : (c.pesan_verifikasi || 'Halo, saya telah mengajukan klaim atas barang ini.');
-            const lastTime = latest ? latest.time : timeStr;
 
             loadedConversations.push({
               id: c.id,
@@ -254,10 +259,14 @@ export default function MessagesPage() {
               counterpartRole,
               itemTitle: report?.nama_barang || 'Barang Temuan',
               lastMessage: lastMsg,
-              lastTime,
+              lastTime: timeStr,
               unread: false,
               status: convStatus,
               initialPesanVerifikasi: c.pesan_verifikasi,
+              pengklaimId: c.pengklaim_id,
+              pelaporId: report?.pelapor_id,
+              pengklaimName: profile?.nama_lengkap || 'Pengklaim',
+              pelaporName: counterpartName,
             });
           });
 
@@ -277,7 +286,6 @@ export default function MessagesPage() {
 
             const latest = userLatestMsgsMap[c.id];
             const lastMsg = latest ? latest.text : (c.pesan_verifikasi || 'Pengguna mengajukan klaim atas barang yang Anda laporkan.');
-            const lastTime = latest ? latest.time : timeStr;
 
             loadedConversations.push({
               id: c.id,
@@ -285,20 +293,83 @@ export default function MessagesPage() {
               counterpartRole,
               itemTitle: c.laporan_barang?.nama_barang || 'Barang Laporan Anda',
               lastMessage: lastMsg,
-              lastTime,
+              lastTime: timeStr,
               unread: true,
               status: convStatus,
               initialPesanVerifikasi: c.pesan_verifikasi,
+              pengklaimId: c.pengklaim_id,
+              pelaporId: c.laporan_barang?.pelapor_id,
+              pengklaimName: counterpartName,
+              pelaporName: profile?.nama_lengkap || 'Pelapor',
             });
           });
         }
 
         if (isMounted) {
           setConversations(loadedConversations);
-          if (loadedConversations.length > 0) {
-            setSelectedConv(loadedConversations[0]);
+
+          if (targetClaimId) {
+            const matched = loadedConversations.find((c) => c.id === targetClaimId);
+            if (matched) {
+              setSelectedConv(matched);
+              setEmptyNotice(null);
+            } else {
+              // Cek apakah klaim spesifik ini ada di database
+              const { data: targetClaim } = await supabase
+                .from('klaim_barang')
+                .select('*, laporan_barang(*, profil_pengguna:pelapor_id(nama_lengkap, role_kampus, universitas)), profil_pengguna:pengklaim_id(nama_lengkap, role_kampus, universitas)')
+                .eq('id', targetClaimId)
+                .maybeSingle();
+
+              // Cek apakah klaim ini benar-benar memiliki riwayat pesan
+              const { count: msgCount } = await supabase
+                .from('pesan_chat')
+                .select('id', { count: 'exact', head: true })
+                .eq('klaim_id', targetClaimId);
+
+              if (targetClaim && (msgCount ?? 0) > 0) {
+                const report = targetClaim.laporan_barang;
+                const claimant = targetClaim.profil_pengguna;
+                const pelapor = report?.profil_pengguna;
+                const claimantName = claimant?.nama_lengkap || 'Pengklaim';
+                const pelaporName = pelapor?.nama_lengkap || 'Pelapor';
+                const counterpartName = userIsAdmin ? `${claimantName} & ${pelaporName}` : pelaporName;
+
+                const customConv: ChatConversation = {
+                  id: targetClaim.id,
+                  counterpartName,
+                  counterpartRole: userIsAdmin ? 'Mediasi Klaim' : (pelapor?.role_kampus || 'Warga Kampus'),
+                  itemTitle: report?.nama_barang || 'Barang Laporan',
+                  lastMessage: targetClaim.pesan_verifikasi || 'Percakapan terkait klaim.',
+                  lastTime: 'Baru',
+                  unread: false,
+                  status: targetClaim.status === 'SELESAI' ? 'RESOLVED' : targetClaim.status === 'DITOLAK' ? 'DISPUTED' : 'VERIFYING',
+                  initialPesanVerifikasi: targetClaim.pesan_verifikasi,
+                  pengklaimId: targetClaim.pengklaim_id,
+                  pelaporId: report?.pelapor_id,
+                  pengklaimName: claimantName,
+                  pelaporName: pelaporName,
+                };
+
+                setConversations((prev) => [customConv, ...prev.filter((p) => p.id !== customConv.id)]);
+                setSelectedConv(customConv);
+                setEmptyNotice(null);
+              } else {
+                // Klaim ini TIDAK memiliki riwayat pesan mediasi. JANGAN buka mediasi orang lain!
+                setSelectedConv(null);
+                setEmptyNotice({
+                  claimTitle: targetClaim?.laporan_barang?.nama_barang || 'Klaim Terkait',
+                  claimId: targetClaimId,
+                });
+              }
+            }
           } else {
-            setSelectedConv(null);
+            if (loadedConversations.length > 0) {
+              setSelectedConv(loadedConversations[0]);
+            } else {
+              setSelectedConv(null);
+            }
+            setEmptyNotice(null);
           }
         }
       } catch (err) {
@@ -312,7 +383,7 @@ export default function MessagesPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [targetClaimId]);
 
   // Update conversation status
   useEffect(() => {
@@ -333,13 +404,20 @@ export default function MessagesPage() {
       try {
         const { data: dbRows, error } = await supabase
           .from('pesan_chat')
-          .select('*')
+          .select('*, profil_pengguna:pengirim_id(id, nama_lengkap, role_kampus, tipe_akun, email)')
           .eq('klaim_id', convId)
           .order('dibuat_pada', { ascending: true });
 
         if (error) throw error;
 
         if (dbRows && dbRows.length > 0) {
+          // Cache profiles
+          dbRows.forEach((r: any) => {
+            if (r.pengirim_id && r.profil_pengguna) {
+              profilesCacheRef.current[r.pengirim_id] = r.profil_pengguna;
+            }
+          });
+
           const mapped: ChatMessage[] = dbRows.map((r: any) => {
             const isMe = r.pengirim_id === currentUserId;
             const isSystem = r.tipe_pesan === 'sistem';
@@ -347,27 +425,45 @@ export default function MessagesPage() {
             const d = new Date(r.dibuat_pada);
             const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 
-            // For admin mediator: identify sender by matching participant IDs
+            const profile = r.profil_pengguna || profilesCacheRef.current[r.pengirim_id];
+
+            // Check if sender is admin
+            const isSenderAdmin = Boolean(
+              profile?.tipe_akun === 'admin' ||
+              profile?.role_kampus === 'admin' ||
+              profile?.email?.toLowerCase().includes('admin') ||
+              (isMe && isAdmin) ||
+              (selectedConv?.pengklaimId &&
+                selectedConv?.pelaporId &&
+                r.pengirim_id !== selectedConv.pengklaimId &&
+                r.pengirim_id !== selectedConv.pelaporId &&
+                !isSystem)
+            );
+
             let senderName: string | undefined;
             let senderRole: 'pengklaim' | 'pelapor' | 'admin' | undefined;
-            if (isAdmin && selectedConv) {
-              if (r.pengirim_id === selectedConv.pengklaimId) {
-                senderName = selectedConv.pengklaimName || 'Pengklaim';
-                senderRole = 'pengklaim';
-              } else if (r.pengirim_id === selectedConv.pelaporId) {
-                senderName = selectedConv.pelaporName || 'Pelapor';
-                senderRole = 'pelapor';
-              } else if (r.pengirim_id === currentUserId) {
-                senderName = 'Admin';
-                senderRole = 'admin';
-              }
+
+            if (isSenderAdmin) {
+              senderRole = 'admin';
+              senderName = profile?.nama_lengkap
+                ? `Admin (${profile.nama_lengkap})`
+                : 'Admin Mediasi Kampus';
+            } else if (selectedConv && r.pengirim_id === selectedConv.pengklaimId) {
+              senderRole = 'pengklaim';
+              senderName = selectedConv.pengklaimName || profile?.nama_lengkap || 'Pengklaim';
+            } else if (selectedConv && r.pengirim_id === selectedConv.pelaporId) {
+              senderRole = 'pelapor';
+              senderName = selectedConv.pelaporName || profile?.nama_lengkap || 'Pelapor';
+            } else {
+              senderName = profile?.nama_lengkap || (isMe ? 'Anda' : 'Pengguna');
             }
 
             return {
               id: r.id,
-              sender: isSystem ? 'system' as const : (isAdmin ? (r.pengirim_id === currentUserId ? 'me' as const : 'other' as const) : (isMe ? 'me' as const : 'other' as const)),
+              sender: isSystem ? ('system' as const) : (isMe ? ('me' as const) : ('other' as const)),
               senderName,
               senderRole,
+              isAdminSender: isSenderAdmin,
               text: parsed.text,
               imageUrl: parsed.imageUrl,
               time: timeStr,
@@ -399,6 +495,8 @@ export default function MessagesPage() {
             initialMsgs.push({
               id: `init-${convId}`,
               sender: 'other',
+              senderRole: 'pengklaim',
+              senderName: selectedConv.pengklaimName || 'Pengklaim',
               text: `Halo, saya mengajukan klaim dengan bukti verifikasi:\n"${selectedConv.initialPesanVerifikasi}"`,
               time: selectedConv.lastTime || 'Baru saja',
             });
@@ -428,7 +526,7 @@ export default function MessagesPage() {
           table: 'pesan_chat',
           filter: `klaim_id=eq.${convId}`,
         },
-        (payload: any) => {
+        async (payload: any) => {
           const row = payload.new;
           if (row.pengirim_id === currentUserId) return;
 
@@ -437,9 +535,58 @@ export default function MessagesPage() {
           const d = new Date(row.dibuat_pada);
           const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 
+          let profile = profilesCacheRef.current[row.pengirim_id];
+          if (!profile && !isSystem && row.pengirim_id) {
+            try {
+              const { data: p } = await supabase
+                .from('profil_pengguna')
+                .select('id, nama_lengkap, role_kampus, tipe_akun, email')
+                .eq('id', row.pengirim_id)
+                .single();
+              if (p) {
+                profile = p;
+                profilesCacheRef.current[row.pengirim_id] = p;
+              }
+            } catch {
+              // ignore
+            }
+          }
+
+          const isSenderAdmin = Boolean(
+            profile?.tipe_akun === 'admin' ||
+            profile?.role_kampus === 'admin' ||
+            profile?.email?.toLowerCase().includes('admin') ||
+            (selectedConv?.pengklaimId &&
+              selectedConv?.pelaporId &&
+              row.pengirim_id !== selectedConv.pengklaimId &&
+              row.pengirim_id !== selectedConv.pelaporId &&
+              !isSystem)
+          );
+
+          let senderName: string | undefined;
+          let senderRole: 'pengklaim' | 'pelapor' | 'admin' | undefined;
+
+          if (isSenderAdmin) {
+            senderRole = 'admin';
+            senderName = profile?.nama_lengkap
+              ? `Admin (${profile.nama_lengkap})`
+              : 'Admin Mediasi Kampus';
+          } else if (selectedConv && row.pengirim_id === selectedConv.pengklaimId) {
+            senderRole = 'pengklaim';
+            senderName = selectedConv.pengklaimName || profile?.nama_lengkap || 'Pengklaim';
+          } else if (selectedConv && row.pengirim_id === selectedConv.pelaporId) {
+            senderRole = 'pelapor';
+            senderName = selectedConv.pelaporName || profile?.nama_lengkap || 'Pelapor';
+          } else {
+            senderName = profile?.nama_lengkap || 'Pengguna';
+          }
+
           const newChat: ChatMessage = {
             id: row.id,
             sender: isSystem ? 'system' : 'other',
+            senderName,
+            senderRole,
+            isAdminSender: isSenderAdmin,
             text: parsed.text,
             imageUrl: parsed.imageUrl,
             time: timeStr,
@@ -524,6 +671,9 @@ export default function MessagesPage() {
     const newMsg: ChatMessage = {
       id: tempId,
       sender: 'me',
+      senderRole: isAdmin ? 'admin' : (selectedConv.pengklaimId === currentUserId ? 'pengklaim' : 'pelapor'),
+      senderName: isAdmin ? 'Admin' : (selectedConv.pengklaimId === currentUserId ? selectedConv.pengklaimName : selectedConv.pelaporName),
+      isAdminSender: isAdmin,
       text: userText,
       imageUrl: imageToSend || undefined,
       time: timeStr,
@@ -795,12 +945,18 @@ export default function MessagesPage() {
 
             <div className="space-y-1.5">
               <h3 className="text-xl font-bold text-slate-900 tracking-tight">
-                {isAdmin ? 'Belum Ada Sesi Mediasi Aktif' : 'Belum Ada Sesi Pesan & Verifikasi'}
+                {emptyNotice
+                  ? 'Tidak Ada Pesan Mediasi'
+                  : isAdmin
+                    ? 'Belum Ada Sesi Mediasi Aktif'
+                    : 'Belum Ada Sesi Pesan & Verifikasi'}
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
-                {isAdmin
-                  ? 'Saat ini seluruh verifikasi klaim civitas berjalan lancar atau belum ada laporan sengketa yang membutuhkan intervensi mediator kampus.'
-                  : 'Sesi diskusi verifikasi peer-to-peer akan muncul secara otomatis saat Anda mengajukan klaim atas barang temuan, atau saat ada pengguna lain yang mengklaim barang yang Anda laporkan.'}
+                {emptyNotice
+                  ? `Klaim untuk barang "${emptyNotice.claimTitle}" belum memiliki riwayat atau sesi pesan mediasi aktif.`
+                  : isAdmin
+                    ? 'Saat ini seluruh verifikasi klaim warga kampus berjalan lancar atau belum ada laporan sengketa yang membutuhkan intervensi mediator kampus.'
+                    : 'Sesi diskusi verifikasi peer-to-peer akan muncul secara otomatis saat Anda mengajukan klaim atas barang temuan, atau saat ada pengguna lain yang mengklaim barang yang Anda laporkan.'}
               </p>
             </div>
 
@@ -809,10 +965,10 @@ export default function MessagesPage() {
                 <>
                   <Link
                     href="/admin/klaim"
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-[6px] bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-2"
                   >
                     <FileCheck2 size={14} />
-                    <span>Kelola Klaim Civitas</span>
+                    <span>Kembali ke Kelola Klaim</span>
                   </Link>
                   <Link
                     href="/admin/laporan"
@@ -855,8 +1011,8 @@ export default function MessagesPage() {
               showMobileChat={showMobileChat}
             />
 
-            {/* Right Column: Active Chat Room */}
-            {selectedConv && (
+            {/* Right Column: Active Chat Room or Empty State */}
+            {selectedConv ? (
               <div
                 className={`lg:col-span-8 flex flex-col h-full min-h-0 bg-white ${!showMobileChat ? 'hidden lg:flex' : 'flex'
                   }`}
@@ -878,6 +1034,7 @@ export default function MessagesPage() {
                 <ChatMessageList
                   messages={currentMessages}
                   isAdmin={isAdmin}
+                  isDisputed={isDisputed}
                   safePointsList={safePointsList}
                   onZoomImage={(url) => setZoomedImage(url)}
                   messagesContainerRef={messagesContainerRef}
@@ -903,6 +1060,33 @@ export default function MessagesPage() {
                   inputRef={inputRef}
                 />
               </div>
+            ) : (
+              <div
+                className={`lg:col-span-8 flex flex-col items-center justify-center p-8 text-center bg-gray-50/50 ${
+                  !showMobileChat ? 'hidden lg:flex' : 'flex'
+                }`}
+              >
+                <div className="w-16 h-16 rounded-2xl bg-sky-50 text-[#30AFFF] border border-sky-100 flex items-center justify-center mb-3">
+                  <MessageSquareOff size={28} />
+                </div>
+                <h4 className="text-base font-bold text-gray-900 mb-1">
+                  {emptyNotice ? 'Tidak Ada Pesan Mediasi' : 'Pilih Sesi Percakapan'}
+                </h4>
+                <p className="text-xs text-gray-500 max-w-md leading-relaxed mb-5">
+                  {emptyNotice
+                    ? `Klaim untuk barang "${emptyNotice.claimTitle}" belum memiliki riwayat atau sesi pesan mediasi aktif.`
+                    : 'Pilih salah satu sesi percakapan dari daftar di sebelah kiri untuk membaca atau membalas pesan.'}
+                </p>
+                {isAdmin && (
+                  <Link
+                    href="/admin/klaim"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold transition-all shadow-xs"
+                  >
+                    <FileCheck2 size={14} />
+                    <span>Kembali ke Kelola Klaim</span>
+                  </Link>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -924,5 +1108,19 @@ export default function MessagesPage() {
         />
       </div>
     </AppLayout>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#f4f7fb] flex items-center justify-center p-4">
+          <Loader2 size={24} className="animate-spin text-[#30AFFF]" />
+        </div>
+      }
+    >
+      <MessagesContent />
+    </Suspense>
   );
 }

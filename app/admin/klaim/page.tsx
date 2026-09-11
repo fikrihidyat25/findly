@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   FileCheck2,
   Search,
@@ -9,6 +10,7 @@ import {
   XCircle,
   Clock,
   MessageSquare,
+  MessageSquareOff,
   Loader2,
   RefreshCw,
   X,
@@ -29,15 +31,18 @@ interface KlaimItem {
   pesan_verifikasi: string;
   status: 'MENUNGGU' | 'DIVERIFIKASI' | 'JADWAL_DIBUAT' | 'DITOLAK' | 'SELESAI' | string;
   dibuat_pada: string;
+  hasMessages?: boolean;
 }
 
 export default function AdminKlaimPage() {
+  const router = useRouter();
   const [klaimList, setKlaimList] = useState<KlaimItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('semua');
   const [actionLoading, setActionLoading] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [noMediationModal, setNoMediationModal] = useState<KlaimItem | null>(null);
 
   async function fetchKlaimData() {
     setLoading(true);
@@ -72,10 +77,18 @@ export default function AdminKlaimPage() {
         profileMap.set(p.id, { nama: p.nama_lengkap || 'Pengguna', email: p.email || '' });
       });
 
+      // 4. Fetch claims that have messages in pesan_chat
+      const { data: chatData } = await supabase
+        .from('pesan_chat')
+        .select('klaim_id');
+
+      const claimsWithMessages = new Set((chatData || []).map((m: any) => m.klaim_id));
+
       const formatted: KlaimItem[] = (claims || []).map((c) => {
         const rep = reportMap.get(c.laporan_id);
         const pengklaim = profileMap.get(c.pengklaim_id);
         const pelapor = rep?.pelapor_id ? profileMap.get(rep.pelapor_id) : null;
+        const hasMessages = c.status === 'DITOLAK';
 
         return {
           id: c.id,
@@ -89,6 +102,7 @@ export default function AdminKlaimPage() {
           pesan_verifikasi: c.pesan_verifikasi || 'Tidak ada pesan sertaan.',
           status: c.status || 'MENUNGGU',
           dibuat_pada: c.dibuat_pada,
+          hasMessages,
         };
       });
 
@@ -162,6 +176,23 @@ export default function AdminKlaimPage() {
       return dateStr;
     }
   };
+
+  // Action: Buka chat mediasi jika klaim ini berstatus sengketa/mediasi (DITOLAK)
+  function handleOpenChat(item: KlaimItem) {
+    if (item.status !== 'DITOLAK') {
+      // TIDAK ADA SESI MEDIASI UNTUK KLAIM INI:
+      // Tampilkan Modal Pop-up + Feedback Alert, dan JANGAN buka halaman pesan!
+      setNoMediationModal(item);
+      setFeedbackMessage({
+        type: 'error',
+        text: `Belum ada sesi mediasi aktif untuk klaim "${item.nama_barang}" (Status saat ini: ${item.status}).`,
+      });
+      return;
+    }
+
+    // Jika klaim berstatus DITOLAK, memang ada sesi mediasi aktif: buka halaman pesan
+    router.push(`/messages?id=${item.id}`);
+  }
 
   return (
     <div className="space-y-6">
@@ -315,13 +346,22 @@ export default function AdminKlaimPage() {
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {/* Go to chat button */}
-                        <Link
-                          href={`/messages?id=${item.id}`}
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                          title="Buka Chat Terkait"
+                        <button
+                          type="button"
+                          onClick={() => handleOpenChat(item)}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            item.status === 'DITOLAK'
+                              ? 'text-[#30AFFF] bg-sky-50 hover:bg-sky-100 ring-1 ring-sky-200'
+                              : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
+                          }`}
+                          title={
+                            item.status === 'DITOLAK'
+                              ? 'Buka Sesi Mediasi Sengketa'
+                              : 'Belum Ada Sesi Mediasi (Klik untuk info)'
+                          }
                         >
                           <MessageSquare size={15} />
-                        </Link>
+                        </button>
 
                         {/* Approve button */}
                         {item.status !== 'SELESAI' && (
@@ -357,6 +397,69 @@ export default function AdminKlaimPage() {
           </div>
         )}
       </div>
+
+      {/* Modal / Pop-up Tidak Ada Pesan Mediasi */}
+      {noMediationModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setNoMediationModal(null)}
+        >
+          <div
+            className="bg-white rounded-3xl border border-gray-100 p-6 sm:p-7 max-w-sm w-full shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
+              <MessageSquareOff size={26} />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-gray-900">
+                Belum Ada Sesi Mediasi
+              </h3>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Klaim ini saat ini berstatus <strong className="text-gray-800">{noMediationModal.status}</strong> dan belum ada sesi mediasi aktif. Sesi mediasi administrator hanya tersedia untuk klaim yang mengalami sengketa kepemilikan (status DITOLAK).
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100 text-left text-xs space-y-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-400">Nama Barang:</span>
+                <span className="font-bold text-gray-800 truncate max-w-[170px]">
+                  {noMediationModal.nama_barang}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-400">Pengklaim:</span>
+                <span className="font-semibold text-gray-700">
+                  {noMediationModal.pengklaim_nama}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-400">Status Klaim:</span>
+                <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] ${
+                  noMediationModal.status === 'SELESAI'
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : noMediationModal.status === 'DITOLAK'
+                      ? 'bg-red-50 text-red-700'
+                      : 'bg-amber-50 text-amber-700'
+                }`}>
+                  {noMediationModal.status}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setNoMediationModal(null)}
+                className="w-full py-2.5 bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-xs"
+              >
+                Tutup Pemberitahuan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

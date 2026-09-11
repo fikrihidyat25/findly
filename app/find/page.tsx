@@ -256,31 +256,28 @@ export default function FindItemsPage() {
             <div className="flex items-center gap-1 bg-gray-100/90 p-1 rounded-xl shrink-0 w-full sm:w-auto justify-center">
               <button
                 onClick={() => setSelectedStatus('all')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  selectedStatus === 'all'
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${selectedStatus === 'all'
                     ? 'bg-white text-gray-900 shadow-2xs'
                     : 'text-gray-500 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 Semua Status
               </button>
               <button
                 onClick={() => setSelectedStatus('found')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  selectedStatus === 'found'
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${selectedStatus === 'found'
                     ? 'bg-white text-emerald-600 shadow-2xs'
                     : 'text-gray-500 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 Ditemukan
               </button>
               <button
                 onClick={() => setSelectedStatus('lost')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  selectedStatus === 'lost'
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${selectedStatus === 'lost'
                     ? 'bg-white text-rose-600 shadow-2xs'
                     : 'text-gray-500 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 Hilang
               </button>
@@ -297,11 +294,10 @@ export default function FindItemsPage() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all cursor-pointer ${
-                  selectedCategory === cat
+                className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all cursor-pointer ${selectedCategory === cat
                     ? 'bg-[#30AFFF] text-white font-semibold shadow-2xs'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 {cat}
               </button>
@@ -380,11 +376,10 @@ export default function FindItemsPage() {
                     {/* Status Badge */}
                     <div className="absolute top-3 left-3 z-10">
                       <span
-                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${
-                          isLost
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${isLost
                             ? 'bg-rose-500 text-white border-rose-600'
                             : 'bg-emerald-500 text-white border-emerald-600'
-                        }`}
+                          }`}
                       >
                         {isLost ? 'Hilang' : 'Ditemukan'}
                       </span>
@@ -393,9 +388,8 @@ export default function FindItemsPage() {
                     {/* Bookmark Button */}
                     <button
                       onClick={() => toggleSave(item.id)}
-                      className={`absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center shadow-2xs transition-all hover:scale-110 cursor-pointer ${
-                        isSaved ? 'text-[#30AFFF]' : 'text-gray-400 hover:text-gray-700'
-                      }`}
+                      className={`absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center shadow-2xs transition-all hover:scale-110 cursor-pointer ${isSaved ? 'text-[#30AFFF]' : 'text-gray-400 hover:text-gray-700'
+                        }`}
                     >
                       <Bookmark size={15} className={isSaved ? 'fill-[#30AFFF] stroke-[#30AFFF]' : ''} />
                     </button>
@@ -455,7 +449,7 @@ export default function FindItemsPage() {
                       ) : (
                         <Link
                           href={`/find/${item.id}`}
-                          className="w-full inline-flex items-center justify-center py-2 px-3 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-all"
+                          className="w-full inline-flex items-center justify-center py-2 px-3 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold shadow-2xs transition-all"
                         >
                           Saya Menemukan Ini
                         </Link>
