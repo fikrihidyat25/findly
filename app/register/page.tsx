@@ -53,6 +53,10 @@ function RegisterFormContent() {
     if (noticeParam) {
       setEmailSentNotice(noticeParam);
     }
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setErrorMessage(decodeURIComponent(errorParam));
+    }
   }, [searchParams]);
   const [nimNip, setNimNip] = useState('');
 
@@ -99,7 +103,7 @@ function RegisterFormContent() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+          redirectTo: `${window.location.origin}/auth/callback?source=register&next=/dashboard`,
           queryParams: {
             prompt: 'select_account',
           },

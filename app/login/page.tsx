@@ -68,79 +68,88 @@ function LoginFormContent() {
     setSuccessMessage(null);
     setResendStatus(null);
     setShowResendConfirm(false);
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setErrorMessage('Alamat email wajib diisi.');
+      return;
+    }
+
+    if (!password) {
+      setErrorMessage('Kata sandi wajib diisi. Belum memiliki akun? Silakan daftar akun baru terlebih dahulu.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      if (email && password) {
-        const cleanEmail = email.trim();
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
 
-        if (error) {
-          const msg = error.message.toLowerCase();
-          if (msg.includes('email not confirmed')) {
-            setErrorMessage('Email Anda belum dikonfirmasi. Silakan periksa inbox atau folder spam di Gmail Anda dan klik tautan konfirmasi dari Supabase.');
-            setShowResendConfirm(true);
-            return;
+      if (error) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes('email not confirmed')) {
+          setErrorMessage('Email Anda belum dikonfirmasi. Silakan periksa inbox atau folder spam di Gmail Anda dan klik tautan konfirmasi dari Supabase.');
+          setShowResendConfirm(true);
+          return;
+        }
+        if (msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
+          // Cek ke database apakah email ini sebenarnya belum ada di database
+          let emailExists: boolean | null = null;
+
+          // 1. Coba RPC cek_email_terdaftar (mencari ke auth.users)
+          try {
+            const { data: exists, error: rpcErr } = await supabase.rpc('cek_email_terdaftar', {
+              p_email: cleanEmail,
+            });
+            if (!rpcErr && typeof exists === 'boolean') {
+              emailExists = exists;
+            }
+          } catch {
+            // RPC belum dibuat di Supabase
           }
-          if (msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
-            // Cek ke database apakah email ini sebenarnya belum ada di database
-            let emailExists: boolean | null = null;
 
-            // 1. Coba RPC cek_email_terdaftar (mencari ke auth.users)
+          // 2. Fallback: cek ke profil_pengguna
+          if (emailExists === null) {
             try {
-              const { data: exists, error: rpcErr } = await supabase.rpc('cek_email_terdaftar', {
-                p_email: cleanEmail,
-              });
-              if (!rpcErr && typeof exists === 'boolean') {
-                emailExists = exists;
+              const { data: profile } = await supabase
+                .from('profil_pengguna')
+                .select('id')
+                .ilike('email', cleanEmail)
+                .maybeSingle();
+
+              if (profile) {
+                emailExists = true;
               }
             } catch {
-              // RPC belum dibuat di Supabase
+              // Kolom belum ada
             }
-
-            // 2. Fallback: cek ke profil_pengguna
-            if (emailExists === null) {
-              try {
-                const { data: profile } = await supabase
-                  .from('profil_pengguna')
-                  .select('id')
-                  .ilike('email', cleanEmail)
-                  .maybeSingle();
-
-                if (profile) {
-                  emailExists = true;
-                }
-              } catch {
-                // Kolom belum ada
-              }
-            }
-
-            if (emailExists === false) {
-              setErrorMessage('Email ini belum terdaftar di database Findly.');
-            } else if (emailExists === true) {
-              setErrorMessage('Kata sandi yang Anda masukkan salah.');
-            } else {
-              setErrorMessage('Email atau kata sandi yang Anda masukkan salah.');
-            }
-            return;
           }
-          if (msg.includes('querying schema')) {
-            setErrorMessage('Akun ini tersimpan dengan token belum sinkron di database Supabase. Silakan jalankan query perbaikan di SQL Editor Supabase.');
-            return;
+
+          if (emailExists === false) {
+            setErrorMessage('Email ini belum terdaftar di database Findly. Silakan registrasi terlebih dahulu.');
+          } else if (emailExists === true) {
+            setErrorMessage('Kata sandi yang Anda masukkan salah.');
+          } else {
+            setErrorMessage('Email atau kata sandi yang Anda masukkan salah. Belum punya akun? Silakan daftar.');
           }
-          setErrorMessage(error.message);
           return;
         }
-
-        if (data.session) {
-          const redirect = searchParams.get('redirect') || '/dashboard';
-          router.push(redirect);
-          router.refresh();
+        if (msg.includes('querying schema')) {
+          setErrorMessage('Akun ini tersimpan dengan token belum sinkron di database Supabase. Silakan jalankan query perbaikan di SQL Editor Supabase.');
           return;
         }
+        setErrorMessage(error.message);
+        return;
+      }
+
+      if (data.session) {
+        const redirect = searchParams.get('redirect') || '/dashboard';
+        router.push(redirect);
+        router.refresh();
+        return;
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat login.';
@@ -184,7 +193,7 @@ function LoginFormContent() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+          redirectTo: `${window.location.origin}/auth/callback?source=login&next=/dashboard`,
           queryParams: {
             prompt: 'select_account',
           },
@@ -251,6 +260,19 @@ function LoginFormContent() {
                     {resendStatus && (
                       <span className="text-[10px] text-emerald-700 font-semibold">{resendStatus}</span>
                     )}
+                  </div>
+                )}
+                {(errorMessage.toLowerCase().includes('belum terdaftar') ||
+                  errorMessage.toLowerCase().includes('daftar akun baru') ||
+                  errorMessage.toLowerCase().includes('registrasi')) && (
+                  <div className="pt-1.5 border-t border-red-200/60 flex items-center justify-between">
+                    <span className="text-[11px] text-red-600">Belum memiliki akun Findly?</span>
+                    <Link
+                      href={`/register${email ? `?email=${encodeURIComponent(email)}` : ''}`}
+                      className="font-bold text-[#0284C7] hover:underline cursor-pointer text-[11px] inline-flex items-center gap-1"
+                    >
+                      Daftar Akun Baru &rarr;
+                    </Link>
                   </div>
                 )}
               </div>
