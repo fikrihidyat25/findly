@@ -96,45 +96,7 @@ function LoginFormContent() {
           return;
         }
         if (msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
-          // Cek ke database apakah email ini sebenarnya belum ada di database
-          let emailExists: boolean | null = null;
-
-          // 1. Coba RPC cek_email_terdaftar (mencari ke auth.users)
-          try {
-            const { data: exists, error: rpcErr } = await supabase.rpc('cek_email_terdaftar', {
-              p_email: cleanEmail,
-            });
-            if (!rpcErr && typeof exists === 'boolean') {
-              emailExists = exists;
-            }
-          } catch {
-            // RPC belum dibuat di Supabase
-          }
-
-          // 2. Fallback: cek ke profil_pengguna
-          if (emailExists === null) {
-            try {
-              const { data: profile } = await supabase
-                .from('profil_pengguna')
-                .select('id')
-                .ilike('email', cleanEmail)
-                .maybeSingle();
-
-              if (profile) {
-                emailExists = true;
-              }
-            } catch {
-              // Kolom belum ada
-            }
-          }
-
-          if (emailExists === false) {
-            setErrorMessage('Email ini belum terdaftar di database Findly. Silakan registrasi terlebih dahulu.');
-          } else if (emailExists === true) {
-            setErrorMessage('Kata sandi yang Anda masukkan salah.');
-          } else {
-            setErrorMessage('Email atau kata sandi yang Anda masukkan salah. Belum punya akun? Silakan daftar.');
-          }
+          setErrorMessage('Email atau kata sandi yang Anda masukkan salah. Pastikan email sudah terdaftar dan kata sandi benar.');
           return;
         }
         if (msg.includes('querying schema')) {
@@ -264,6 +226,7 @@ function LoginFormContent() {
                 )}
                 {(errorMessage.toLowerCase().includes('belum terdaftar') ||
                   errorMessage.toLowerCase().includes('daftar akun baru') ||
+                  errorMessage.toLowerCase().includes('salah') ||
                   errorMessage.toLowerCase().includes('registrasi')) && (
                   <div className="pt-1.5 border-t border-red-200/60 flex items-center justify-between">
                     <span className="text-[11px] text-red-600">Belum memiliki akun Findly?</span>
