@@ -179,31 +179,8 @@ function RegisterFormContent() {
           signUpError.message.toLowerCase().includes('connection') ||
           signUpError.message.toLowerCase().includes('failed to send');
 
-        // Jika terjadi kendala SMTP / rate limit / 504 timeout, otomatis fallback daftarkan langsung via database RPC
         if (isSmtpFailure) {
-          const { data: rpcData, error: rpcError } = await supabase.rpc('daftar_pengguna_cepat', {
-            p_email: email.trim(),
-            p_password: password,
-            p_nama_lengkap: fullName.trim(),
-            p_tipe_akun: accountType,
-            p_universitas: accountType === 'campus' ? university.trim() : '',
-            p_role_kampus: accountType === 'campus' ? campusRole : '',
-            p_nim_nip: accountType === 'campus' ? nimNip.trim() : '',
-          });
-
-          if (rpcError) {
-            throw new Error('Gagal mendaftarkan akun. Silakan periksa koneksi atau coba beberapa saat lagi.');
-          }
-
-          if (rpcData && !rpcData.success) {
-            throw new Error(rpcData.message || 'Gagal mendaftarkan akun.');
-          }
-
-          setSuccessMessage('Pendaftaran akun berhasil! Mengalihkan ke halaman login...');
-          setTimeout(() => {
-            router.push(`/login?email=${encodeURIComponent(email.trim())}&registered=true`);
-          }, 1200);
-          return;
+          throw new Error('Pengiriman email verifikasi gagal (Koneksi SMTP Supabase mengalami Timeout atau Rate Limit). Pastikan kredensial SMTP di Supabase Dashboard sudah benar.');
         }
 
         throw signUpError;
