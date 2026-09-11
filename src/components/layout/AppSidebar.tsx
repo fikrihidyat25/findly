@@ -99,7 +99,6 @@ export default function AppSidebar({
     { label: 'Mediasi Klaim', href: '/admin/klaim', icon: FileCheck2 },
     { label: 'Pesan & Mediasi', href: '/messages', icon: MessageSquare, badge: msgBadge },
     { label: 'Verifikasi Civitas', href: '/admin/pengguna', icon: Users },
-    { label: 'Katalog Barang', href: '/find', icon: Search },
     { label: 'Notifikasi', href: '/notifications', icon: Bell, badge: notifBadge },
   ];
 
