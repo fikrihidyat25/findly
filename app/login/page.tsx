@@ -224,20 +224,6 @@ function LoginFormContent() {
                     )}
                   </div>
                 )}
-                {(errorMessage.toLowerCase().includes('belum terdaftar') ||
-                  errorMessage.toLowerCase().includes('daftar akun baru') ||
-                  errorMessage.toLowerCase().includes('salah') ||
-                  errorMessage.toLowerCase().includes('registrasi')) && (
-                  <div className="pt-1.5 border-t border-red-200/60 flex items-center justify-between">
-                    <span className="text-[11px] text-red-600">Belum memiliki akun Findly?</span>
-                    <Link
-                      href={`/register${email ? `?email=${encodeURIComponent(email)}` : ''}`}
-                      className="font-bold text-[#0284C7] hover:underline cursor-pointer text-[11px] inline-flex items-center gap-1"
-                    >
-                      Daftar Akun Baru &rarr;
-                    </Link>
-                  </div>
-                )}
               </div>
             )}
 
