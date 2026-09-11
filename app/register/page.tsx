@@ -652,18 +652,6 @@ function RegisterFormContent() {
             )}
           </div>
 
-          {/* Footer Legal Links */}
-          <div className="flex items-center justify-center gap-6 pt-5 text-[11px] text-gray-400 border-t border-gray-50 mt-4">
-            <Link href="/privacy" className="hover:text-gray-600 transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-gray-600 transition-colors">
-              Terms of Service
-            </Link>
-            <Link href="/help" className="hover:text-gray-600 transition-colors">
-              Bantuan
-            </Link>
-          </div>
         </div>
       </div>
     </div>

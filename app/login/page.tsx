@@ -380,18 +380,6 @@ function LoginFormContent() {
             </div>
           </div>
 
-          {/* Footer Legal Links */}
-          <div className="flex items-center justify-center gap-6 pt-6 text-[11px] text-gray-400">
-            <Link href="/privacy" className="hover:text-gray-600 transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-gray-600 transition-colors">
-              Term of Service
-            </Link>
-            <Link href="/help" className="hover:text-gray-600 transition-colors">
-              Help Center
-            </Link>
-          </div>
         </div>
       </div>
     </div>
