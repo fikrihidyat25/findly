@@ -68,12 +68,11 @@ export interface MasterCondition {
 export interface MasterCampusArea {
   id: string;
   nama_lokasi: string;
+  kategori_area?: string;
   deskripsi: string;
-  alamat_lengkap?: string;
-  ada_satpam?: boolean;
-  ada_cctv?: boolean;
+  urutan: number;
   aktif: boolean;
-  kampus?: string;
+  dibuat_pada?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -178,16 +177,16 @@ export const DEFAULT_MASTER_CONDITIONS: MasterCondition[] = [
 ];
 
 export const DEFAULT_CAMPUS_AREAS: MasterCampusArea[] = [
-  { id: 'ar-1', nama_lokasi: 'Perpustakaan Pusat', deskripsi: 'Gedung perpustakaan dan ruang baca', aktif: true },
-  { id: 'ar-2', nama_lokasi: 'Gedung Rektorat', deskripsi: 'Lobby dan kantor administrasi utama', aktif: true },
-  { id: 'ar-3', nama_lokasi: 'Gedung Kuliah Bersama (GKB)', deskripsi: 'Ruang kelas dan koridor perkuliahan', aktif: true },
-  { id: 'ar-4', nama_lokasi: 'Fakultas Ilmu Komputer', deskripsi: 'Gedung FILKOM & laboratorium komputer', aktif: true },
-  { id: 'ar-5', nama_lokasi: 'Fakultas Teknik', deskripsi: 'Bengkel dan gedung fakultas teknik', aktif: true },
-  { id: 'ar-6', nama_lokasi: 'Fakultas Ekonomi & Bisnis', deskripsi: 'Ruang seminar dan kelas FEB', aktif: true },
-  { id: 'ar-7', nama_lokasi: 'Kantin Utama', deskripsi: 'Food court dan pujasera kampus', aktif: true },
-  { id: 'ar-8', nama_lokasi: 'Masjid Kampus', deskripsi: 'Area ibadah dan serambi masjid', aktif: true },
-  { id: 'ar-9', nama_lokasi: 'Parkiran Kendaraan', deskripsi: 'Area parkir motor & mobil kampus', aktif: true },
-  { id: 'ar-10', nama_lokasi: 'Area Kampus Lainnya', deskripsi: 'Titik lainnya di lingkungan universitas', aktif: true },
+  { id: 'ar-1', nama_lokasi: 'Perpustakaan Pusat', kategori_area: 'Fasilitas Umum', deskripsi: 'Gedung perpustakaan utama dan ruang baca', urutan: 1, aktif: true },
+  { id: 'ar-2', nama_lokasi: 'Gedung Rektorat', kategori_area: 'Administrasi', deskripsi: 'Lobby utama rektorat dan kantor administrasi kampus', urutan: 2, aktif: true },
+  { id: 'ar-3', nama_lokasi: 'Gedung Kuliah Bersama (GKB)', kategori_area: 'Gedung Kuliah', deskripsi: 'Ruang kelas kuliah umum, koridor, dan selasar', urutan: 3, aktif: true },
+  { id: 'ar-4', nama_lokasi: 'Fakultas Ilmu Komputer', kategori_area: 'Fakultas', deskripsi: 'Gedung FILKOM, lab komputer, dan ruang dosen', urutan: 4, aktif: true },
+  { id: 'ar-5', nama_lokasi: 'Fakultas Teknik', kategori_area: 'Fakultas', deskripsi: 'Bengkel praktikum, laboratorium teknik, dan ruang kelas', urutan: 5, aktif: true },
+  { id: 'ar-6', nama_lokasi: 'Fakultas Ekonomi & Bisnis', kategori_area: 'Fakultas', deskripsi: 'Gedung FEB, ruang seminar, dan ruang kelas', urutan: 6, aktif: true },
+  { id: 'ar-7', nama_lokasi: 'Kantin Utama', kategori_area: 'Fasilitas Umum', deskripsi: 'Pujasera, warung makan mahasiswa, dan area duduk santai', urutan: 7, aktif: true },
+  { id: 'ar-8', nama_lokasi: 'Masjid Kampus', kategori_area: 'Fasilitas Umum', deskripsi: 'Area ibadah, serambi utama, dan area wudhu', urutan: 8, aktif: true },
+  { id: 'ar-9', nama_lokasi: 'Parkiran Kendaraan', kategori_area: 'Area Luar', deskripsi: 'Area parkir motor dan mobil mahasiswa/civitas kampus', urutan: 9, aktif: true },
+  { id: 'ar-10', nama_lokasi: 'Area Lainnya', kategori_area: 'Lainnya', deskripsi: 'Lokasi lain di lingkungan kampus di luar daftar utama', urutan: 10, aktif: true },
 ];
 
 export const AVAILABLE_CATEGORY_ICONS = [
@@ -207,6 +206,15 @@ export const AVAILABLE_CATEGORY_ICONS = [
   'Sparkles',
   'Camera',
   'Heart',
+] as const;
+
+export const AVAILABLE_AREA_CATEGORIES = [
+  'Gedung Kuliah',
+  'Fakultas',
+  'Fasilitas Umum',
+  'Administrasi',
+  'Area Luar',
+  'Lainnya',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -272,15 +280,16 @@ export async function getMasterConditions(includeInactive = false): Promise<Mast
 }
 
 /**
- * Mengambil master area kampus (diambil dari titik_kumpul_aman & digabung fallback jika diperlukan)
+ * Mengambil master area kampus (lokasi barang hilang / ditemukan)
  */
 export async function getMasterCampusAreas(includeInactive = false): Promise<MasterCampusArea[]> {
   try {
     const supabase = createClient();
     let query = supabase
-      .from('titik_kumpul_aman')
-      .select('id, nama_lokasi, deskripsi, alamat_lengkap, ada_satpam, ada_cctv, aktif, kampus')
-      .order('nama_lokasi', { ascending: true });
+      .from('master_area_kampus')
+      .select('*')
+      .order('urutan', { ascending: true })
+      .order('dibuat_pada', { ascending: true });
 
     if (!includeInactive) {
       query = query.eq('aktif', true);
@@ -288,40 +297,10 @@ export async function getMasterCampusAreas(includeInactive = false): Promise<Mas
 
     const { data, error } = await query;
     if (!error && data && data.length > 0) {
-      // Gabungkan nama lokasi unik
-      const results: MasterCampusArea[] = [];
-      const seen = new Set<string>();
-
-      for (const item of data) {
-        if (!seen.has(item.nama_lokasi)) {
-          seen.add(item.nama_lokasi);
-          results.push({
-            id: item.id,
-            nama_lokasi: item.nama_lokasi,
-            deskripsi: item.deskripsi || '',
-            alamat_lengkap: item.alamat_lengkap,
-            ada_satpam: item.ada_satpam,
-            ada_cctv: item.ada_cctv,
-            aktif: item.aktif ?? true,
-            kampus: item.kampus,
-          });
-        }
-      }
-
-      // Pastikan ada opsi "Area Kampus Lainnya" di akhir
-      if (!seen.has('Area Kampus Lainnya') && !seen.has('Area Lainnya')) {
-        results.push({
-          id: 'area-lainnya',
-          nama_lokasi: 'Area Kampus Lainnya',
-          deskripsi: 'Lokasi lain di lingkungan kampus yang belum terdaftar',
-          aktif: true,
-        });
-      }
-
-      return results;
+      return data;
     }
   } catch (err) {
-    console.warn('Fallback titik_kumpul_aman ke default campus areas:', err);
+    console.warn('Fallback master_area_kampus ke default:', err);
   }
 
   return includeInactive
@@ -390,7 +369,67 @@ export async function deleteMasterCategory(id: string): Promise<{ error: any }> 
 }
 
 // ---------------------------------------------------------------------------
-// 3. Admin CRUD Operations for Conditions
+// 3. Admin CRUD Operations for Campus Areas (Lokasi / Gedung Kampus)
+// ---------------------------------------------------------------------------
+
+export async function createMasterCampusArea(payload: {
+  nama_lokasi: string;
+  kategori_area?: string;
+  deskripsi?: string;
+  urutan?: number;
+  aktif?: boolean;
+}): Promise<{ data: MasterCampusArea | null; error: any }> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('master_area_kampus')
+      .insert({
+        nama_lokasi: payload.nama_lokasi.trim(),
+        kategori_area: payload.kategori_area || 'Gedung Kuliah',
+        deskripsi: payload.deskripsi?.trim() || '',
+        urutan: payload.urutan ?? 1,
+        aktif: payload.aktif ?? true,
+      })
+      .select()
+      .single();
+
+    return { data, error };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
+}
+
+export async function updateMasterCampusArea(
+  id: string,
+  payload: Partial<MasterCampusArea>
+): Promise<{ data: MasterCampusArea | null; error: any }> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('master_area_kampus')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    return { data, error };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
+}
+
+export async function deleteMasterCampusArea(id: string): Promise<{ error: any }> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from('master_area_kampus').delete().eq('id', id);
+    return { error };
+  } catch (err: any) {
+    return { error: err };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4. Admin CRUD Operations for Conditions
 // ---------------------------------------------------------------------------
 
 export async function createMasterCondition(payload: {

@@ -15,12 +15,9 @@ import {
   X,
   Save,
   AlertCircle,
-  ExternalLink,
-  ShieldCheck,
-  ShieldAlert,
+  Building2,
   Sliders,
   Sparkles,
-  Building2,
 } from 'lucide-react';
 import {
   MasterCategory,
@@ -35,7 +32,11 @@ import {
   createMasterCondition,
   updateMasterCondition,
   deleteMasterCondition,
+  createMasterCampusArea,
+  updateMasterCampusArea,
+  deleteMasterCampusArea,
   AVAILABLE_CATEGORY_ICONS,
+  AVAILABLE_AREA_CATEGORIES,
   resolveCategoryIcon,
 } from '@/src/lib/masterData';
 
@@ -64,6 +65,17 @@ export default function AdminMasterDataPage() {
     aktif: true,
   });
 
+  // Campus Area Modal State
+  const [areaModalOpen, setAreaModalOpen] = useState(false);
+  const [areaModalMode, setAreaModalMode] = useState<'create' | 'edit'>('create');
+  const [areaFormData, setAreaFormData] = useState<Partial<MasterCampusArea>>({
+    nama_lokasi: '',
+    kategori_area: 'Gedung Kuliah',
+    deskripsi: '',
+    urutan: 1,
+    aktif: true,
+  });
+
   // Condition Modal State
   const [conditionModalOpen, setConditionModalOpen] = useState(false);
   const [conditionModalMode, setConditionModalMode] = useState<'create' | 'edit'>('create');
@@ -77,7 +89,7 @@ export default function AdminMasterDataPage() {
   // Delete Confirmation Modal State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{
-    type: 'kategori' | 'kondisi';
+    type: 'kategori' | 'area' | 'kondisi';
     id: string;
     nama: string;
   } | null>(null);
@@ -152,7 +164,7 @@ export default function AdminMasterDataPage() {
     setActionLoading(true);
     try {
       if (categoryModalMode === 'create') {
-        const { data, error } = await createMasterCategory({
+        const { error } = await createMasterCategory({
           nama: categoryFormData.nama,
           icon: categoryFormData.icon,
           deskripsi: categoryFormData.deskripsi,
@@ -184,7 +196,6 @@ export default function AdminMasterDataPage() {
   const toggleCategoryStatus = async (item: MasterCategory) => {
     try {
       const nextStatus = !item.aktif;
-      // Optimistic update
       setCategories((prev) =>
         prev.map((c) => (c.id === item.id ? { ...c, aktif: nextStatus } : c))
       );
@@ -193,6 +204,81 @@ export default function AdminMasterDataPage() {
       showNotification('success', `Status kategori "${item.nama}" diubah ke ${nextStatus ? 'Aktif' : 'Nonaktif'}.`);
     } catch (err: any) {
       showNotification('error', 'Gagal memperbarui status kategori.');
+      await loadData();
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Campus Area Handlers
+  // ---------------------------------------------------------------------------
+  const openCreateArea = () => {
+    setAreaModalMode('create');
+    setAreaFormData({
+      nama_lokasi: '',
+      kategori_area: 'Gedung Kuliah',
+      deskripsi: '',
+      urutan: campusAreas.length + 1,
+      aktif: true,
+    });
+    setAreaModalOpen(true);
+  };
+
+  const openEditArea = (item: MasterCampusArea) => {
+    setAreaModalMode('edit');
+    setAreaFormData({ ...item });
+    setAreaModalOpen(true);
+  };
+
+  const handleSaveArea = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!areaFormData.nama_lokasi?.trim()) {
+      showNotification('error', 'Nama gedung / area kampus wajib diisi.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      if (areaModalMode === 'create') {
+        const { error } = await createMasterCampusArea({
+          nama_lokasi: areaFormData.nama_lokasi,
+          kategori_area: areaFormData.kategori_area,
+          deskripsi: areaFormData.deskripsi,
+          urutan: areaFormData.urutan,
+          aktif: areaFormData.aktif,
+        });
+        if (error) throw error;
+        showNotification('success', `Area kampus "${areaFormData.nama_lokasi}" berhasil ditambahkan.`);
+      } else if (areaFormData.id) {
+        const { error } = await updateMasterCampusArea(areaFormData.id, {
+          nama_lokasi: areaFormData.nama_lokasi,
+          kategori_area: areaFormData.kategori_area,
+          deskripsi: areaFormData.deskripsi,
+          urutan: areaFormData.urutan,
+          aktif: areaFormData.aktif,
+        });
+        if (error) throw error;
+        showNotification('success', `Area kampus "${areaFormData.nama_lokasi}" berhasil diperbarui.`);
+      }
+      setAreaModalOpen(false);
+      await loadData();
+    } catch (err: any) {
+      showNotification('error', err.message || 'Gagal menyimpan area kampus.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const toggleAreaStatus = async (item: MasterCampusArea) => {
+    try {
+      const nextStatus = !item.aktif;
+      setCampusAreas((prev) =>
+        prev.map((a) => (a.id === item.id ? { ...a, aktif: nextStatus } : a))
+      );
+      const { error } = await updateMasterCampusArea(item.id, { aktif: nextStatus });
+      if (error) throw error;
+      showNotification('success', `Status area "${item.nama_lokasi}" diubah ke ${nextStatus ? 'Aktif' : 'Nonaktif'}.`);
+    } catch (err: any) {
+      showNotification('error', 'Gagal memperbarui status area kampus.');
       await loadData();
     }
   };
@@ -257,7 +343,6 @@ export default function AdminMasterDataPage() {
   const toggleConditionStatus = async (item: MasterCondition) => {
     try {
       const nextStatus = !item.aktif;
-      // Optimistic update
       setConditions((prev) =>
         prev.map((c) => (c.id === item.id ? { ...c, aktif: nextStatus } : c))
       );
@@ -273,7 +358,7 @@ export default function AdminMasterDataPage() {
   // ---------------------------------------------------------------------------
   // Delete Handler
   // ---------------------------------------------------------------------------
-  const confirmDelete = (type: 'kategori' | 'kondisi', id: string, nama: string) => {
+  const confirmDelete = (type: 'kategori' | 'area' | 'kondisi', id: string, nama: string) => {
     setDeleteTarget({ type, id, nama });
     setDeleteModalOpen(true);
   };
@@ -286,6 +371,10 @@ export default function AdminMasterDataPage() {
         const { error } = await deleteMasterCategory(deleteTarget.id);
         if (error) throw error;
         showNotification('success', `Kategori "${deleteTarget.nama}" berhasil dihapus.`);
+      } else if (deleteTarget.type === 'area') {
+        const { error } = await deleteMasterCampusArea(deleteTarget.id);
+        if (error) throw error;
+        showNotification('success', `Area kampus "${deleteTarget.nama}" berhasil dihapus.`);
       } else {
         const { error } = await deleteMasterCondition(deleteTarget.id);
         if (error) throw error;
@@ -306,11 +395,14 @@ export default function AdminMasterDataPage() {
   const filteredCategories = categories.filter(
     (c) => c.nama.toLowerCase().includes(q) || c.deskripsi?.toLowerCase().includes(q)
   );
+  const filteredCampusAreas = campusAreas.filter(
+    (a) =>
+      a.nama_lokasi.toLowerCase().includes(q) ||
+      a.deskripsi?.toLowerCase().includes(q) ||
+      a.kategori_area?.toLowerCase().includes(q)
+  );
   const filteredConditions = conditions.filter(
     (c) => c.nama.toLowerCase().includes(q) || c.deskripsi?.toLowerCase().includes(q)
-  );
-  const filteredCampusAreas = campusAreas.filter(
-    (a) => a.nama_lokasi.toLowerCase().includes(q) || a.deskripsi?.toLowerCase().includes(q)
   );
 
   return (
@@ -378,6 +470,16 @@ export default function AdminMasterDataPage() {
               </button>
             )}
 
+            {activeTab === 'area' && (
+              <button
+                onClick={openCreateArea}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
+              >
+                <Plus size={15} />
+                <span>Tambah Area Kampus</span>
+              </button>
+            )}
+
             {activeTab === 'kondisi' && (
               <button
                 onClick={openCreateCondition}
@@ -386,16 +488,6 @@ export default function AdminMasterDataPage() {
                 <Plus size={15} />
                 <span>Tambah Kondisi</span>
               </button>
-            )}
-
-            {activeTab === 'area' && (
-              <Link
-                href="/admin/titik-temu"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
-              >
-                <MapPin size={15} />
-                <span>Kelola Titik Temu Peta</span>
-              </Link>
             )}
           </div>
         </div>
@@ -467,7 +559,7 @@ export default function AdminMasterDataPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={`Cari ${
-                activeTab === 'kategori' ? 'kategori...' : activeTab === 'area' ? 'gedung / area...' : 'kondisi...'
+                activeTab === 'kategori' ? 'kategori...' : activeTab === 'area' ? 'gedung / area kampus...' : 'kondisi...'
               }`}
               className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:bg-white focus:border-[#30AFFF] focus:outline-none transition-all"
             />
@@ -576,97 +668,84 @@ export default function AdminMasterDataPage() {
 
             {/* ==================== TAB 2: AREA & GEDUNG KAMPUS ==================== */}
             {activeTab === 'area' && (
-              <div className="space-y-4 p-5 sm:p-6">
-                <div className="p-4 rounded-2xl bg-sky-50 border border-sky-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-[#30AFFF] text-white flex items-center justify-center shrink-0">
-                      <MapPin size={16} />
-                    </div>
-                    <div className="space-y-0.5">
-                      <h3 className="font-bold text-gray-900">
-                        Sinkronisasi Otomatis dengan Titik Temu Kampus
-                      </h3>
-                      <p className="text-gray-600 leading-relaxed">
-                        Data gedung dan area kampus di bawah ini langsung terhubung dengan tabel{' '}
-                        <code className="px-1.5 py-0.5 rounded bg-sky-100/80 font-mono text-[11px] text-sky-900">
-                          titik_kumpul_aman
-                        </code>
-                        . Anda dapat mengatur koordinat GPS peta, ketersediaan petugas satpam, dan CCTV di halaman Titik Temu.
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/admin/titik-temu"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-sky-200 text-sky-700 font-bold hover:bg-sky-100/50 transition-colors shrink-0"
-                  >
-                    <span>Buka Titik Temu</span>
-                    <ExternalLink size={13} />
-                  </Link>
-                </div>
-
-                <div className="overflow-x-auto border border-gray-100 rounded-2xl">
+              <div className="divide-y divide-gray-100">
+                <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-gray-50/75 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                        <th className="py-3.5 px-4 w-16 text-center">Urutan</th>
                         <th className="py-3.5 px-4">Nama Gedung / Area Kampus</th>
-                        <th className="py-3.5 px-4">Keterangan / Alamat</th>
-                        <th className="py-3.5 px-4 w-40 text-center">Fasilitas Keamanan</th>
+                        <th className="py-3.5 px-4">Kategori / Zona</th>
+                        <th className="py-3.5 px-4">Deskripsi / Keterangan</th>
                         <th className="py-3.5 px-4 w-28 text-center">Status</th>
+                        <th className="py-3.5 px-4 w-28 text-right">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-xs">
                       {filteredCampusAreas.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="py-12 text-center text-gray-400">
-                            Tidak ada area kampus yang cocok dengan pencarian.
+                          <td colSpan={6} className="py-12 text-center text-gray-400">
+                            Tidak ada gedung atau area kampus yang cocok dengan pencarian.
                           </td>
                         </tr>
                       ) : (
                         filteredCampusAreas.map((area, idx) => (
                           <tr key={area.id || idx} className="hover:bg-gray-50/60 transition-colors">
+                            <td className="py-3.5 px-4 text-center font-bold text-gray-400">
+                              #{area.urutan || idx + 1}
+                            </td>
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center shrink-0">
-                                  <Building2 size={14} />
+                                <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#30AFFF] flex items-center justify-center shrink-0 border border-blue-100/60">
+                                  <Building2 size={15} />
                                 </div>
                                 <span className="font-bold text-gray-900">{area.nama_lokasi}</span>
                               </div>
                             </td>
-                            <td className="py-3.5 px-4 text-gray-600">
-                              {area.alamat_lengkap || area.deskripsi || 'Area lingkungan kampus'}
+                            <td className="py-3.5 px-4">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700">
+                                {area.kategori_area || 'Gedung Kuliah'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-gray-600 max-w-sm leading-relaxed">
+                              {area.deskripsi || '-'}
                             </td>
                             <td className="py-3.5 px-4 text-center">
-                              <div className="inline-flex items-center gap-2">
-                                {area.ada_satpam && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200">
-                                    <ShieldCheck size={11} /> Satpam
-                                  </span>
-                                )}
-                                {area.ada_cctv && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-semibold border border-blue-200">
-                                    CCTV
-                                  </span>
-                                )}
-                                {!area.ada_satpam && !area.ada_cctv && (
-                                  <span className="text-gray-400 text-[11px]">-</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3.5 px-4 text-center">
-                              <span
-                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                              <button
+                                type="button"
+                                onClick={() => toggleAreaStatus(area)}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
                                   area.aktif !== false
-                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                    : 'bg-gray-100 text-gray-500 border border-gray-200'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                    : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'
                                 }`}
+                                title="Klik untuk mengubah status penayangan"
                               >
                                 <span
                                   className={`w-1.5 h-1.5 rounded-full ${
                                     area.aktif !== false ? 'bg-emerald-500' : 'bg-gray-400'
                                   }`}
                                 />
-                                <span>{area.aktif !== false ? 'Tersedia' : 'Nonaktif'}</span>
-                              </span>
+                                <span>{area.aktif !== false ? 'Aktif' : 'Nonaktif'}</span>
+                              </button>
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="inline-flex items-center gap-1">
+                                <button
+                                  onClick={() => openEditArea(area)}
+                                  className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-600 hover:text-[#30AFFF] transition-colors cursor-pointer"
+                                  title="Edit Area Kampus"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                                <button
+                                  onClick={() => confirmDelete('area', area.id, area.nama_lokasi)}
+                                  className="p-1.5 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                                  title="Hapus Area Kampus"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -776,7 +855,7 @@ export default function AdminMasterDataPage() {
               </div>
               <button
                 onClick={() => setCategoryModalOpen(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100"
+                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100 cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -877,17 +956,140 @@ export default function AdminMasterDataPage() {
                 <button
                   type="button"
                   onClick={() => setCategoryModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                   <span>{categoryModalMode === 'create' ? 'Simpan Kategori' : 'Perbarui Kategori'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* MODAL: Tambah / Edit Area & Gedung Kampus                            */}
+      {/* =================================================================== */}
+      {areaModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-3xl p-6 sm:p-7 shadow-xl border border-gray-100 space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#30AFFF] flex items-center justify-center">
+                  <Building2 size={16} />
+                </div>
+                <h3 className="font-bold text-sm text-gray-900">
+                  {areaModalMode === 'create' ? 'Tambah Area & Gedung Kampus' : 'Edit Area & Gedung Kampus'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setAreaModalOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveArea} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Nama Gedung / Area Kampus <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={areaFormData.nama_lokasi || ''}
+                  onChange={(e) => setAreaFormData({ ...areaFormData, nama_lokasi: e.target.value })}
+                  placeholder="Contoh: Perpustakaan Pusat, Gedung Kuliah F, Kantin Baru"
+                  className="w-full px-3.5 py-2.5 text-xs text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:border-[#30AFFF] focus:ring-2 focus:ring-blue-100 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Kategori / Zona Area
+                </label>
+                <select
+                  value={areaFormData.kategori_area || 'Gedung Kuliah'}
+                  onChange={(e) => setAreaFormData({ ...areaFormData, kategori_area: e.target.value })}
+                  className="w-full px-3.5 py-2.5 text-xs text-gray-900 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#30AFFF] cursor-pointer"
+                >
+                  {AVAILABLE_AREA_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Deskripsi / Keterangan Lokasi
+                </label>
+                <textarea
+                  rows={2}
+                  value={areaFormData.deskripsi || ''}
+                  onChange={(e) => setAreaFormData({ ...areaFormData, deskripsi: e.target.value })}
+                  placeholder="Contoh: Ruang perkuliahan lantai 1 sampai lantai 4 dan koridor"
+                  className="w-full px-3.5 py-2 text-xs text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:border-[#30AFFF] focus:ring-2 focus:ring-blue-100 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Nomor Urut Tampilan
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={areaFormData.urutan ?? 1}
+                    onChange={(e) =>
+                      setAreaFormData({ ...areaFormData, urutan: parseInt(e.target.value) || 1 })
+                    }
+                    className="w-full px-3 py-2 text-xs text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:border-[#30AFFF]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Status Penayangan
+                  </label>
+                  <select
+                    value={areaFormData.aktif ? 'true' : 'false'}
+                    onChange={(e) =>
+                      setAreaFormData({ ...areaFormData, aktif: e.target.value === 'true' })
+                    }
+                    className="w-full px-3 py-2 text-xs text-gray-900 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#30AFFF]"
+                  >
+                    <option value="true">Aktif (Tampil di Form)</option>
+                    <option value="false">Nonaktif (Disembunyikan)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setAreaModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  <span>{areaModalMode === 'create' ? 'Simpan Area' : 'Perbarui Area'}</span>
                 </button>
               </div>
             </form>
@@ -912,7 +1114,7 @@ export default function AdminMasterDataPage() {
               </div>
               <button
                 onClick={() => setConditionModalOpen(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100"
+                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100 cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -985,14 +1187,14 @@ export default function AdminMasterDataPage() {
                 <button
                   type="button"
                   onClick={() => setConditionModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                   <span>{conditionModalMode === 'create' ? 'Simpan Kondisi' : 'Perbarui Kondisi'}</span>
@@ -1015,7 +1217,7 @@ export default function AdminMasterDataPage() {
 
             <div className="space-y-1">
               <h3 className="font-bold text-sm text-gray-900">
-                Hapus {deleteTarget.type === 'kategori' ? 'Kategori' : 'Kondisi'}?
+                Hapus {deleteTarget.type === 'kategori' ? 'Kategori' : deleteTarget.type === 'area' ? 'Area Kampus' : 'Kondisi'}?
               </h3>
               <p className="text-xs text-gray-500 leading-relaxed">
                 Apakah Anda yakin ingin menghapus data{' '}
@@ -1028,7 +1230,7 @@ export default function AdminMasterDataPage() {
               <button
                 type="button"
                 onClick={() => setDeleteModalOpen(false)}
-                className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer"
               >
                 Batal
               </button>
@@ -1036,7 +1238,7 @@ export default function AdminMasterDataPage() {
                 type="button"
                 disabled={actionLoading}
                 onClick={handleExecuteDelete}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-xs disabled:opacity-50"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
               >
                 {actionLoading ? <Loader2 size={14} className="animate-spin" /> : null}
                 <span>Hapus Data</span>
