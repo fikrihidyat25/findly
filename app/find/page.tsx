@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 import { CATEGORIES, detectCategory, getCategoryIcon, cleanDescription } from '@/src/lib/categories';
+import { getMasterCategories } from '@/src/lib/masterData';
 
 interface CampusItem {
   id: string;
@@ -103,6 +104,17 @@ export default function FindItemsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'lost' | 'found'>('all');
   const [savedItems, setSavedItems] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>(Array.from(CATEGORIES));
+
+  useEffect(() => {
+    getMasterCategories(false)
+      .then((cats) => {
+        if (cats && cats.length > 0) {
+          setAvailableCategories(['Semua', ...cats.map((c) => c.nama)]);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     // Load saved bookmarks from localStorage
@@ -290,7 +302,7 @@ export default function FindItemsPage() {
               <Filter size={13} />
               Kategori:
             </span>
-            {CATEGORIES.map((cat) => (
+            {availableCategories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}

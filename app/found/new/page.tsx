@@ -21,10 +21,38 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 import { compressImage } from '@/src/lib/imageUtils';
+import {
+  getMasterCategories,
+  getMasterCampusAreas,
+  MasterCategory,
+  MasterCampusArea,
+  DEFAULT_MASTER_CATEGORIES,
+  DEFAULT_CAMPUS_AREAS,
+} from '@/src/lib/masterData';
 
 export default function FoundItemWizardPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Dynamic Options
+  const [availableCategories, setAvailableCategories] = useState<MasterCategory[]>(DEFAULT_MASTER_CATEGORIES);
+  const [availableAreas, setAvailableAreas] = useState<MasterCampusArea[]>(DEFAULT_CAMPUS_AREAS);
+
+  useEffect(() => {
+    async function loadDynamicOptions() {
+      try {
+        const [cats, areas] = await Promise.all([
+          getMasterCategories(false),
+          getMasterCampusAreas(false),
+        ]);
+        if (cats.length > 0) setAvailableCategories(cats);
+        if (areas.length > 0) setAvailableAreas(areas);
+      } catch (err) {
+        console.warn('Gagal memuat opsi kategori/area temuan:', err);
+      }
+    }
+    loadDynamicOptions();
+  }, []);
 
   useEffect(() => {
     async function checkRole() {
@@ -362,14 +390,11 @@ export default function FoundItemWizardPage() {
                         className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all cursor-pointer"
                       >
                         <option value="" disabled hidden>Pilih Kategori</option>
-                        <option value="Elektronik & Gadget">Elektronik & Gadget</option>
-                        <option value="Dompet & Aksesoris">Dompet & Aksesoris</option>
-                        <option value="Pakaian & Jaket">Pakaian & Jaket</option>
-                        <option value="Tas & Ransel">Tas & Ransel</option>
-                        <option value="Dokumen & Kartu">Dokumen & Kartu</option>
-                        <option value="Kunci & Kendaraan">Kunci & Kendaraan</option>
-                        <option value="Buku & Alat Tulis">Buku & Alat Tulis</option>
-                        <option value="Lainnya">Lainnya</option>
+                        {availableCategories.map((c) => (
+                          <option key={c.id || c.nama} value={c.nama}>
+                            {c.nama}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -492,13 +517,11 @@ export default function FoundItemWizardPage() {
                         className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all cursor-pointer"
                       >
                         <option value="" disabled hidden>Pilih Area Kampus</option>
-                        <option value="Perpustakaan Pusat">Perpustakaan Pusat</option>
-                        <option value="Gedung Kuliah Bersama (GKB)">Gedung Kuliah Bersama</option>
-                        <option value="Fakultas Ilmu Komputer">Fakultas Ilmu Komputer</option>
-                        <option value="Kantin Utama">Kantin Utama</option>
-                        <option value="Masjid Kampus">Masjid Kampus</option>
-                        <option value="Parkiran Gedung A/B/C">Parkiran Kampus</option>
-                        <option value="Area Kampus Lainnya">Area Kampus Lainnya</option>
+                        {availableAreas.map((area) => (
+                          <option key={area.id || area.nama_lokasi} value={area.nama_lokasi}>
+                            {area.nama_lokasi}
+                          </option>
+                        ))}
                       </select>
                     </div>
 

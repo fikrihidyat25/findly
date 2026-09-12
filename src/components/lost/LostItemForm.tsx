@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -23,10 +23,44 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 import { compressImage } from '@/src/lib/imageUtils';
+import {
+  getMasterCategories,
+  getMasterConditions,
+  getMasterCampusAreas,
+  MasterCategory,
+  MasterCondition,
+  MasterCampusArea,
+  DEFAULT_MASTER_CATEGORIES,
+  DEFAULT_MASTER_CONDITIONS,
+  DEFAULT_CAMPUS_AREAS,
+} from '@/src/lib/masterData';
 
 export default function LostItemForm() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Dynamic Master Data Options
+  const [availableCategories, setAvailableCategories] = useState<MasterCategory[]>(DEFAULT_MASTER_CATEGORIES);
+  const [availableConditions, setAvailableConditions] = useState<MasterCondition[]>(DEFAULT_MASTER_CONDITIONS);
+  const [availableAreas, setAvailableAreas] = useState<MasterCampusArea[]>(DEFAULT_CAMPUS_AREAS);
+
+  useEffect(() => {
+    async function loadDynamicOptions() {
+      try {
+        const [cats, conds, areas] = await Promise.all([
+          getMasterCategories(false),
+          getMasterConditions(false),
+          getMasterCampusAreas(false),
+        ]);
+        if (cats.length > 0) setAvailableCategories(cats);
+        if (conds.length > 0) setAvailableConditions(conds);
+        if (areas.length > 0) setAvailableAreas(areas);
+      } catch (err) {
+        console.warn('Gagal memuat opsi master data, menggunakan preset bawaan:', err);
+      }
+    }
+    loadDynamicOptions();
+  }, []);
 
   // Stepper State (1 to 4)
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -348,14 +382,11 @@ export default function LostItemForm() {
                         className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all cursor-pointer"
                       >
                         <option value="" disabled hidden>Pilih Kategori Barang</option>
-                        <option value="Elektronik & Gadget">Elektronik & Gadget</option>
-                        <option value="Dompet & Aksesoris">Dompet & Aksesoris</option>
-                        <option value="Tas & Ransel">Tas & Ransel</option>
-                        <option value="Dokumen & Kartu">Dokumen & Kartu (KTM/KTP)</option>
-                        <option value="Kunci & Kendaraan">Kunci & Kendaraan</option>
-                        <option value="Buku & Alat Tulis">Buku & Alat Tulis</option>
-                        <option value="Pakaian & Jaket">Pakaian & Jaket</option>
-                        <option value="Lainnya">Lainnya</option>
+                        {availableCategories.map((c) => (
+                          <option key={c.id || c.nama} value={c.nama}>
+                            {c.nama}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -384,10 +415,11 @@ export default function LostItemForm() {
                         className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all cursor-pointer"
                       >
                         <option value="" disabled hidden>Pilih Kondisi</option>
-                        <option value="Sangat Baik / Baru">Sangat Baik / Baru</option>
-                        <option value="Baik (Bekas Pemakaian Normal)">Baik (Bekas Pemakaian Normal)</option>
-                        <option value="Cukup / Ada Goresan">Cukup / Ada Goresan</option>
-                        <option value="Rusak Sebagian">Rusak Sebagian</option>
+                        {availableConditions.map((cond) => (
+                          <option key={cond.id || cond.nama} value={cond.nama}>
+                            {cond.nama}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -533,16 +565,11 @@ export default function LostItemForm() {
                       className="w-full px-3 py-2 text-xs sm:text-sm text-gray-800 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all cursor-pointer"
                     >
                       <option value="" disabled hidden>Pilih Area Kampus</option>
-                      <option value="Perpustakaan Pusat">Perpustakaan Pusat</option>
-                      <option value="Gedung Rektorat">Gedung Rektorat</option>
-                      <option value="Gedung Kuliah Bersama (GKB)">Gedung Kuliah Bersama (GKB)</option>
-                      <option value="Fakultas Ilmu Komputer">Fakultas Ilmu Komputer</option>
-                      <option value="Fakultas Teknik">Fakultas Teknik</option>
-                      <option value="Fakultas Ekonomi & Bisnis">Fakultas Ekonomi & Bisnis</option>
-                      <option value="Kantin Utama">Kantin Utama</option>
-                      <option value="Masjid Kampus">Masjid Kampus</option>
-                      <option value="Parkiran Gedung A / B / C">Parkiran Kendaraan</option>
-                      <option value="Area Lainnya">Area Lainnya</option>
+                      {availableAreas.map((area) => (
+                        <option key={area.id || area.nama_lokasi} value={area.nama_lokasi}>
+                          {area.nama_lokasi}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
