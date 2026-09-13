@@ -34,6 +34,7 @@ import { createClient } from '@/src/lib/supabase/client';
 import LeafletSafeMap from '@/src/components/map/LeafletSafeMap';
 import { SafePoint, getSafePoints, DEFAULT_SAFE_POINTS } from '@/src/lib/safePoints';
 import { detectCategory, cleanDescription } from '@/src/lib/categories';
+import ProtectedItemImage from '@/src/components/common/ProtectedItemImage';
 
 interface ItemDetail {
   id: string;
@@ -117,6 +118,7 @@ export default function ItemDetailPage() {
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Modal template state for "Saya Menemukan Barang Ini"
   const [showFoundModal, setShowFoundModal] = useState(false);
@@ -158,6 +160,15 @@ export default function ItemDetailPage() {
         } = await supabase.auth.getUser();
         if (authUser) {
           setCurrentUserId(authUser.id);
+          const { data: profile } = await supabase
+            .from('profil_pengguna')
+            .select('tipe_akun, role_kampus')
+            .eq('id', authUser.id)
+            .single();
+
+          if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin' || authUser.user_metadata?.tipe_akun === 'admin') {
+            setIsAdmin(true);
+          }
         }
 
         const { data, error } = await supabase
@@ -468,28 +479,26 @@ export default function ItemDetailPage() {
             </h1>
           </div>
 
-          {/* Visual Showcase Banner */}
-          {item.foto_url ? (
-            <div className="rounded-2xl border border-gray-100 overflow-hidden shadow-2xs max-h-96 flex items-center justify-center bg-gray-50">
-              <img
-                src={item.foto_url}
-                alt={item.title}
-                className="w-full h-auto max-h-96 object-contain"
-              />
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100/80 border border-gray-100 p-8 sm:p-12 flex flex-col items-center justify-center text-center space-y-3">
-              <div
-                className={`w-24 h-24 rounded-3xl ${item.colorScheme.bg} ${item.colorScheme.text} border ${item.colorScheme.border} flex items-center justify-center shadow-sm`}
-              >
-                <Icon size={48} className="stroke-[1.75]" />
-              </div>
-              <div>
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  Foto / Ikon Representasi Barang
-                </span>
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  Foto detail barang belum diunggah atau dirahasiakan oleh pelapor.
+          {/* Visual Showcase Banner with Anti-Fraud Shield */}
+          <ProtectedItemImage
+            src={item.foto_url}
+            alt={item.title}
+            type={item.type}
+            category={item.category}
+            isOwnerOrAdmin={Boolean((currentUserId && item.pelaporId === currentUserId) || isAdmin)}
+            variant="detail"
+            Icon={Icon}
+            colorScheme={item.colorScheme}
+          />
+
+          {/* Anti-Modus Guideline for Found Items */}
+          {item.type === 'found' && !((currentUserId && item.pelaporId === currentUserId) || isAdmin) && (
+            <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex items-start gap-3 text-xs text-amber-900 shadow-2xs">
+              <ShieldCheck size={18} className="text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-1 leading-relaxed">
+                <p className="font-bold">Merasa ini barang milik Anda?</p>
+                <p className="text-amber-800">
+                  Untuk melindungi penemu dari pihak yang mengaku-ngaku, Anda wajib menyebutkan ciri-ciri khusus barang saat mengklik <strong>&ldquo;Ajukan Klaim&rdquo;</strong> (seperti warna casing, stiker, isi dompet/tas, gantungan kunci, atau goresan unik).
                 </p>
               </div>
             </div>

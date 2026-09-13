@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 import { detectCategory, getCategoryIcon } from '@/src/lib/categories';
+import ProtectedItemImage from '@/src/components/common/ProtectedItemImage';
 
 interface SavedItem {
   id: string;
@@ -19,6 +20,7 @@ interface SavedItem {
   location: string;
   description?: string;
   foto_url?: string | null;
+  pelaporId?: string;
   icon: any;
   colorScheme: {
     bg: string;
@@ -27,48 +29,36 @@ interface SavedItem {
   };
 }
 
-function CardImage({
-  src,
-  alt,
-  Icon,
-  colorScheme,
-}: {
-  src?: string | null;
-  alt: string;
-  Icon: any;
-  colorScheme: { bg: string; text: string; border: string };
-}) {
-  const [error, setError] = useState(false);
-  const isValid = Boolean(src && !src.startsWith('blob:') && !error);
 
-  if (isValid) {
-    return (
-      <img
-        src={src!}
-        alt={alt}
-        onError={() => setError(true)}
-        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-      />
-    );
-  }
-
-  return (
-    <div
-      className={`w-16 h-16 rounded-2xl bg-white/90 shadow-2xs flex items-center justify-center ${colorScheme.text} group-hover:scale-110 transition-transform duration-300`}
-    >
-      <Icon size={32} className="stroke-[1.75]" />
-    </div>
-  );
-}
 
 export default function SavedItemsPage() {
   const [items, setItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     async function loadSaved() {
       setLoading(true);
       try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          setCurrentUserId(user.id);
+          const { data: profile } = await supabase
+            .from('profil_pengguna')
+            .select('tipe_akun, role_kampus')
+            .eq('id', user.id)
+            .single();
+
+          if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin' || user.user_metadata?.tipe_akun === 'admin') {
+            setIsAdmin(true);
+          }
+        }
+
         const savedIds: string[] = JSON.parse(localStorage.getItem('findly_saved_items') || '[]');
         if (!Array.isArray(savedIds) || savedIds.length === 0) {
           setItems([]);
@@ -76,7 +66,6 @@ export default function SavedItemsPage() {
           return;
         }
 
-        const supabase = createClient();
         const { data, error } = await supabase
           .from('laporan_barang')
           .select('*')
@@ -98,6 +87,7 @@ export default function SavedItemsPage() {
               location: row.lokasi_terakhir || 'Lingkungan Kampus',
               description: row.deskripsi || '',
               foto_url,
+              pelaporId: row.pelapor_id,
               icon: getCategoryIcon(cat),
               colorScheme: isFound
                 ? { bg: 'bg-emerald-50/70', text: 'text-emerald-700', border: 'border-emerald-200' }
@@ -206,10 +196,14 @@ export default function SavedItemsPage() {
                       <Trash2 size={15} />
                     </button>
 
-                    {/* Photo or Category Fallback */}
-                    <CardImage
+                    {/* Photo with Smart Privacy Blur & Watermark */}
+                    <ProtectedItemImage
                       src={item.foto_url}
                       alt={item.title}
+                      type={item.type}
+                      category={item.category}
+                      isOwnerOrAdmin={Boolean((currentUserId && item.pelaporId === currentUserId) || isAdmin)}
+                      variant="thumbnail"
                       Icon={Icon}
                       colorScheme={item.colorScheme}
                     />

@@ -10,10 +10,12 @@ import {
   Clock,
   Bookmark,
   PackageSearch,
+  ShieldCheck,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 import { CATEGORIES, detectCategory, getCategoryIcon, cleanDescription } from '@/src/lib/categories';
 import { getMasterCategories } from '@/src/lib/masterData';
+import ProtectedItemImage from '@/src/components/common/ProtectedItemImage';
 
 interface CampusItem {
   id: string;
@@ -62,39 +64,7 @@ function formatRelativeTime(dateString: string) {
   }
 }
 
-function CardImage({
-  src,
-  alt,
-  Icon,
-  colorScheme,
-}: {
-  src?: string | null;
-  alt: string;
-  Icon: any;
-  colorScheme: { bg: string; text: string; border: string };
-}) {
-  const [error, setError] = useState(false);
-  const isValid = Boolean(src && !src.startsWith('blob:') && !error);
 
-  if (isValid) {
-    return (
-      <img
-        src={src!}
-        alt={alt}
-        onError={() => setError(true)}
-        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-      />
-    );
-  }
-
-  return (
-    <div
-      className={`w-16 h-16 rounded-2xl bg-white/90 shadow-2xs flex items-center justify-center ${colorScheme.text} group-hover:scale-110 transition-transform duration-300`}
-    >
-      <Icon size={32} className="stroke-[1.75]" />
-    </div>
-  );
-}
 export default function FindItemsPage() {
   const [items, setItems] = useState<CampusItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,9 +193,15 @@ export default function FindItemsPage() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-              Cari Barang
-            </h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+                Cari Barang
+              </h1>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                <ShieldCheck size={12} className="text-emerald-600" />
+                Anti-Modus Protection
+              </span>
+            </div>
             <p className="text-xs sm:text-sm text-gray-500">
               Jelajahi laporan barang hilang dan temuan di seluruh lingkungan universitas.
             </p>
@@ -406,10 +382,14 @@ export default function FindItemsPage() {
                       <Bookmark size={15} className={isSaved ? 'fill-[#30AFFF] stroke-[#30AFFF]' : ''} />
                     </button>
 
-                    {/* Photo or Category Fallback */}
-                    <CardImage
+                    {/* Photo with Smart Privacy Blur & Watermark */}
+                    <ProtectedItemImage
                       src={item.foto_url}
                       alt={item.title}
+                      type={item.type}
+                      category={item.category}
+                      isOwnerOrAdmin={Boolean((currentUserId && item.pelaporId === currentUserId) || isAdmin)}
+                      variant="thumbnail"
                       Icon={Icon}
                       colorScheme={item.colorScheme}
                     />
