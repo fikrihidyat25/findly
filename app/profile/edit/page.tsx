@@ -331,7 +331,7 @@ export default function EditProfilePage() {
                     onClick={handleRemoveAvatar}
                     className="text-[11px] font-semibold text-rose-500 hover:underline pt-0.5 cursor-pointer block"
                   >
-                    Hapus Foto Khusus (Gunakan Inisial)
+                    Hapus Foto Khusus
                   </button>
                 )}
               </div>
@@ -383,8 +383,8 @@ export default function EditProfilePage() {
                   onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="Contoh: 081234567890"
                   className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm focus:outline-none transition-all ${phoneError
-                      ? 'border-rose-400 ring-2 ring-rose-100'
-                      : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
+                    ? 'border-rose-400 ring-2 ring-rose-100'
+                    : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
                     }`}
                 />
                 <span className="text-[10px] text-gray-400">
@@ -489,8 +489,8 @@ export default function EditProfilePage() {
                     onChange={(e) => handleCohortChange(e.target.value)}
                     placeholder="Contoh: 2022"
                     className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm focus:outline-none transition-all ${cohortError
-                        ? 'border-rose-400 ring-2 ring-rose-100'
-                        : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
+                      ? 'border-rose-400 ring-2 ring-rose-100'
+                      : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
                       }`}
                   />
                 </div>
@@ -516,8 +516,8 @@ export default function EditProfilePage() {
                     onChange={(e) => handleNimChange(e.target.value)}
                     placeholder="Contoh: 2212345678"
                     className={`w-full px-3.5 py-2.5 rounded-xl border text-gray-800 text-xs sm:text-sm font-mono focus:outline-none transition-all ${nimError
-                        ? 'border-rose-400 ring-2 ring-rose-100'
-                        : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
+                      ? 'border-rose-400 ring-2 ring-rose-100'
+                      : 'border-gray-200 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20'
                       }`}
                   />
                   <span className="text-[10px] text-gray-400">

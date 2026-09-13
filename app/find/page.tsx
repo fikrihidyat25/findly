@@ -117,6 +117,7 @@ export default function FindItemsPage() {
         const { data, error } = await supabase
           .from('laporan_barang')
           .select('*')
+          .neq('status', 'SELESAI')
           .order('dibuat_pada', { ascending: false });
 
         if (error) throw error;

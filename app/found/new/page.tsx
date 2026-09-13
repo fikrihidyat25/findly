@@ -290,10 +290,6 @@ export default function FoundItemWizardPage() {
       <div className="space-y-6">
         {/* Page Header */}
         <div className="space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200/60 mb-1">
-            <Sparkles size={12} />
-            <span>Aksi Kebaikan Kampus</span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
             Saya Menemukan Barang
           </h1>

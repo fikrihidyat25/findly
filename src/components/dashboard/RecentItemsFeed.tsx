@@ -98,6 +98,7 @@ export default function RecentItemsFeed() {
         const { data, error } = await supabase
           .from('laporan_barang')
           .select('id, nama_barang, jenis_laporan, deskripsi, lokasi_terakhir, foto_url, pelapor_id, dibuat_pada')
+          .neq('status', 'SELESAI')
           .order('dibuat_pada', { ascending: false })
           .limit(8);
 

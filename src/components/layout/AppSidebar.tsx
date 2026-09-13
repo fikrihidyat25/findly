@@ -128,7 +128,6 @@ export default function AppSidebar({
     { label: 'Klaim Saya', href: '/claims', icon: FileCheck2 },
     { label: 'Pesan', href: '/messages', icon: MessageSquare, badge: msgBadge },
     { label: 'Disimpan', href: '/saved', icon: Bookmark },
-    { label: 'Notifikasi', href: '/notifications', icon: Bell, badge: notifBadge },
   ];
 
   // 2. Dedicated Navigation for Administrator
@@ -140,7 +139,6 @@ export default function AppSidebar({
     { label: 'Master Data', href: '/admin/master-data', icon: Sliders },
     { label: 'Pesan & Mediasi', href: '/messages', icon: MessageSquare, badge: msgBadge },
     { label: 'Verifikasi Warga Kampus', href: '/admin/pengguna', icon: Users },
-    { label: 'Notifikasi', href: '/notifications', icon: Bell, badge: notifBadge },
   ];
 
   const currentNavItems = isAdmin ? adminNavItems : userNavItems;

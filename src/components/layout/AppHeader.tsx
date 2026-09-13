@@ -260,19 +260,7 @@ export default function AppHeader({
               />
             </div>
 
-            {/* Messages */}
-            <Link
-              href="/messages"
-              className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
-              aria-label="Messages"
-            >
-              <MessageSquare size={19} className="stroke-[1.75]" />
-              {unreadMessages > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-[#30AFFF] rounded-full border-2 border-white leading-none shadow-xs">
-                  {unreadMessages > 9 ? '9+' : unreadMessages}
-                </span>
-              )}
-            </Link>
+
 
             {/* User Profile Pill & Dropdown */}
             <div className="relative">
