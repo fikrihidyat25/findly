@@ -7,6 +7,7 @@ import { Plus, PackageMinus } from 'lucide-react';
 import AppLayout from '@/src/components/layout/AppLayout';
 import QuickStats from '@/src/components/dashboard/QuickStats';
 import RecentItemsFeed from '@/src/components/dashboard/RecentItemsFeed';
+import SafetyTipBanner from '@/src/components/dashboard/SafetyTipBanner';
 import { createClient } from '@/src/lib/supabase/client';
 
 export default function DashboardPage() {
@@ -46,7 +47,7 @@ export default function DashboardPage() {
 
   return (
     <AppLayout searchQuery={searchQuery} onSearchChange={setSearchQuery}>
-      <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="space-y-5 max-w-7xl mx-auto">
         {/* Crisp Hero Header with Direct Action CTAs */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-100">
           <div className="space-y-1">
@@ -76,6 +77,9 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* Safety Tip Reminder at the Top */}
+        <SafetyTipBanner />
 
         {/* Streamlined Metrics Status Ribbon */}
         <QuickStats />
