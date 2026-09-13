@@ -12,6 +12,8 @@ export interface ChatConversation {
   pelaporId?: string;
   pengklaimName?: string;
   pelaporName?: string;
+  disetujuiPelapor?: boolean;
+  disetujuiPengklaim?: boolean;
 }
 
 export interface ChatMessage {

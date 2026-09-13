@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, CheckCircle2, MapPin, Check, X, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, MapPin, Check, X, AlertTriangle, ShieldCheck, Clock } from 'lucide-react';
 import { ChatConversation } from '@/src/types/chat';
 
 interface ChatHeaderProps {
@@ -8,9 +8,12 @@ interface ChatHeaderProps {
   isAdmin: boolean;
   isApproved: boolean;
   isDisputed: boolean;
+  myAgreed?: boolean;
+  otherAgreed?: boolean;
   onBackToConversations: () => void;
   onOpenSafePointModal: () => void;
   onApprove: () => void;
+  onCancelApprove?: () => void;
   onDispute: () => void;
   onRejectByAdmin: () => void;
 }
@@ -20,9 +23,12 @@ export default function ChatHeader({
   isAdmin,
   isApproved,
   isDisputed,
+  myAgreed = false,
+  otherAgreed = false,
   onBackToConversations,
   onOpenSafePointModal,
   onApprove,
+  onCancelApprove,
   onDispute,
   onRejectByAdmin,
 }: ChatHeaderProps) {
@@ -59,24 +65,22 @@ export default function ChatHeader({
               ) : (
                 <CheckCircle2 size={10} className="text-emerald-700" />
               )}
-              {selectedConv.counterpartRole}
+              <span>{selectedConv.counterpartRole}</span>
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 truncate mt-0.5">
-            Membahas barang: <strong className="text-slate-800 font-semibold">{selectedConv.itemTitle}</strong>
+          <p className="text-xs text-slate-500 truncate mt-0.5">
+            Membahas barang: <span className="font-semibold text-slate-800">{selectedConv.itemTitle}</span>
           </p>
         </div>
       </div>
 
-      <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 shrink-0 w-full md:w-auto pl-10 md:pl-0">
-        {/* Titik Temu Aman */}
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap shrink-0">
         <button
           type="button"
           onClick={onOpenSafePointModal}
-          className="px-2.5 sm:px-3 py-1.5 rounded-[6px] bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-          title="Pilih titik temu aman resmi kampus"
+          className="px-2.5 sm:px-3 py-1.5 rounded-[6px] border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
         >
-          <MapPin size={13} className="text-sky-600 shrink-0" />
+          <MapPin size={13} className="text-[#30AFFF]" />
           <span className="hidden sm:inline">Titik Temu Aman</span>
         </button>
 
@@ -105,15 +109,54 @@ export default function ChatHeader({
               </>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={onApprove}
-                  className="px-2.5 sm:px-3 py-1.5 rounded-[6px] bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer flex items-center gap-1"
-                >
-                  <Check size={13} />
-                  <span className="hidden sm:inline">Sepakati Pemilikan</span>
-                  <span className="sm:hidden">Sepakati</span>
-                </button>
+                {/* 1. Pengguna saat ini sudah sepakat, menunggu lawan bicara */}
+                {myAgreed && !otherAgreed && (
+                  <div className="flex items-center gap-1">
+                    <span className="px-2.5 sm:px-3 py-1.5 rounded-[6px] bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
+                      <Clock size={13} className="text-amber-600 animate-pulse" />
+                      <span className="hidden sm:inline">Menunggu Lawan Bicara (1/2)</span>
+                      <span className="sm:hidden">Menunggu (1/2)</span>
+                    </span>
+                    {onCancelApprove && (
+                      <button
+                        type="button"
+                        onClick={onCancelApprove}
+                        className="px-1.5 py-1 text-[11px] text-gray-400 hover:text-rose-600 hover:underline cursor-pointer"
+                        title="Batalkan pengajuan kesepakatan"
+                      >
+                        Batal
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* 2. Lawan bicara sudah sepakat, pengguna ini belum */}
+                {otherAgreed && !myAgreed && (
+                  <button
+                    type="button"
+                    onClick={onApprove}
+                    className="px-2.5 sm:px-3 py-1.5 rounded-[6px] bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center gap-1.5 ring-2 ring-emerald-300/80 animate-pulse"
+                    title="Lawan bicara telah menyepakati! Klik untuk mengonfirmasi serah terima"
+                  >
+                    <Check size={14} className="stroke-[2.5]" />
+                    <span className="hidden sm:inline">Setujui Kesepakatan (1/2)</span>
+                    <span className="sm:hidden">Setujui (1/2)</span>
+                  </button>
+                )}
+
+                {/* 3. Belum ada yang sepakat */}
+                {!myAgreed && !otherAgreed && (
+                  <button
+                    type="button"
+                    onClick={onApprove}
+                    className="px-2.5 sm:px-3 py-1.5 rounded-[6px] bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <Check size={13} />
+                    <span className="hidden sm:inline">Sepakati Pemilikan</span>
+                    <span className="sm:hidden">Sepakati</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={onDispute}
@@ -129,8 +172,9 @@ export default function ChatHeader({
         )}
 
         {isApproved && (
-          <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-[4px] border border-emerald-300">
-            Selesai
+          <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-[4px] border border-emerald-300 flex items-center gap-1">
+            <CheckCircle2 size={13} className="text-emerald-700" />
+            <span>Selesai (Disepakati Kedua Pihak)</span>
           </span>
         )}
 

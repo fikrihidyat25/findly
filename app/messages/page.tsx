@@ -11,6 +11,8 @@ import {
   Loader2,
   LogIn,
   FileCheck2,
+  Check,
+  Clock,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 import { SafePoint, getSafePoints, DEFAULT_SAFE_POINTS } from '@/src/lib/safePoints';
@@ -39,6 +41,8 @@ function MessagesContent() {
 
   const [isDisputed, setIsDisputed] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
+  const [disetujuiPelapor, setDisetujuiPelapor] = useState(false);
+  const [disetujuiPengklaim, setDisetujuiPengklaim] = useState(false);
 
   // Image attachment & zoom states
   const [selectedImage, setSelectedImage] = useState<SelectedImageAttachment | null>(null);
@@ -187,6 +191,8 @@ function MessagesContent() {
               pelaporId: report?.pelapor_id,
               pengklaimName: claimantName,
               pelaporName: pelaporName,
+              disetujuiPelapor: Boolean(c.disetujui_oleh_pelapor),
+              disetujuiPengklaim: Boolean(c.disetujui_oleh_pengklaim),
             });
           });
         } else {
@@ -267,6 +273,8 @@ function MessagesContent() {
               pelaporId: report?.pelapor_id,
               pengklaimName: profile?.nama_lengkap || 'Pengklaim',
               pelaporName: counterpartName,
+              disetujuiPelapor: Boolean(c.disetujui_oleh_pelapor),
+              disetujuiPengklaim: Boolean(c.disetujui_oleh_pengklaim),
             });
           });
 
@@ -301,6 +309,8 @@ function MessagesContent() {
               pelaporId: c.laporan_barang?.pelapor_id,
               pengklaimName: counterpartName,
               pelaporName: profile?.nama_lengkap || 'Pelapor',
+              disetujuiPelapor: Boolean(c.disetujui_oleh_pelapor),
+              disetujuiPengklaim: Boolean(c.disetujui_oleh_pengklaim),
             });
           });
         }
@@ -349,6 +359,8 @@ function MessagesContent() {
                   pelaporId: report?.pelapor_id,
                   pengklaimName: claimantName,
                   pelaporName: pelaporName,
+                  disetujuiPelapor: Boolean(targetClaim.disetujui_oleh_pelapor),
+                  disetujuiPengklaim: Boolean(targetClaim.disetujui_oleh_pengklaim),
                 };
 
                 setConversations((prev) => [customConv, ...prev.filter((p) => p.id !== customConv.id)]);
@@ -390,6 +402,8 @@ function MessagesContent() {
     if (selectedConv) {
       setIsApproved(selectedConv.status === 'RESOLVED');
       setIsDisputed(selectedConv.status === 'DISPUTED');
+      setDisetujuiPelapor(Boolean(selectedConv.disetujuiPelapor));
+      setDisetujuiPengklaim(Boolean(selectedConv.disetujuiPengklaim));
     }
   }, [selectedConv]);
 
@@ -508,6 +522,48 @@ function MessagesContent() {
             }));
           }
         }
+
+        // Ambil status klaim dan persetujuan konsensus dari klaim_barang
+        try {
+          const { data: claimRow } = await supabase
+            .from('klaim_barang')
+            .select('*')
+            .eq('id', convId)
+            .maybeSingle();
+
+          if (claimRow && isMounted) {
+            let pAgreed = Boolean(claimRow.disetujui_oleh_pelapor);
+            let kAgreed = Boolean(claimRow.disetujui_oleh_pengklaim);
+
+            if (claimRow.status === 'SELESAI') {
+              pAgreed = true;
+              kAgreed = true;
+              setIsApproved(true);
+            } else if (claimRow.status === 'DITOLAK') {
+              setIsDisputed(true);
+            }
+
+            // Fallback: deteksi persetujuan dari jejak pesan sistem jika kolom belum dimigrasi
+            if (claimRow.status !== 'SELESAI' && claimRow.disetujui_oleh_pelapor === undefined && dbRows) {
+              const consensusMsgs = dbRows.filter((r: any) => r.tipe_pesan === 'sistem' && (
+                r.pesan.includes('menyetujui kesepakatan') ||
+                r.pesan.includes('membatalkan pengajuan kesepakatan')
+              ));
+              for (const cm of consensusMsgs) {
+                const isFromPelapor = cm.pesan.includes(selectedConv?.pelaporName || 'Pelapor');
+                const isFromPengklaim = cm.pesan.includes(selectedConv?.pengklaimName || 'Pengklaim');
+                const isCancel = cm.pesan.includes('membatalkan');
+                if (isFromPelapor) pAgreed = !isCancel;
+                if (isFromPengklaim) kAgreed = !isCancel;
+              }
+            }
+
+            setDisetujuiPelapor(pAgreed);
+            setDisetujuiPengklaim(kAgreed);
+          }
+        } catch (claimErr) {
+          console.warn('Error fetching claim row details:', claimErr);
+        }
       } catch (err) {
         console.warn('Error fetching db messages:', err);
       }
@@ -531,6 +587,50 @@ function MessagesContent() {
           if (row.pengirim_id === currentUserId) return;
 
           const isSystem = row.tipe_pesan === 'sistem';
+
+          if (isSystem) {
+            if (row.pesan.includes('Kepemilikan barang telah disepakati oleh kedua')) {
+              setIsApproved(true);
+              setDisetujuiPelapor(true);
+              setDisetujuiPengklaim(true);
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === convId ? { ...c, status: 'RESOLVED', disetujuiPelapor: true, disetujuiPengklaim: true } : c
+                )
+              );
+            } else if (row.pesan.includes('menyetujui kesepakatan')) {
+              const isFromPelapor = row.pesan.includes(selectedConv?.pelaporName || 'Pelapor');
+              const isFromPengklaim = row.pesan.includes(selectedConv?.pengklaimName || 'Pengklaim');
+              if (isFromPelapor) {
+                setDisetujuiPelapor(true);
+                setConversations((prev) =>
+                  prev.map((c) => (c.id === convId ? { ...c, disetujuiPelapor: true } : c))
+                );
+              }
+              if (isFromPengklaim) {
+                setDisetujuiPengklaim(true);
+                setConversations((prev) =>
+                  prev.map((c) => (c.id === convId ? { ...c, disetujuiPengklaim: true } : c))
+                );
+              }
+            } else if (row.pesan.includes('membatalkan pengajuan kesepakatan')) {
+              const isFromPelapor = row.pesan.includes(selectedConv?.pelaporName || 'Pelapor');
+              const isFromPengklaim = row.pesan.includes(selectedConv?.pengklaimName || 'Pengklaim');
+              if (isFromPelapor) {
+                setDisetujuiPelapor(false);
+                setConversations((prev) =>
+                  prev.map((c) => (c.id === convId ? { ...c, disetujuiPelapor: false } : c))
+                );
+              }
+              if (isFromPengklaim) {
+                setDisetujuiPengklaim(false);
+                setConversations((prev) =>
+                  prev.map((c) => (c.id === convId ? { ...c, disetujuiPengklaim: false } : c))
+                );
+              }
+            }
+          }
+
           const parsed = parseChatMessage(row.pesan);
           const d = new Date(row.dibuat_pada);
           const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
@@ -606,6 +706,40 @@ function MessagesContent() {
             prev.map((c) =>
               c.id === convId
                 ? { ...c, lastMessage: snippet, lastTime: newChat.time }
+                : c
+            )
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'klaim_barang',
+          filter: `id=eq.${convId}`,
+        },
+        (payload: any) => {
+          const row = payload.new;
+          if (!row) return;
+          const pelaporAgreed = Boolean(row.disetujui_oleh_pelapor);
+          const pengklaimAgreed = Boolean(row.disetujui_oleh_pengklaim);
+          setDisetujuiPelapor(pelaporAgreed);
+          setDisetujuiPengklaim(pengklaimAgreed);
+          if (row.status === 'SELESAI') {
+            setIsApproved(true);
+          } else if (row.status === 'DITOLAK') {
+            setIsDisputed(true);
+          }
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === convId
+                ? {
+                    ...c,
+                    status: row.status === 'SELESAI' ? 'RESOLVED' : row.status === 'DITOLAK' ? 'DISPUTED' : c.status,
+                    disetujuiPelapor: pelaporAgreed,
+                    disetujuiPengklaim: pengklaimAgreed,
+                  }
                 : c
             )
           );
@@ -770,42 +904,215 @@ function MessagesContent() {
     setShowSafePointModal(false);
   };
 
+  // Deteksi peran user saat ini dalam percakapan aktif
+  const isPengklaim = Boolean(currentUserId && selectedConv?.pengklaimId && currentUserId === selectedConv.pengklaimId);
+  const isPelapor = Boolean(
+    currentUserId && (
+      (selectedConv?.pelaporId && currentUserId === selectedConv.pelaporId) ||
+      (!isPengklaim && currentUserId !== selectedConv?.pengklaimId)
+    )
+  );
+
+  const myAgreed = (isPelapor && disetujuiPelapor) || (isPengklaim && disetujuiPengklaim);
+  const otherAgreed = (isPelapor && disetujuiPengklaim) || (isPengklaim && disetujuiPelapor);
+
   const handleApprove = async () => {
     if (!selectedConv) return;
-    setIsApproved(true);
     const timeStr = getCurrentTime();
-    const approveMsg: ChatMessage = {
+
+    if (isAdmin) {
+      // Admin memiliki hak override untuk menyetujui klaim secara sepihak/final
+      setIsApproved(true);
+      setDisetujuiPelapor(true);
+      setDisetujuiPengklaim(true);
+
+      const adminMsg: ChatMessage = {
+        id: `sys-${Date.now()}`,
+        sender: 'system',
+        text: 'Persetujuan serah terima barang telah dikonfirmasi oleh admin. Silakan kedua pihak melakukan serah terima di titik temu aman kampus.',
+        time: timeStr,
+      };
+
+      setMessagesMap((prev) => ({
+        ...prev,
+        [selectedConv.id]: [...(prev[selectedConv.id] || []), adminMsg],
+      }));
+
+      try {
+        const supabase = createClient();
+        await supabase
+          .from('klaim_barang')
+          .update({
+            status: 'SELESAI',
+            disetujui_oleh_pelapor: true,
+            disetujui_oleh_pengklaim: true,
+          })
+          .eq('id', selectedConv.id);
+
+        await supabase.from('pesan_chat').insert({
+          klaim_id: selectedConv.id,
+          pengirim_id: currentUserId,
+          pesan: adminMsg.text,
+          tipe_pesan: 'sistem',
+        });
+      } catch (err) {
+        console.error('Error syncing admin approval:', err);
+      }
+
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === selectedConv.id
+            ? {
+                ...c,
+                status: 'RESOLVED',
+                disetujuiPelapor: true,
+                disetujuiPengklaim: true,
+                lastMessage: adminMsg.text.split('\n')[0],
+                lastTime: timeStr,
+              }
+            : c
+        )
+      );
+      return;
+    }
+
+    // Konsensus Dua Pihak:
+    // Jika pihak kedua sudah sepakat, maka klik ini melengkapi konsensus (2/2) -> status SELESAI
+    // Jika pihak kedua belum sepakat, maka klik ini mencatat kesepakatan pihak pertama (1/2) -> tunggu pihak kedua
+    const willBothAgree = otherAgreed;
+    const newPelaporAgreed = isPelapor ? true : disetujuiPelapor;
+    const newPengklaimAgreed = isPengklaim ? true : disetujuiPengklaim;
+
+    const myDisplayName = isPelapor
+      ? (selectedConv.pelaporName || 'Pelapor')
+      : (selectedConv.pengklaimName || 'Pengklaim');
+
+    let sysMsgText = '';
+    if (willBothAgree) {
+      sysMsgText = '🎉 Kepemilikan barang telah disepakati oleh kedua belah pihak! Silakan atur jadwal dan lakukan serah terima di Titik Temu Aman kampus.';
+      setIsApproved(true);
+      setDisetujuiPelapor(true);
+      setDisetujuiPengklaim(true);
+    } else {
+      sysMsgText = `🤝 ${myDisplayName} telah menyetujui kesepakatan kepemilikan barang (1/2). Menunggu konfirmasi dari pihak kedua untuk menyelesaikan serah terima.`;
+      if (isPelapor) setDisetujuiPelapor(true);
+      if (isPengklaim) setDisetujuiPengklaim(true);
+    }
+
+    const consentMsg: ChatMessage = {
       id: `sys-${Date.now()}`,
       sender: 'system',
-      text: isAdmin
-        ? 'Persetujuan serah terima barang telah dikonfirmasi oleh admin. Silakan kedua pihak melakukan serah terima di titik temu aman kampus.'
-        : 'Kepemilikan barang telah disepakati oleh kedua pihak. Silakan lakukan serah terima di titik temu aman kampus.',
+      text: sysMsgText,
       time: timeStr,
     };
 
-    const updated = [...(messagesMap[selectedConv.id] || []), approveMsg];
     setMessagesMap((prev) => ({
       ...prev,
-      [selectedConv.id]: updated,
+      [selectedConv.id]: [...(prev[selectedConv.id] || []), consentMsg],
     }));
 
     try {
       const supabase = createClient();
-      await supabase.from('klaim_barang').update({ status: 'SELESAI' }).eq('id', selectedConv.id);
+      const updateData: any = {
+        disetujui_oleh_pelapor: willBothAgree ? true : newPelaporAgreed,
+        disetujui_oleh_pengklaim: willBothAgree ? true : newPengklaimAgreed,
+      };
+      if (willBothAgree) {
+        updateData.status = 'SELESAI';
+      }
+
+      const { error: updateErr } = await supabase
+        .from('klaim_barang')
+        .update(updateData)
+        .eq('id', selectedConv.id);
+
+      if (updateErr && willBothAgree) {
+        // Fallback jika kolom disetujui belum ditambahkan di database
+        await supabase.from('klaim_barang').update({ status: 'SELESAI' }).eq('id', selectedConv.id);
+      }
+
       await supabase.from('pesan_chat').insert({
         klaim_id: selectedConv.id,
         pengirim_id: currentUserId,
-        pesan: approveMsg.text,
+        pesan: consentMsg.text,
         tipe_pesan: 'sistem',
       });
     } catch (err) {
-      console.error('Error syncing approval:', err);
+      console.error('Error syncing dual consensus approval:', err);
     }
 
     setConversations((prev) =>
       prev.map((c) =>
         c.id === selectedConv.id
-          ? { ...c, status: 'RESOLVED', lastMessage: approveMsg.text.split('\n')[0] }
+          ? {
+              ...c,
+              status: willBothAgree ? 'RESOLVED' : c.status,
+              disetujuiPelapor: willBothAgree ? true : newPelaporAgreed,
+              disetujuiPengklaim: willBothAgree ? true : newPengklaimAgreed,
+              lastMessage: consentMsg.text.split('\n')[0],
+              lastTime: timeStr,
+            }
+          : c
+      )
+    );
+  };
+
+  const handleCancelApprove = async () => {
+    if (!selectedConv || isApproved) return;
+    const timeStr = getCurrentTime();
+
+    const newPelaporAgreed = isPelapor ? false : disetujuiPelapor;
+    const newPengklaimAgreed = isPengklaim ? false : disetujuiPengklaim;
+
+    if (isPelapor) setDisetujuiPelapor(false);
+    if (isPengklaim) setDisetujuiPengklaim(false);
+
+    const myDisplayName = isPelapor
+      ? (selectedConv.pelaporName || 'Pelapor')
+      : (selectedConv.pengklaimName || 'Pengklaim');
+
+    const cancelMsg: ChatMessage = {
+      id: `sys-${Date.now()}`,
+      sender: 'system',
+      text: `↩️ ${myDisplayName} membatalkan pengajuan kesepakatan kepemilikan barang.`,
+      time: timeStr,
+    };
+
+    setMessagesMap((prev) => ({
+      ...prev,
+      [selectedConv.id]: [...(prev[selectedConv.id] || []), cancelMsg],
+    }));
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from('klaim_barang')
+        .update({
+          disetujui_oleh_pelapor: newPelaporAgreed,
+          disetujui_oleh_pengklaim: newPengklaimAgreed,
+        })
+        .eq('id', selectedConv.id);
+
+      await supabase.from('pesan_chat').insert({
+        klaim_id: selectedConv.id,
+        pengirim_id: currentUserId,
+        pesan: cancelMsg.text,
+        tipe_pesan: 'sistem',
+      });
+    } catch (err) {
+      console.error('Error syncing cancel approval:', err);
+    }
+
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === selectedConv.id
+          ? {
+              ...c,
+              disetujuiPelapor: newPelaporAgreed,
+              disetujuiPengklaim: newPengklaimAgreed,
+              lastMessage: cancelMsg.text.split('\n')[0],
+              lastTime: timeStr,
+            }
           : c
       )
     );
@@ -1023,12 +1330,57 @@ function MessagesContent() {
                   isAdmin={isAdmin}
                   isApproved={isApproved}
                   isDisputed={isDisputed}
+                  myAgreed={myAgreed}
+                  otherAgreed={otherAgreed}
                   onBackToConversations={() => setShowMobileChat(false)}
                   onOpenSafePointModal={() => setShowSafePointModal(true)}
                   onApprove={handleApprove}
+                  onCancelApprove={handleCancelApprove}
                   onDispute={handleDispute}
                   onRejectByAdmin={handleRejectByAdmin}
                 />
+
+                {/* Banner Ajakan Konfirmasi jika Pihak Kedua Belum Setuju */}
+                {!isAdmin && otherAgreed && !myAgreed && !isApproved && (
+                  <div className="bg-emerald-50 border-b border-emerald-200 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-emerald-900 shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
+                      </span>
+                      <span>
+                        <strong>{selectedConv.counterpartName}</strong> telah menyetujui kepemilikan barang ini. Konfirmasi kesepakatan Anda untuk menyelesaikan serah terima!
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApprove}
+                      className="shrink-0 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-[6px] transition-colors cursor-pointer shadow-xs flex items-center gap-1"
+                    >
+                      <Check size={13} className="stroke-[2.5]" />
+                      <span>Setujui Sekarang</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Banner Info jika User Sedang Menunggu Pihak Kedua */}
+                {!isAdmin && myAgreed && !otherAgreed && !isApproved && (
+                  <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between gap-3 text-xs text-amber-900 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <Clock size={14} className="text-amber-600 animate-pulse shrink-0" />
+                      <span>
+                        Anda telah menyetujui kesepakatan (1/2). Menunggu konfirmasi dari <strong>{selectedConv.counterpartName}</strong>.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCancelApprove}
+                      className="text-amber-800 hover:text-rose-700 underline text-[11px] cursor-pointer shrink-0"
+                    >
+                      Batalkan Persetujuan
+                    </button>
+                  </div>
+                )}
 
                 {/* Messages Scroll Area */}
                 <ChatMessageList
