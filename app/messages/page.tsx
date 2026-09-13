@@ -1211,7 +1211,7 @@ function MessagesContent() {
             <p className="text-xs text-slate-500 hidden sm:block mt-0.5">
               {isAdmin
                 ? 'Ruang diskusi dan mediasi klaim kepemilikan barang di kampus.'
-                : 'Ruang diskusi dan verifikasi kepemilikan peer-to-peer antara penemu dan pengklaim kampus.'}
+                : 'Ruang obrolan langsung antara penemu dan pemilik untuk verifikasi barang.'}
             </p>
           </div>
         </div>
@@ -1240,7 +1240,7 @@ function MessagesContent() {
           <div className="bg-white rounded-[6px] border border-slate-200 p-12 text-center shadow-xs flex flex-col items-center justify-center gap-3 min-h-[400px]">
             <Loader2 size={32} className="animate-spin text-sky-600" />
             <p className="text-xs text-slate-500">
-              {isAdmin ? 'Memuat sesi mediasi civitas...' : 'Memuat sesi obrolan verifikasi...'}
+              {isAdmin ? 'Memuat sesi mediasi...' : 'Memuat sesi obrolan verifikasi...'}
             </p>
           </div>
         ) : conversations.length === 0 ? (
@@ -1262,8 +1262,8 @@ function MessagesContent() {
                 {emptyNotice
                   ? `Klaim untuk barang "${emptyNotice.claimTitle}" belum memiliki riwayat atau sesi pesan mediasi aktif.`
                   : isAdmin
-                    ? 'Saat ini seluruh verifikasi klaim warga kampus berjalan lancar atau belum ada laporan sengketa yang membutuhkan intervensi mediator kampus.'
-                    : 'Sesi diskusi verifikasi peer-to-peer akan muncul secara otomatis saat Anda mengajukan klaim atas barang temuan, atau saat ada pengguna lain yang mengklaim barang yang Anda laporkan.'}
+                    ? 'Saat ini seluruh proses verifikasi berjalan lancar atau belum ada laporan sengketa yang membutuhkan bantuan admin mediator.'
+                    : 'Sesi obrolan verifikasi akan muncul secara otomatis saat Anda mengajukan klaim atas barang temuan, atau saat ada pengguna lain yang mengklaim barang yang Anda laporkan.'}
               </p>
             </div>
 
