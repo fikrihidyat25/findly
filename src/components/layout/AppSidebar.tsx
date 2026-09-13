@@ -15,9 +15,7 @@ import {
   User,
   Settings,
   LifeBuoy,
-  PlusCircle,
   X,
-  Sparkles,
   LayoutDashboard,
   FileText,
   Users,
@@ -389,34 +387,6 @@ export default function AppSidebar({
             })}
           </nav>
         </div>
-
-        {/* Promo / Action Card (Only when expanded on dashboard for regular users) */}
-        {expanded &&
-          !isAdmin &&
-          (pathname === '/dashboard' || pathname === '/beranda') && (
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#EBF7FF] to-[#E0F2FE] p-4 border border-[#BAE6FD]/60 shadow-2xs">
-              <div className="relative z-10 space-y-2">
-                <div className="flex items-center gap-1.5 text-[#0369A1] text-xs font-semibold">
-                  <Sparkles size={14} className="text-[#0284C7]" />
-                  <span>Aksi Positif</span>
-                </div>
-                <h4 className="font-bold text-xs text-gray-900 leading-snug">
-                  Laporkan barang yang Anda temukan.
-                </h4>
-                <p className="text-[11px] text-gray-600 leading-relaxed">
-                  Bantu teman kampus mendapatkan kembali barang berharganya.
-                </p>
-                <Link
-                  href="/found/new"
-                  onClick={onCloseMobile}
-                  className="inline-flex items-center justify-center gap-1.5 w-full mt-2 bg-[#10B981] hover:bg-[#059669] active:scale-[0.98] text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm transition-all"
-                >
-                  <PlusCircle size={14} />
-                  <span>Laporkan Sekarang</span>
-                </Link>
-              </div>
-            </div>
-          )}
       </div>
 
       {/* Sidebar Footer Copyright */}
