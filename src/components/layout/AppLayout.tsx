@@ -89,8 +89,11 @@ export default function AppLayout({
           newest.unread &&
           newest.id !== prevLatestNotifIdRef.current
         ) {
-          setActiveToast(newest);
-          playNotificationSound();
+          const isMessagesPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/messages');
+          if (!(isMessagesPage && newest.type === 'chat')) {
+            setActiveToast(newest);
+            playNotificationSound();
+          }
         }
         prevLatestNotifIdRef.current = newest.id;
       }

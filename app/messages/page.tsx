@@ -1457,6 +1457,7 @@ function MessagesContent() {
                   onImageSelect={handleImageSelect}
                   fileInputRef={fileInputRef}
                   inputRef={inputRef}
+                  onOpenSafePointModal={() => setShowSafePointModal(true)}
                 />
               </div>
             ) : (

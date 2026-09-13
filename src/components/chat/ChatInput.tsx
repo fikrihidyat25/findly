@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Paperclip, Send, Loader2, X } from 'lucide-react';
+import { Paperclip, Send, Loader2, X, MapPin } from 'lucide-react';
 import { SelectedImageAttachment } from '@/src/types/chat';
 
 interface ChatInputProps {
@@ -14,6 +14,7 @@ interface ChatInputProps {
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   inputRef: React.RefObject<HTMLInputElement | null>;
+  onOpenSafePointModal?: () => void;
 }
 
 export default function ChatInput({
@@ -26,6 +27,7 @@ export default function ChatInput({
   onImageSelect,
   fileInputRef,
   inputRef,
+  onOpenSafePointModal,
 }: ChatInputProps) {
   return (
     <div className="shrink-0">
@@ -81,6 +83,17 @@ export default function ChatInput({
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-sky-600 rounded-full ring-2 ring-white" />
           )}
         </button>
+        {onOpenSafePointModal && (
+          <button
+            type="button"
+            onClick={onOpenSafePointModal}
+            className="p-2 text-slate-500 hover:text-emerald-600 rounded-[6px] hover:bg-emerald-50 transition-colors cursor-pointer"
+            aria-label="Pilih Titik Temu"
+            title="Bagikan Titik Temu Aman"
+          >
+            <MapPin size={18} />
+          </button>
+        )}
         <input
           ref={inputRef}
           type="text"

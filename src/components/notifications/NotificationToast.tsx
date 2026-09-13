@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import {
   Bell,
@@ -25,9 +25,15 @@ export default function NotificationToast({
   onRead,
 }: NotificationToastProps) {
   const [progress, setProgress] = useState(100);
+  const onCloseRef = useRef(onClose);
+  const notificationId = notification?.id;
 
   useEffect(() => {
-    if (!notification) return;
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!notificationId) return;
     setProgress(100);
 
     const duration = 6000; // 6 seconds
@@ -38,7 +44,7 @@ export default function NotificationToast({
       setProgress((prev) => {
         if (prev <= step) {
           clearInterval(timer);
-          onClose();
+          onCloseRef.current();
           return 0;
         }
         return prev - step;
@@ -46,7 +52,8 @@ export default function NotificationToast({
     }, intervalTime);
 
     return () => clearInterval(timer);
-  }, [notification, onClose]);
+  }, [notificationId]);
+
 
   if (!notification) return null;
 

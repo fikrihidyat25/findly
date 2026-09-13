@@ -184,11 +184,6 @@ export default function LeafletSafeMap({
   return (
     <div className={`relative w-full ${heightClass} rounded-2xl overflow-hidden border border-gray-200/80 shadow-xs z-0`}>
       <div ref={mapContainerRef} className="w-full h-full" />
-      {isPicker && (
-        <div className="absolute top-2.5 right-2.5 z-1000 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-xl border border-gray-200 text-[11px] font-semibold text-gray-700 shadow-sm pointer-events-none">
-          👆 Klik atau geser pin untuk menentukan titik
-        </div>
-      )}
     </div>
   );
 }

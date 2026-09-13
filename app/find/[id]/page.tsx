@@ -31,7 +31,6 @@ import {
   Navigation,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
-import LeafletSafeMap from '@/src/components/map/LeafletSafeMap';
 import { SafePoint, getSafePoints, DEFAULT_SAFE_POINTS } from '@/src/lib/safePoints';
 import { detectCategory, cleanDescription } from '@/src/lib/categories';
 import ProtectedItemImage from '@/src/components/common/ProtectedItemImage';
@@ -312,13 +311,9 @@ export default function ItemDetailPage() {
         return;
       }
 
-      const selectedPoint = safePointsList.find((sp) => sp.id === selectedSafePointId) || safePointsList[0];
-      const storageDisplay = `🛡️ Dititipkan di ${selectedPoint.nama_lokasi} (${selectedPoint.alamat_lengkap})`;
-
       const formattedVerificationMessage = [
         `📢 KONFIRMASI PENEMUAN BARANG`,
         `📍 Lokasi Ditemukan: ${foundLocation.trim()}`,
-        `🏢 Titik Temu / Tempat Penitipan: ${storageDisplay}`,
         `🔍 Kondisi Barang: ${itemCondition}`,
         `💬 Pesan Penemu: ${finderMessage.trim()}`,
       ].join('\n');
@@ -557,89 +552,7 @@ export default function ItemDetailPage() {
               </div>
             </div>
 
-            {/* Titik Kumpul / Pengambilan Aman Resmi Kampus */}
-            <div className="pt-3.5 border-t border-[#BFDBFE]/60 space-y-3">
-              <div className="flex items-start gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#30AFFF]/10 text-[#30AFFF] flex items-center justify-center shrink-0 mt-0.5">
-                  <ShieldCheck size={18} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <strong className="text-gray-900 text-xs sm:text-sm">
-                      Titik Kumpul / Pengambilan Aman:
-                    </strong>
-                    <span className="text-[10px] font-bold text-[#30AFFF] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                      Resmi Kampus
-                    </span>
-                  </div>
-                  <p className="text-xs font-bold text-gray-800 mt-1">
-                    {item.safePointObj?.nama_lokasi || item.safePoint}
-                  </p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">
-                    {item.safePointObj?.alamat_lengkap || 'Area Kampus Terpantau'}
-                  </p>
 
-                  {/* Security & Hours Badges */}
-                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                    {item.safePointObj?.ada_satpam && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                        👮 Ada Satpam Standby
-                      </span>
-                    )}
-                    {item.safePointObj?.ada_cctv && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
-                        📹 Pantauan CCTV 24 Jam
-                      </span>
-                    )}
-                    {item.safePointObj?.jam_buka && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md">
-                        <Clock size={11} className="text-gray-500" />
-                        {item.safePointObj.jam_buka} - {item.safePointObj.jam_tutup} WIB
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons: View Map and Open Navigation/Ojol */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowMap(!showMap)}
-                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-xs font-bold text-gray-700 flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <MapPin size={14} className="text-[#30AFFF]" />
-                  <span>{showMap ? 'Tutup Peta' : 'Lihat Peta (Leaflet OSM)'}</span>
-                </button>
-
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${item.safePointObj?.latitude || -6.36442},${item.safePointObj?.longitude || 106.82861}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                  title="Buka lokasi di Google Maps atau aplikasi HP"
-                >
-                  <Navigation size={14} />
-                  <span>Buka di Peta</span>
-                </a>
-              </div>
-
-              {/* Interactive Leaflet OpenStreetMap */}
-              {showMap && item.safePointObj && (
-                <div className="pt-2 animate-in fade-in zoom-in-98 duration-200">
-                  <LeafletSafeMap
-                    lat={item.safePointObj.latitude}
-                    lng={item.safePointObj.longitude}
-                    locationName={item.safePointObj.nama_lokasi}
-                    address={item.safePointObj.alamat_lengkap}
-                    heightClass="h-[240px]"
-                  />
-                  <p className="text-[10px] text-gray-400 mt-1.5 text-center">
-                    Peta interaktif gratis Leaflet.js • Data &copy; OpenStreetMap contributors
-                  </p>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Safety & Protocol Banner */}
@@ -803,49 +716,7 @@ export default function ItemDetailPage() {
                 </p>
               </div>
 
-              {/* Field 2: Status & Tempat Penyimpanan */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-gray-800">
-                    Pilih Titik Kumpul / Tempat Penitipan Aman <span className="text-rose-500">*</span>
-                  </label>
-                  <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                    Resmi Admin Kampus
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  {safePointsList.map((sp) => {
-                    const isSelected = selectedSafePointId === sp.id;
-                    return (
-                      <button
-                        key={sp.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedSafePointId(sp.id);
-                          setStorageType('security');
-                          setStorageNote(sp.nama_lokasi);
-                        }}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${isSelected
-                          ? 'border-[#30AFFF] bg-blue-50/70 text-gray-900 font-semibold ring-2 ring-[#30AFFF]/20'
-                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                          }`}
-                      >
-                        <div className="font-bold text-xs text-gray-900 line-clamp-1">
-                          🛡️ {sp.nama_lokasi}
-                        </div>
-                        <span className="block text-[10px] text-gray-500 mt-0.5 line-clamp-1">
-                          {sp.alamat_lengkap}
-                        </span>
-                        <div className="flex items-center gap-1 text-[10px] text-emerald-700 font-medium mt-1">
-                          {sp.ada_satpam && <span>• 👮 Satpam</span>}
-                          {sp.ada_cctv && <span>• 📹 CCTV</span>}
-                          <span>• 🕒 {sp.jam_buka}-{sp.jam_tutup}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+
 
               {/* Field 3: Kondisi Barang */}
               <div className="space-y-1.5">

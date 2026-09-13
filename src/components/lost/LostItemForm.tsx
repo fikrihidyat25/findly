@@ -223,9 +223,6 @@ export default function LostItemForm() {
           <CheckCircle2 size={36} />
         </div>
         <div className="space-y-2">
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
-            Status: LOST (Hilang)
-          </span>
           <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">
             Laporan Kehilangan Berhasil Dipublikasikan!
           </h2>

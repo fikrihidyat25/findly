@@ -224,9 +224,6 @@ export default function FoundItemWizardPage() {
             <CheckCircle2 size={36} />
           </div>
           <div className="space-y-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Status: FOUND (Ditemukan)
-            </span>
             <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">
               Terima Kasih Atas Kejujuran Anda!
             </h2>

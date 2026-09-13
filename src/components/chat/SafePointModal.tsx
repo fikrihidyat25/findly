@@ -70,22 +70,14 @@ export default function SafePointModal({
                   key={`safe-pt-${pt.id}-${pIdx}`}
                   type="button"
                   onClick={() => onSelectSafePointId(pt.id)}
-                  className={`p-3 rounded-[6px] border text-left transition-all cursor-pointer ${
+                  className={`px-3 py-2.5 rounded-[6px] border text-left transition-all cursor-pointer flex items-center justify-between ${
                     isSelected
-                      ? 'border-slate-800 bg-slate-50 text-slate-900 font-semibold ring-1 ring-slate-800'
+                      ? 'border-[#0284C7] bg-[#E0F2FE] text-slate-900 font-semibold ring-1 ring-[#0284C7]'
                       : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="font-bold text-xs text-slate-900 line-clamp-1">
-                    🛡️ {pt.nama_lokasi}
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
-                    {pt.alamat_lengkap}
-                  </p>
-                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 font-medium mt-1.5">
-                    {pt.ada_satpam && <span>• 👮 Satpam</span>}
-                    {pt.ada_cctv && <span>• 📹 CCTV</span>}
-                    <span>• 🕒 {pt.jam_buka}-{pt.jam_tutup}</span>
+                  <div className={`font-bold text-xs line-clamp-1 ${isSelected ? 'text-[#0284C7]' : 'text-slate-900'}`}>
+                    📍 {pt.nama_lokasi}
                   </div>
                 </button>
               );
