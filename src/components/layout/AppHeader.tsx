@@ -112,6 +112,19 @@ export default function AppHeader({
           status_kampus_terverifikasi: isCampus ? (profile?.status_kampus_terverifikasi ?? false) : false,
           avatar_url: avatar,
         });
+
+        // Auto-purge bloated base64 from user_metadata to keep JWT & cookies lightweight (< 2KB)
+        if (
+          authUser.user_metadata?.avatar_url?.startsWith('data:') ||
+          authUser.user_metadata?.picture?.startsWith('data:')
+        ) {
+          supabase.auth.updateUser({
+            data: {
+              avatar_url: null,
+              picture: null,
+            },
+          }).catch(() => {});
+        }
       } catch (err) {
         console.error('Error loading header user:', err);
         setUser(null);

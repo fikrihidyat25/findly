@@ -17,7 +17,6 @@ import {
   CreditCard,
   KeyRound,
   BookOpen,
-  Plus,
   LogIn,
   UserPlus,
 } from 'lucide-react';
@@ -222,23 +221,13 @@ export default function ClaimsDashboardPage() {
     <AppLayout>
       <div className="space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-              Klaim Saya
-            </h1>
-            <p className="text-xs sm:text-sm text-gray-500">
-              Pantau seluruh riwayat pengajuan klaim barang dan respon verifikasi dari penemu.
-            </p>
-          </div>
-
-          <Link
-            href="/find"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold rounded-xl shadow-sm transition-all shrink-0 self-start sm:self-auto"
-          >
-            <Plus size={15} />
-            <span>Ajukan Klaim Baru</span>
-          </Link>
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+            Klaim Saya
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Pantau seluruh riwayat pengajuan klaim barang dan respon verifikasi dari penemu.
+          </p>
         </div>
 
         {isGuest ? (

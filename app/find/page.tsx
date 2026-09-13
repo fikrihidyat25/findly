@@ -190,32 +190,13 @@ export default function FindItemsPage() {
     <AppLayout searchQuery={searchQuery} onSearchChange={setSearchQuery}>
       <div className="space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-              Cari Barang
-            </h1>
-            <p className="text-xs sm:text-sm text-gray-500">
-              Jelajahi laporan barang hilang dan temuan di seluruh lingkungan universitas.
-            </p>
-          </div>
-
-          {!isAdmin && (
-            <div className="flex items-center gap-2 shrink-0">
-              <Link
-                href="/lost/new"
-                className="px-3.5 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all"
-              >
-                + Lapor Kehilangan
-              </Link>
-              <Link
-                href="/found/new"
-                className="px-3.5 py-2 text-xs font-semibold text-white bg-[#30AFFF] hover:bg-[#2196E8] rounded-xl shadow-sm transition-all"
-              >
-                + Lapor Temuan
-              </Link>
-            </div>
-          )}
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+            Cari Barang
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Jelajahi laporan barang hilang dan temuan di seluruh lingkungan universitas.
+          </p>
         </div>
 
         {/* Filter Controls Bar */}
@@ -322,20 +303,6 @@ export default function FindItemsPage() {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
-              <Link
-                href="/lost/new"
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-all cursor-pointer"
-              >
-                + Lapor Kehilangan
-              </Link>
-              <Link
-                href="/found/new"
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-              >
-                + Lapor Temuan
-              </Link>
-            </div>
           </div>
         ) : (
           /* Catalog Items Grid */

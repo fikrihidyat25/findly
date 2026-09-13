@@ -149,31 +149,14 @@ export default function MyReportsPage() {
     <AppLayout searchQuery={searchQuery} onSearchChange={setSearchQuery}>
       <div className="space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2.5">
-              <FileText className="text-[#30AFFF]" size={28} />
-              <span>Laporan Saya</span>
-            </h1>
-            <p className="text-xs sm:text-sm text-gray-500">
-              Kelola semua riwayat laporan kehilangan dan temuan yang Anda buat.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Link
-              href="/lost/new"
-              className="px-3.5 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all"
-            >
-              + Lapor Kehilangan
-            </Link>
-            <Link
-              href="/found/new"
-              className="px-3.5 py-2 text-xs font-semibold text-white bg-[#30AFFF] hover:bg-[#2196E8] rounded-xl shadow-2xs transition-all"
-            >
-              + Lapor Temuan
-            </Link>
-          </div>
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2.5">
+            <FileText className="text-[#30AFFF]" size={28} />
+            <span>Laporan Saya</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Kelola semua riwayat laporan kehilangan dan temuan yang Anda buat.
+          </p>
         </div>
 
         {/* Feedback Alert */}
@@ -267,20 +250,6 @@ export default function MyReportsPage() {
                 ? 'Tidak ada laporan yang cocok dengan pencarian Anda.'
                 : 'Anda belum membuat laporan barang hilang atau barang temuan.'}
             </p>
-            <div className="pt-3 flex items-center justify-center gap-2">
-              <Link
-                href="/lost/new"
-                className="px-4 py-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-semibold border border-rose-200 transition-all"
-              >
-                Lapor Kehilangan
-              </Link>
-              <Link
-                href="/found/new"
-                className="px-4 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196E8] text-white text-xs font-semibold shadow-2xs transition-all"
-              >
-                Lapor Temuan
-              </Link>
-            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

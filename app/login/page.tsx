@@ -135,6 +135,23 @@ function LoginFormContent() {
       }
 
       if (data.session) {
+        // Auto-sanitize legacy bloated base64 from auth user_metadata if present
+        if (
+          data.user?.user_metadata?.avatar_url?.startsWith('data:') ||
+          data.user?.user_metadata?.picture?.startsWith('data:')
+        ) {
+          try {
+            await supabase.auth.updateUser({
+              data: {
+                avatar_url: null,
+                picture: null,
+              },
+            });
+          } catch {
+            // ignore
+          }
+        }
+
         const redirect = searchParams.get('redirect') || '/dashboard';
         router.push(redirect);
         router.refresh();

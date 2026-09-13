@@ -69,6 +69,23 @@ export async function updateSession(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser();
 
+    // Auto-purge bloated base64 from user_metadata to permanently shrink JWT & cookies to < 1KB
+    if (
+        user?.user_metadata?.avatar_url?.startsWith('data:') ||
+        user?.user_metadata?.picture?.startsWith('data:')
+    ) {
+        try {
+            await supabase.auth.updateUser({
+                data: {
+                    avatar_url: null,
+                    picture: null,
+                },
+            });
+        } catch {
+            // ignore
+        }
+    }
+
     const { pathname, search } = request.nextUrl;
 
     // Public routes allowed for unauthenticated guests

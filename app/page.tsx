@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -304,20 +304,6 @@ export default function LandingPage() {
                 <p className="text-xs text-gray-500 max-w-md mx-auto leading-relaxed">
                   Belum ada data barang hilang atau temuan di database. Masuk ke akun Anda untuk mendaftarkan barang pertama.
                 </p>
-              </div>
-              <div className="flex justify-center gap-3 pt-2">
-                <Link
-                  href="/login?redirect=/lost/new"
-                  className="px-4 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-colors"
-                >
-                  Lapor Kehilangan
-                </Link>
-                <Link
-                  href="/login?redirect=/found/new"
-                  className="px-4 py-2 rounded-xl bg-[#30AFFF] hover:bg-[#2196e8] text-white text-xs font-semibold shadow-2xs transition-colors"
-                >
-                  Lapor Temuan
-                </Link>
               </div>
             </div>
           ) : (

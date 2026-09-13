@@ -171,26 +171,33 @@ export default function EditProfilePage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Update Supabase profile table
+        // Update Supabase profile table (database table safely stores base64 avatar without bloating JWT)
         const { error } = await supabase.from('profil_pengguna').upsert({
           id: user.id,
           nama_lengkap: fullName,
           no_telepon: phone,
           avatar_url: avatarPreview,
+          universitas: university,
+          nim_nip: nim,
+          tipe_akun: accountType,
         });
 
         if (error) {
           console.warn('Supabase upsert warning:', error.message);
         }
 
-        // Update auth metadata so session-wide data stays in sync
+        // Update auth metadata so session-wide data stays in sync.
+        // CRITICAL: NEVER store base64 data URLs in auth metadata!
+        // Supabase encodes user_metadata directly into the JWT token, which gets saved
+        // into browser cookies. Storing base64 here inflates cookies > 16KB and triggers
+        // HTTP ERROR 431 (Request Header Fields Too Large) or Vercel 494.
         try {
           await supabase.auth.updateUser({
             data: {
               nama_lengkap: fullName,
               full_name: fullName,
-              avatar_url: avatarPreview,
-              picture: avatarPreview,
+              avatar_url: avatarPreview?.startsWith('http') ? avatarPreview : null,
+              picture: avatarPreview?.startsWith('http') ? avatarPreview : null,
             },
           });
         } catch (authErr) {
