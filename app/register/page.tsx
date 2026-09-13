@@ -158,6 +158,8 @@ function RegisterFormContent() {
         role_kampus: accountType === 'campus' ? campusRole : null,
         nim_nip: accountType === 'campus' ? nimNip.trim() : null,
         status_kampus_terverifikasi: isVerified,
+        is_registered: true,
+        registration_source: 'email',
       };
 
       // 1. Pendaftaran Langsung via Supabase Auth SignUp (Mengirim Tautan Konfirmasi Email Otomatis)

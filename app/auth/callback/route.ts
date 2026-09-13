@@ -49,6 +49,40 @@ export async function GET(request: Request) {
         const user = data?.user;
 
         if (user) {
+          const isGoogleOAuth = Boolean(source === 'login' || source === 'register');
+
+          // Cek apakah akun ini terdaftar via jalur Email & Kata Sandi manual
+          const isRegisteredViaEmail =
+            user.app_metadata?.provider === 'email' ||
+            user.user_metadata?.registration_source === 'email' ||
+            Boolean(user.identities?.some((id) => id.provider === 'email'));
+
+          // OPSI 2 (STRICT BEDA JALUR):
+          // Jika akun ini terdaftar menggunakan Email & Password manual, TOLAK login/register via Google!
+          if (isGoogleOAuth && isRegisteredViaEmail) {
+            // Unlink identitas Google jika terlanjur ditautkan oleh Supabase
+            const googleIdentity = user.identities?.find((id) => id.provider === 'google');
+            if (googleIdentity) {
+              try {
+                await supabase.auth.unlinkIdentity(googleIdentity);
+              } catch (unlinkErr) {
+                console.error('Gagal unlink identitas Google:', unlinkErr);
+              }
+            }
+
+            try {
+              await supabase.auth.signOut();
+            } catch (signOutErr) {
+              console.error('Gagal signOut akun email:', signOutErr);
+            }
+
+            const errorMsg = encodeURIComponent(
+              'Akun dengan email ini didaftarkan menggunakan Email & Kata Sandi manual, bukan lewat Google. Silakan masuk menggunakan form email dan kata sandi di bawah.'
+            );
+            const userEmail = encodeURIComponent(user.email || '');
+            return NextResponse.redirect(`${origin}/login?error=${errorMsg}&email=${userEmail}`);
+          }
+
           const createdAt = new Date(user.created_at).getTime();
           const now = Date.now();
           const isBrandNewAccount = (now - createdAt) < 60000;

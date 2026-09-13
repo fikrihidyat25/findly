@@ -123,7 +123,7 @@ function LoginFormContent() {
           return;
         }
         if (msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
-          setErrorMessage('Email atau kata sandi yang Anda masukkan salah. Pastikan email sudah terdaftar dan kata sandi benar.');
+          setErrorMessage('Email atau kata sandi yang Anda masukkan salah. Jika akun Anda didaftarkan via tombol Google, silakan masuk menggunakan tombol Google di bawah.');
           return;
         }
         if (msg.includes('querying schema')) {
