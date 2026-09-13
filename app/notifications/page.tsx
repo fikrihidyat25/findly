@@ -151,55 +151,45 @@ export default function NotificationsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-4xl mx-auto">
-        {/* Header Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gray-100 shadow-2xs">
+      <div className="space-y-6">
+        {/* Clean Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-                Notifikasi
-              </h1>
-              {/* Real-time Indicator Badge */}
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-                <span>Live Real-time</span>
-              </span>
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              Notifikasi
+            </h1>
             <p className="text-xs sm:text-sm text-gray-500">
-              Pembaruan langsung aktivitas klaim barang, pesan chat verifikasi, dan laporan kampus tanpa perlu reload.
+              Pantau pesan baru, pembaruan status klaim, dan kabar barang Anda.
             </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => loadData(false)}
-              disabled={refreshing}
-              className="p-2.5 rounded-2xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 transition-all cursor-pointer shadow-2xs"
-              title="Segarkan notifikasi sekarang"
-            >
-              <RefreshCw size={14} className={refreshing ? 'animate-spin text-[#30AFFF]' : ''} />
-            </button>
-
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-sky-50 text-[#30AFFF] hover:bg-sky-100 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-50 text-[#30AFFF] hover:bg-sky-100 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
               >
                 <CheckCheck size={14} />
                 <span>Tandai Semua Dibaca</span>
               </button>
             )}
+
+            <button
+              onClick={() => loadData(false)}
+              disabled={refreshing}
+              className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 transition-all cursor-pointer shadow-2xs"
+              title="Segarkan"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin text-[#30AFFF]' : ''} />
+            </button>
           </div>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-2xl overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl overflow-x-auto w-fit">
           <button
             onClick={() => setFilter('all')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
               filter === 'all'
                 ? 'bg-white text-gray-900 shadow-2xs'
                 : 'text-gray-500 hover:text-gray-800'
@@ -207,14 +197,14 @@ export default function NotificationsPage() {
           >
             <Bell size={13} className={filter === 'all' ? 'text-[#30AFFF]' : 'text-gray-400'} />
             <span>Semua</span>
-            <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-gray-200/80 text-gray-700 font-semibold">
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-gray-200/80 text-gray-700 font-semibold">
               {items.length}
             </span>
           </button>
 
           <button
             onClick={() => setFilter('unread')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
               filter === 'unread'
                 ? 'bg-white text-gray-900 shadow-2xs'
                 : 'text-gray-500 hover:text-gray-800'
@@ -223,7 +213,7 @@ export default function NotificationsPage() {
             <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
             <span>Belum Dibaca</span>
             <span
-              className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${
+              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
                 unreadCount > 0 ? 'bg-rose-500 text-white' : 'bg-gray-200/80 text-gray-700'
               }`}
             >
@@ -233,7 +223,7 @@ export default function NotificationsPage() {
 
           <button
             onClick={() => setFilter('chat')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
               filter === 'chat'
                 ? 'bg-white text-gray-900 shadow-2xs'
                 : 'text-gray-500 hover:text-gray-800'
@@ -241,14 +231,14 @@ export default function NotificationsPage() {
           >
             <MessageSquare size={13} className={filter === 'chat' ? 'text-[#30AFFF]' : 'text-gray-400'} />
             <span>Pesan Chat</span>
-            <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-gray-200/80 text-gray-700 font-semibold">
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-gray-200/80 text-gray-700 font-semibold">
               {chatCount}
             </span>
           </button>
 
           <button
             onClick={() => setFilter('claim')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
               filter === 'claim'
                 ? 'bg-white text-gray-900 shadow-2xs'
                 : 'text-gray-500 hover:text-gray-800'
@@ -256,7 +246,7 @@ export default function NotificationsPage() {
           >
             <FileCheck2 size={13} className={filter === 'claim' ? 'text-amber-500' : 'text-gray-400'} />
             <span>Klaim & Laporan</span>
-            <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-gray-200/80 text-gray-700 font-semibold">
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-gray-200/80 text-gray-700 font-semibold">
               {claimCount}
             </span>
           </button>
