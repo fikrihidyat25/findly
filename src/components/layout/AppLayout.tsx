@@ -32,26 +32,6 @@ export default function AppLayout({
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [activeToast, setActiveToast] = useState<AppNotification | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('findly_sidebar_pinned');
-      if (saved !== null) {
-        setIsSidebarPinned(saved === 'true');
-      }
-    } catch {}
-  }, []);
-
-  const handleTogglePin = useCallback(() => {
-    setIsSidebarPinned((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('findly_sidebar_pinned', String(next));
-      } catch {}
-      return next;
-    });
-  }, []);
 
   const prevLatestNotifIdRef = useRef<string | null>(null);
   const isInitialMountRef = useRef(true);
@@ -187,21 +167,17 @@ export default function AppLayout({
         onRead={handleReadNotification}
       />
 
-      {/* Sidebar (Desktop Fixed with Hover/Motion Expand & Mobile Drawer) */}
+      {/* Sidebar (Desktop Fixed & Mobile Drawer) */}
       <AppSidebar
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
         unreadNotifs={unreadNotifs}
         unreadMessages={unreadMessages}
-        isPinned={isSidebarPinned}
-        onTogglePin={handleTogglePin}
       />
 
-      {/* Main Content Column with Smooth Padding Transition */}
+      {/* Main Content Column */}
       <div
-        className={`flex-1 ${
-          isSidebarPinned ? 'md:pl-64 lg:pl-72' : 'md:pl-[72px]'
-        } flex flex-col min-w-0 transition-[padding] duration-300 ease-in-out ${
+        className={`flex-1 md:pl-64 lg:pl-72 flex flex-col min-w-0 ${
           fullHeight ? 'h-screen overflow-hidden' : ''
         }`}
       >

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -23,7 +23,6 @@ import {
   Users,
   MapPin,
   Sliders,
-  Pin,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 
@@ -32,8 +31,6 @@ interface SidebarProps {
   onCloseMobile?: () => void;
   unreadNotifs?: number;
   unreadMessages?: number;
-  isPinned?: boolean;
-  onTogglePin?: () => void;
 }
 
 export default function AppSidebar({
@@ -41,58 +38,20 @@ export default function AppSidebar({
   onCloseMobile,
   unreadNotifs = 0,
   unreadMessages = 0,
-  isPinned = false,
-  onTogglePin,
 }: SidebarProps) {
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
 
-  // Dynamic hover & motion responsiveness
-  const [isHovered, setIsHovered] = useState(false);
-  const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Sidebar expanded if pinned or currently hovered with mouse movement
-  const isExpanded = Boolean(isPinned || isHovered);
-
-  const resetIdleTimer = () => {
-    if (isPinned) return;
-    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    // Jika tidak ada gerakan kursor selama 3.5 detik di area sidebar, otomatis collapse ke ikon saja
-    idleTimerRef.current = setTimeout(() => {
-      setIsHovered(false);
-    }, 3500);
-  };
-
-  const handleMouseEnter = () => {
-    setIsHovered(true);
-    resetIdleTimer();
-  };
-
-  const handleMouseMove = () => {
-    if (!isHovered) {
-      setIsHovered(true);
-    }
-    resetIdleTimer();
-  };
-
-  const handleMouseLeave = () => {
-    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    setIsHovered(false);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    };
-  }, []);
-
   useEffect(() => {
     async function checkRole() {
       setRoleLoading(true);
       try {
-        const isAdminSession = typeof document !== 'undefined' && document.cookie.includes('findly_admin_session=true');
-        const envAdminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@findly.com';
+        const isAdminSession =
+          typeof document !== 'undefined' &&
+          document.cookie.includes('findly_admin_session=true');
+        const envAdminEmail =
+          process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@findly.com';
 
         if (isAdminSession) {
           setIsAdmin(true);
@@ -100,13 +59,16 @@ export default function AppSidebar({
         }
 
         const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           setIsAdmin(false);
           return;
         }
 
-        const isEnvAdmin = user.email?.toLowerCase() === envAdminEmail.toLowerCase();
+        const isEnvAdmin =
+          user.email?.toLowerCase() === envAdminEmail.toLowerCase();
 
         const { data: profile } = await supabase
           .from('profil_pengguna')
@@ -114,7 +76,12 @@ export default function AppSidebar({
           .eq('id', user.id)
           .single();
 
-        if (isEnvAdmin || profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin' || user.user_metadata?.tipe_akun === 'admin') {
+        if (
+          isEnvAdmin ||
+          profile?.tipe_akun === 'admin' ||
+          profile?.role_kampus === 'admin' ||
+          user.user_metadata?.tipe_akun === 'admin'
+        ) {
           setIsAdmin(true);
         } else {
           setIsAdmin(false);
@@ -136,8 +103,10 @@ export default function AppSidebar({
     badge?: number | string;
   }
 
-  const msgBadge = unreadMessages > 0 ? (unreadMessages > 9 ? '9+' : unreadMessages) : undefined;
-  const notifBadge = unreadNotifs > 0 ? (unreadNotifs > 9 ? '9+' : unreadNotifs) : undefined;
+  const msgBadge =
+    unreadMessages > 0 ? (unreadMessages > 9 ? '9+' : unreadMessages) : undefined;
+  const notifBadge =
+    unreadNotifs > 0 ? (unreadNotifs > 9 ? '9+' : unreadNotifs) : undefined;
 
   // 1. Navigation for Normal Student / Community User
   const userNavItems: NavItem[] = [
@@ -187,70 +156,54 @@ export default function AppSidebar({
     if (href === '/admin/titik-temu') return pathname.startsWith('/admin/titik-temu');
     if (href === '/admin/master-data') return pathname.startsWith('/admin/master-data');
     if (href === '/admin/pengguna') return pathname.startsWith('/admin/pengguna');
-    if (href === '/dashboard' || href === '/beranda') return pathname === '/dashboard' || pathname === '/beranda';
+    if (href === '/dashboard' || href === '/beranda')
+      return pathname === '/dashboard' || pathname === '/beranda';
     if (href === '/find') return pathname.startsWith('/find') || pathname.startsWith('/cari-barang');
-    if (href === '/my-reports') return pathname.startsWith('/my-reports') || pathname.startsWith('/laporan-saya');
-    if (href === '/lost/new') return pathname.startsWith('/lost') || pathname.startsWith('/saya-kehilangan');
-    if (href === '/found/new') return pathname.startsWith('/found') || pathname.startsWith('/saya-menemukan');
-    if (href === '/claims') return pathname.startsWith('/claim') || pathname.startsWith('/klaim') || pathname.startsWith('/ajukan-klaim');
-    if (href === '/messages') return pathname.startsWith('/messages') || pathname.startsWith('/pesan');
+    if (href === '/my-reports')
+      return pathname.startsWith('/my-reports') || pathname.startsWith('/laporan-saya');
+    if (href === '/lost/new')
+      return pathname.startsWith('/lost') || pathname.startsWith('/saya-kehilangan');
+    if (href === '/found/new')
+      return pathname.startsWith('/found') || pathname.startsWith('/saya-menemukan');
+    if (href === '/claims')
+      return (
+        pathname.startsWith('/claim') ||
+        pathname.startsWith('/klaim') ||
+        pathname.startsWith('/ajukan-klaim')
+      );
+    if (href === '/messages')
+      return pathname.startsWith('/messages') || pathname.startsWith('/pesan');
     if (href === '/saved') return pathname.startsWith('/saved') || pathname.startsWith('/disimpan');
-    if (href === '/notifications') return pathname.startsWith('/notifications') || pathname.startsWith('/notifikasi');
-    if (href === '/safe-zones') return pathname.startsWith('/safe-zones') || pathname.startsWith('/titik-temu');
-    if (href === '/profile') return pathname.startsWith('/profile') || pathname.startsWith('/akun-saya');
-    if (href === '/settings') return pathname.startsWith('/settings') || pathname.startsWith('/pengaturan');
+    if (href === '/notifications')
+      return pathname.startsWith('/notifications') || pathname.startsWith('/notifikasi');
+    if (href === '/safe-zones')
+      return pathname.startsWith('/safe-zones') || pathname.startsWith('/titik-temu');
+    if (href === '/profile')
+      return pathname.startsWith('/profile') || pathname.startsWith('/akun-saya');
+    if (href === '/settings')
+      return pathname.startsWith('/settings') || pathname.startsWith('/pengaturan');
     if (href === '/help') return pathname.startsWith('/help') || pathname.startsWith('/bantuan');
     return pathname.startsWith(href);
   };
 
-  const renderSidebarContent = (expanded: boolean) => (
-    <div className="flex flex-col h-full bg-white border-r border-gray-100/90 select-none overflow-hidden">
+  const sidebarContent = (
+    <div className="flex flex-col h-full bg-white border-r border-gray-100/90 select-none">
       {/* Brand Logo Header */}
-      <div
-        className={`py-4 flex items-center border-b border-gray-50 h-[68px] shrink-0 transition-all duration-300 ${
-          expanded ? 'px-5 justify-between' : 'px-2 justify-center'
-        }`}
-      >
+      <div className="px-6 py-5 flex items-center justify-between border-b border-gray-50 h-[68px]">
         <Link
           href={isAdmin ? '/admin' : '/dashboard'}
-          className="flex items-center gap-2.5 group overflow-hidden"
+          className="flex items-center gap-2 group"
           title="Findly Campus"
         >
-          {expanded ? (
-            <div className="flex items-center gap-2 min-w-0 transition-all duration-200">
-              <span className="text-2xl font-black tracking-tight text-[#30AFFF] group-hover:opacity-85 transition-opacity">
-                Findly.
-              </span>
-              {isAdmin && (
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#30AFFF] border border-blue-200 uppercase tracking-wider shrink-0">
-                  Admin
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#30AFFF] to-[#2196E8] flex items-center justify-center text-white font-black text-xl shadow-xs group-hover:scale-105 transition-transform shrink-0">
-              F<span className="text-white/80 text-sm leading-none">.</span>
-            </div>
+          <span className="text-2xl font-black tracking-tight text-[#30AFFF] group-hover:opacity-85 transition-opacity">
+            Findly.
+          </span>
+          {isAdmin && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#30AFFF] border border-blue-200 uppercase tracking-wider">
+              Admin
+            </span>
           )}
         </Link>
-
-        {/* Pin / Lock button on desktop when expanded */}
-        {expanded && onTogglePin && (
-          <button
-            type="button"
-            onClick={onTogglePin}
-            className={`hidden md:flex p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
-              isPinned
-                ? 'text-[#30AFFF] bg-blue-50 hover:bg-blue-100'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-            }`}
-            title={isPinned ? 'Lepas sematan (Otomatis mengecil saat kursor diam)' : 'Sematkan sidebar (Tetap terbuka)'}
-          >
-            <Pin size={15} className={isPinned ? 'fill-[#30AFFF]' : ''} />
-          </button>
-        )}
-
-        {/* Close button on mobile */}
         {onCloseMobile && (
           <button
             onClick={onCloseMobile}
@@ -263,29 +216,18 @@ export default function AppSidebar({
       </div>
 
       {/* Navigation Scrollable Area */}
-      <div
-        className={`flex-1 overflow-y-auto py-3 space-y-5 scrollbar-thin scrollbar-thumb-gray-200 ${
-          expanded ? 'px-3.5' : 'px-2'
-        }`}
-      >
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200">
         {/* Main Nav Items */}
         <nav className="space-y-1">
           {roleLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className={`flex items-center rounded-xl p-2.5 ${
-                  expanded ? 'gap-3' : 'justify-center'
-                }`}
-              >
+              <div key={i} className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl">
                 <div className="w-[18px] h-[18px] rounded bg-gray-100 animate-pulse shrink-0" />
-                {expanded && (
-                  <div
-                    className={`h-3.5 rounded bg-gray-100 animate-pulse ${
-                      i % 2 === 0 ? 'w-24' : 'w-20'
-                    }`}
-                  />
-                )}
+                <div
+                  className={`h-3.5 rounded bg-gray-100 animate-pulse ${
+                    i % 2 === 0 ? 'w-24' : 'w-20'
+                  }`}
+                />
               </div>
             ))
           ) : (
@@ -297,29 +239,22 @@ export default function AppSidebar({
                   key={item.label}
                   href={item.href}
                   onClick={onCloseMobile}
-                  title={!expanded ? item.label : undefined}
-                  className={`relative flex items-center rounded-xl text-xs sm:text-sm font-medium transition-all ${
-                    expanded
-                      ? 'justify-between px-3 py-2.5'
-                      : 'justify-center w-10 h-10 mx-auto'
-                  } ${
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
                     active
                       ? 'bg-[#EFF8FF] text-[#30AFFF] font-semibold shadow-2xs'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
-                  <div className={`flex items-center ${expanded ? 'gap-3 min-w-0' : 'justify-center'}`}>
+                  <div className="flex items-center gap-3">
                     <Icon
                       size={18}
                       className={`shrink-0 ${
                         active ? 'text-[#30AFFF] stroke-[2.2]' : 'text-gray-400 stroke-[1.75]'
                       }`}
                     />
-                    {expanded && <span className="truncate">{item.label}</span>}
+                    <span>{item.label}</span>
                   </div>
-
-                  {/* Badge when expanded: full pill */}
-                  {expanded && item.badge && (
+                  {item.badge && (
                     <span
                       className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-2xs shrink-0 ${
                         item.label === 'Notifikasi' ? 'bg-rose-500' : 'bg-[#30AFFF]'
@@ -327,15 +262,6 @@ export default function AppSidebar({
                     >
                       {item.badge}
                     </span>
-                  )}
-
-                  {/* Badge when collapsed: compact dot */}
-                  {!expanded && item.badge && (
-                    <span
-                      className={`absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-white ${
-                        item.label === 'Notifikasi' ? 'bg-rose-500' : 'bg-[#30AFFF]'
-                      }`}
-                    />
                   )}
                 </Link>
               );
@@ -345,13 +271,9 @@ export default function AppSidebar({
 
         {/* Divider & Secondary Nav Items */}
         <div className="border-t border-gray-100 pt-3">
-          {expanded ? (
-            <p className="px-3 text-[10px] font-semibold tracking-wider uppercase text-gray-400 mb-2 truncate">
-              {isAdmin ? 'Pengaturan Admin' : 'Pengaturan Akun'}
-            </p>
-          ) : (
-            <div className="w-6 mx-auto border-t border-gray-200/80 mb-2" />
-          )}
+          <p className="px-3 text-[10px] font-semibold tracking-wider uppercase text-gray-400 mb-2">
+            {isAdmin ? 'Pengaturan Admin' : 'Pengaturan Akun'}
+          </p>
           <nav className="space-y-1">
             {currentSecondaryNavItems.map((item) => {
               const active = isItemActive(item.href);
@@ -361,12 +283,7 @@ export default function AppSidebar({
                   key={item.label}
                   href={item.href}
                   onClick={onCloseMobile}
-                  title={!expanded ? item.label : undefined}
-                  className={`flex items-center rounded-xl text-xs sm:text-sm font-medium transition-all ${
-                    expanded
-                      ? 'gap-3 px-3 py-2.5'
-                      : 'justify-center w-10 h-10 mx-auto'
-                  } ${
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
                     active
                       ? 'bg-[#EFF8FF] text-[#30AFFF] font-semibold'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -378,15 +295,15 @@ export default function AppSidebar({
                       active ? 'text-[#30AFFF]' : 'text-gray-400 stroke-[1.75]'
                     }`}
                   />
-                  {expanded && <span className="truncate">{item.label}</span>}
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
           </nav>
         </div>
 
-        {/* Promo / Action Card (Only when expanded on dashboard for regular users) */}
-        {expanded && !isAdmin && (pathname === '/dashboard' || pathname === '/beranda') && (
+        {/* Promo / Action Card (Only on dashboard for regular users) */}
+        {!isAdmin && (pathname === '/dashboard' || pathname === '/beranda') && (
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#EBF7FF] to-[#E0F2FE] p-4 border border-[#BAE6FD]/60 shadow-2xs">
             <div className="relative z-10 space-y-2">
               <div className="flex items-center gap-1.5 text-[#0369A1] text-xs font-semibold">
@@ -413,28 +330,17 @@ export default function AppSidebar({
       </div>
 
       {/* Sidebar Footer Copyright */}
-      {expanded && (
-        <div className="px-5 py-3.5 border-t border-gray-50 text-[10.5px] text-gray-400 truncate">
-          © 2026 Findly Inc.
-        </div>
-      )}
+      <div className="px-6 py-4 border-t border-gray-50 text-[11px] text-gray-400">
+        © 2026 Findly Inc. Hak Cipta Dilindungi.
+      </div>
     </div>
   );
 
   return (
     <>
-      {/* Desktop Sidebar (Fixed Left with Motion & Hover Expand) */}
-      <aside
-        onMouseEnter={handleMouseEnter}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        className={`hidden md:flex flex-col fixed inset-y-0 left-0 z-30 transition-all duration-300 ease-in-out ${
-          isExpanded
-            ? 'w-64 lg:w-72 shadow-xl border-r border-slate-200/90'
-            : 'w-[72px] shadow-xs border-r border-slate-100'
-        }`}
-      >
-        {renderSidebarContent(isExpanded)}
+      {/* Desktop Sidebar (Fixed Left, solid docked with no overlay collision) */}
+      <aside className="hidden md:flex w-64 lg:w-72 flex-col fixed inset-y-0 left-0 z-30 shadow-xs border-r border-slate-100">
+        {sidebarContent}
       </aside>
 
       {/* Mobile Drawer Backdrop */}
@@ -451,7 +357,7 @@ export default function AppSidebar({
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {renderSidebarContent(true)}
+        {sidebarContent}
       </div>
     </>
   );
