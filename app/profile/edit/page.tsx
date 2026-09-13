@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AppLayout from '@/src/components/layout/AppLayout';
 import { createClient } from '@/src/lib/supabase/client';
+import { compressImage } from '@/src/lib/imageUtils';
 import {
   ArrowLeft,
   Camera,
@@ -26,6 +27,7 @@ import {
 export default function EditProfilePage() {
   const router = useRouter();
   const supabase = createClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Profile Form States
   const [fullName, setFullName] = useState('');
@@ -41,6 +43,7 @@ export default function EditProfilePage() {
 
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -94,8 +97,8 @@ export default function EditProfilePage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           setEmail(user.email || '');
-          if (user.user_metadata?.full_name) {
-            setFullName(user.user_metadata.full_name);
+          if (user.user_metadata?.full_name || user.user_metadata?.nama_lengkap) {
+            setFullName(user.user_metadata.full_name || user.user_metadata.nama_lengkap);
           }
           // Fetch from profil_pengguna if available
           const { data: profile } = await supabase
@@ -107,32 +110,55 @@ export default function EditProfilePage() {
           if (profile) {
             if (profile.nama_lengkap) setFullName(profile.nama_lengkap);
             if (profile.no_telepon) setPhone(profile.no_telepon);
-            if (profile.avatar_url) setAvatarPreview(profile.avatar_url);
+            if (profile.avatar_url) {
+              setAvatarPreview(profile.avatar_url);
+            } else if (user.user_metadata?.avatar_url || user.user_metadata?.picture) {
+              setAvatarPreview(user.user_metadata?.avatar_url || user.user_metadata?.picture);
+            }
             if (profile.universitas) setUniversity(profile.universitas);
             if (profile.nim_nip) setNim(profile.nim_nip);
             if (profile.tipe_akun) setAccountType(profile.tipe_akun);
-          } else if (user.user_metadata?.tipe_akun) {
-            setAccountType(user.user_metadata.tipe_akun);
+          } else {
+            if (user.user_metadata?.avatar_url || user.user_metadata?.picture) {
+              setAvatarPreview(user.user_metadata?.avatar_url || user.user_metadata?.picture);
+            }
+            if (user.user_metadata?.tipe_akun) {
+              setAccountType(user.user_metadata.tipe_akun);
+            }
           }
         }
       } catch (err) {
-        // Fallback
         console.log('Error loading user in edit profile');
       }
     }
     loadUser();
   }, []);
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setErrorMessage('Ukuran foto profil maksimal adalah 2MB.');
+      if (file.size > 5 * 1024 * 1024) {
+        setErrorMessage('Ukuran foto profil maksimal adalah 5MB.');
         return;
       }
       setErrorMessage(null);
-      const previewUrl = URL.createObjectURL(file);
-      setAvatarPreview(previewUrl);
+      setAvatarLoading(true);
+      try {
+        const persistentBase64 = await compressImage(file, 400, 0.85);
+        setAvatarPreview(persistentBase64);
+      } catch (err: any) {
+        console.error('Error compressing avatar image:', err);
+        setErrorMessage(err?.message || 'Gagal memproses gambar foto profil.');
+      } finally {
+        setAvatarLoading(false);
+      }
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -156,12 +182,38 @@ export default function EditProfilePage() {
         if (error) {
           console.warn('Supabase upsert warning:', error.message);
         }
+
+        // Update auth metadata so session-wide data stays in sync
+        try {
+          await supabase.auth.updateUser({
+            data: {
+              nama_lengkap: fullName,
+              full_name: fullName,
+              avatar_url: avatarPreview,
+              picture: avatarPreview,
+            },
+          });
+        } catch (authErr) {
+          console.warn('Auth user metadata update notice:', authErr);
+        }
+      }
+
+      // Dispatch global event for instant UI update across navbar and pages
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('findly:profile_updated', {
+            detail: {
+              nama_lengkap: fullName,
+              avatar_url: avatarPreview,
+            },
+          })
+        );
       }
 
       setSuccessMessage('Profil Anda berhasil diperbarui!');
       setTimeout(() => {
         router.push('/profile');
-      }, 1200);
+      }, 1000);
     } catch (err: any) {
       setErrorMessage(err?.message || 'Gagal memperbarui profil. Coba beberapa saat lagi.');
     } finally {
@@ -172,6 +224,7 @@ export default function EditProfilePage() {
   const getInitials = (name: string) => {
     return name
       .split(' ')
+      .filter(Boolean)
       .map((n) => n[0])
       .slice(0, 2)
       .join('')
@@ -227,7 +280,11 @@ export default function EditProfilePage() {
 
             <div className="flex flex-col sm:flex-row items-center gap-5">
               <div className="relative group">
-                {avatarPreview ? (
+                {avatarLoading ? (
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gray-100 flex items-center justify-center border-2 border-dashed border-[#30AFFF] animate-pulse">
+                    <span className="text-[11px] font-bold text-[#30AFFF]">Memproses...</span>
+                  </div>
+                ) : avatarPreview ? (
                   <img
                     src={avatarPreview}
                     alt="Foto Profil"
@@ -246,6 +303,7 @@ export default function EditProfilePage() {
                 >
                   <Camera size={15} />
                   <input
+                    ref={fileInputRef}
                     id="avatar-upload"
                     type="file"
                     accept="image/*"
@@ -258,13 +316,13 @@ export default function EditProfilePage() {
               <div className="space-y-1 text-center sm:text-left">
                 <h3 className="font-bold text-sm text-gray-900">{fullName}</h3>
                 <p className="text-xs text-gray-500">
-                  Format gambar JPG, PNG, atau WEBP. Maksimal ukuran file 2MB.
+                  Format gambar JPG, PNG, atau WEBP. Maksimal 5MB (otomatis dioptimalkan).
                 </p>
                 {avatarPreview && (
                   <button
                     type="button"
-                    onClick={() => setAvatarPreview(null)}
-                    className="text-[11px] font-semibold text-rose-500 hover:underline pt-0.5 cursor-pointer"
+                    onClick={handleRemoveAvatar}
+                    className="text-[11px] font-semibold text-rose-500 hover:underline pt-0.5 cursor-pointer block"
                   >
                     Hapus Foto Khusus (Gunakan Inisial)
                   </button>

@@ -149,7 +149,7 @@ export default function ClaimsDashboardPage() {
               itemName: report?.nama_barang || (isLost ? 'Barang Hilang' : 'Barang Kampus'),
               itemCategory: report?.kategori || 'Barang Kampus',
               counterpartName: finder?.nama_lengkap || (isLost ? 'Pemilik Barang' : 'Penemu Barang'),
-              counterpartRole: finder?.role_kampus || (isLost ? 'Pemilik Laporan' : 'Civitas Kampus'),
+              counterpartRole: finder?.role_kampus || (isLost ? 'Pemilik Laporan' : 'Pengguna'),
               location: report?.lokasi_terakhir || 'Lingkungan Kampus',
               date: new Date(c.dibuat_pada).toLocaleDateString('id-ID', {
                 day: 'numeric',
@@ -190,7 +190,7 @@ export default function ClaimsDashboardPage() {
                 itemName: report?.nama_barang || (isLost ? 'Barang Hilang' : 'Barang Kampus'),
                 itemCategory: report?.kategori || 'Barang Kampus',
                 counterpartName: claimant?.nama_lengkap || (isLost ? 'Penemu Barang' : 'Pengaju Klaim'),
-                counterpartRole: claimant?.role_kampus || (isLost ? 'Penemu Barang' : 'Civitas Kampus'),
+                counterpartRole: claimant?.role_kampus || (isLost ? 'Penemu Barang' : 'Pengguna'),
                 location: report?.lokasi_terakhir || 'Lingkungan Kampus',
                 date: new Date(c.dibuat_pada).toLocaleDateString('id-ID', {
                   day: 'numeric',

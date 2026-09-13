@@ -281,7 +281,11 @@ function MessagesContent() {
             const report = c.laporan_barang;
             const pelapor = report?.profil_pengguna;
             const counterpartName = pelapor?.nama_lengkap || 'Pelapor Temuan';
-            const counterpartRole = pelapor?.role_kampus ? pelapor.role_kampus.charAt(0).toUpperCase() + pelapor.role_kampus.slice(1) : 'Civitas Kampus';
+            const counterpartRole = pelapor?.role_kampus
+              ? pelapor.role_kampus.charAt(0).toUpperCase() + pelapor.role_kampus.slice(1)
+              : pelapor?.tipe_akun === 'community'
+              ? 'Masyarakat Umum'
+              : 'Pengguna';
 
             const d = new Date(c.dibuat_pada);
             const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;

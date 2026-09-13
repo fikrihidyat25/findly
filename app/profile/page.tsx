@@ -26,6 +26,7 @@ interface UserProfile {
   role_kampus: string;
   nim_nip: string;
   status_kampus_terverifikasi: boolean;
+  avatar_url?: string | null;
 }
 
 export default function ProfilePage() {
@@ -59,6 +60,7 @@ export default function ProfilePage() {
         const isCampus = rawTipe === 'campus';
         const isAdmin = rawTipe === 'admin';
         const tipeAkun = isAdmin ? 'admin' : isCampus ? 'campus' : 'community';
+        const avatar = profile?.avatar_url || authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null;
 
         setUser({
           id: authUser.id,
@@ -69,6 +71,7 @@ export default function ProfilePage() {
           role_kampus: isCampus ? (profile?.role_kampus || authUser.user_metadata?.role_kampus || 'Mahasiswa') : '',
           nim_nip: isCampus ? (profile?.nim_nip || authUser.user_metadata?.nim_nip || '') : '',
           status_kampus_terverifikasi: isCampus ? (profile?.status_kampus_terverifikasi ?? false) : false,
+          avatar_url: avatar,
         });
 
         // Count user's reports
@@ -93,6 +96,32 @@ export default function ProfilePage() {
     }
 
     loadProfile();
+
+    const handleProfileUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                nama_lengkap: customEvent.detail.nama_lengkap ?? prev.nama_lengkap,
+                avatar_url: customEvent.detail.avatar_url ?? null,
+              }
+            : prev
+        );
+      }
+      loadProfile();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('findly:profile_updated', handleProfileUpdated);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('findly:profile_updated', handleProfileUpdated);
+      }
+    };
   }, []);
 
   const getInitials = (name: string) => {
@@ -180,11 +209,24 @@ export default function ProfilePage() {
         <div className="bg-white rounded-3xl border border-gray-100 p-6 sm:p-8 shadow-2xs">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
             <div className="flex items-center gap-4 sm:gap-5">
-              <div className={`w-18 h-18 sm:w-20 sm:h-20 rounded-3xl text-white flex items-center justify-center font-extrabold text-2xl shadow-sm shrink-0 ${user.tipe_akun === 'admin'
-                  ? 'bg-gradient-to-tr from-amber-500 to-orange-500'
-                  : 'bg-gradient-to-tr from-[#30AFFF] to-[#5ec2ff]'
-                }`}>
-                {getInitials(user.nama_lengkap)}
+              <div
+                className={`w-18 h-18 sm:w-20 sm:h-20 rounded-3xl overflow-hidden text-white flex items-center justify-center font-extrabold text-2xl shadow-sm shrink-0 ${
+                  user.avatar_url
+                    ? 'bg-gray-100 border border-gray-200'
+                    : user.tipe_akun === 'admin'
+                      ? 'bg-gradient-to-tr from-amber-500 to-orange-500'
+                      : 'bg-gradient-to-tr from-[#30AFFF] to-[#5ec2ff]'
+                }`}
+              >
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.nama_lengkap}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  getInitials(user.nama_lengkap)
+                )}
               </div>
 
               <div className="space-y-1">

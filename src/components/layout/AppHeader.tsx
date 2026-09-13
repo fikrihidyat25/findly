@@ -38,6 +38,7 @@ interface UserProfile {
   role_kampus?: string;
   universitas?: string;
   status_kampus_terverifikasi?: boolean;
+  avatar_url?: string | null;
 }
 
 export default function AppHeader({
@@ -73,6 +74,7 @@ export default function AppHeader({
             role_kampus: 'Administrator',
             universitas: 'Findly System',
             status_kampus_terverifikasi: true,
+            avatar_url: null,
           });
           setLoading(false);
           return;
@@ -94,11 +96,11 @@ export default function AppHeader({
           .single();
 
         const nama = profile?.nama_lengkap || authUser.user_metadata?.nama_lengkap || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Pengguna';
-
         const rawTipe = profile?.tipe_akun || authUser.user_metadata?.tipe_akun || 'community';
         const isCampus = rawTipe === 'campus';
         const isAdmin = rawTipe === 'admin' || isEnvAdmin;
         const tipeAkun = isAdmin ? 'admin' : isCampus ? 'campus' : 'community';
+        const avatar = profile?.avatar_url || authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null;
 
         setUser({
           id: authUser.id,
@@ -108,6 +110,7 @@ export default function AppHeader({
           role_kampus: isCampus ? (profile?.role_kampus || authUser.user_metadata?.role_kampus || 'Mahasiswa') : (isAdmin ? 'Administrator' : ''),
           universitas: isCampus ? (profile?.universitas || authUser.user_metadata?.universitas || '') : '',
           status_kampus_terverifikasi: isCampus ? (profile?.status_kampus_terverifikasi ?? false) : false,
+          avatar_url: avatar,
         });
       } catch (err) {
         console.error('Error loading header user:', err);
@@ -118,6 +121,26 @@ export default function AppHeader({
     }
 
     loadUser();
+
+    const handleProfileUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                nama_lengkap: customEvent.detail.nama_lengkap ?? prev.nama_lengkap,
+                avatar_url: customEvent.detail.avatar_url ?? null,
+              }
+            : prev
+        );
+      }
+      loadUser();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('findly:profile_updated', handleProfileUpdated);
+    }
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
@@ -132,6 +155,9 @@ export default function AppHeader({
 
     return () => {
       authListener.subscription.unsubscribe();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('findly:profile_updated', handleProfileUpdated);
+      }
     };
   }, []);
 
@@ -242,13 +268,28 @@ export default function AppHeader({
                 className="flex items-center gap-2.5 p-1 sm:px-2.5 sm:py-1.5 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all cursor-pointer"
               >
                 {/* Avatar with Verified Ring */}
-                <div className={`relative w-8 h-8 rounded-full text-white font-bold flex items-center justify-center text-xs shadow-xs ${user.tipe_akun === 'admin'
-                    ? 'bg-gradient-to-tr from-amber-500 to-orange-500'
-                    : 'bg-gradient-to-tr from-[#30AFFF] to-[#60c4ff]'
-                  }`}>
-                  {getInitials(user.nama_lengkap)}
+                <div className="relative shrink-0">
+                  <div
+                    className={`w-8 h-8 rounded-full overflow-hidden text-white font-bold flex items-center justify-center text-xs shadow-xs ${
+                      user.avatar_url
+                        ? 'bg-gray-100 border border-gray-200'
+                        : user.tipe_akun === 'admin'
+                          ? 'bg-gradient-to-tr from-amber-500 to-orange-500'
+                          : 'bg-gradient-to-tr from-[#30AFFF] to-[#60c4ff]'
+                    }`}
+                  >
+                    {user.avatar_url ? (
+                      <img
+                        src={user.avatar_url}
+                        alt={user.nama_lengkap}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      getInitials(user.nama_lengkap)
+                    )}
+                  </div>
                   {user.status_kampus_terverifikasi && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-white flex items-center justify-center">
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-white flex items-center justify-center shadow-xs">
                       <CheckCircle2 size={12} className="text-[#10B981] fill-white" />
                     </div>
                   )}
@@ -275,30 +316,51 @@ export default function AppHeader({
 
               {/* Profile Dropdown Menu */}
               {profileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-lg border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-4 py-2.5 border-b border-gray-50">
-                    <p className="text-xs font-bold text-gray-900">{user.nama_lengkap}</p>
-                    <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
-                    {user.tipe_akun === 'admin' ? (
-                      <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-semibold border border-amber-200">
-                        <ShieldAlert size={10} />
-                        <span>Admin Mediator</span>
-                      </div>
-                    ) : user.tipe_akun === 'campus' && user.status_kampus_terverifikasi ? (
-                      <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-semibold">
-                        <CheckCircle2 size={10} />
-                        <span>University Verified</span>
-                      </div>
-                    ) : user.tipe_akun === 'campus' ? (
-                      <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-semibold">
-                        <GraduationCap size={10} />
-                        <span>Warga Kampus</span>
-                      </div>
-                    ) : (
-                      <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-[10px] font-semibold">
-                        <span>Masyarakat Umum</span>
-                      </div>
-                    )}
+                <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-lg border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-4 py-3 border-b border-gray-50 flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-full overflow-hidden text-white font-bold flex items-center justify-center text-xs shadow-xs shrink-0 ${
+                        user.avatar_url
+                          ? 'bg-gray-100 border border-gray-200'
+                          : user.tipe_akun === 'admin'
+                            ? 'bg-gradient-to-tr from-amber-500 to-orange-500'
+                            : 'bg-gradient-to-tr from-[#30AFFF] to-[#60c4ff]'
+                      }`}
+                    >
+                      {user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={user.nama_lengkap}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        getInitials(user.nama_lengkap)
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-gray-900 truncate">{user.nama_lengkap}</p>
+                      <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
+                      {user.tipe_akun === 'admin' ? (
+                        <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-semibold border border-amber-200">
+                          <ShieldAlert size={10} />
+                          <span>Admin Mediator</span>
+                        </div>
+                      ) : user.tipe_akun === 'campus' && user.status_kampus_terverifikasi ? (
+                        <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-semibold">
+                          <CheckCircle2 size={10} />
+                          <span>University Verified</span>
+                        </div>
+                      ) : user.tipe_akun === 'campus' ? (
+                        <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-semibold">
+                          <GraduationCap size={10} />
+                          <span>Warga Kampus</span>
+                        </div>
+                      ) : (
+                        <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-[10px] font-semibold">
+                          <span>Masyarakat Umum</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="py-1">

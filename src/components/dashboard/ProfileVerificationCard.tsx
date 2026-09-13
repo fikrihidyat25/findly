@@ -13,6 +13,7 @@ interface UserProfile {
   role_kampus: string;
   nim_nip: string;
   status_kampus_terverifikasi: boolean;
+  avatar_url?: string | null;
 }
 
 export default function ProfileVerificationCard() {
@@ -40,6 +41,7 @@ export default function ProfileVerificationCard() {
         const isCampus = rawTipe === 'campus';
         const isAdmin = rawTipe === 'admin';
         const tipeAkun = isAdmin ? 'admin' : isCampus ? 'campus' : 'community';
+        const avatar = profile?.avatar_url || authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null;
 
         setUser({
           id: authUser.id,
@@ -49,6 +51,7 @@ export default function ProfileVerificationCard() {
           role_kampus: isCampus ? (profile?.role_kampus || authUser.user_metadata?.role_kampus || 'Mahasiswa') : '',
           nim_nip: isCampus ? (profile?.nim_nip || authUser.user_metadata?.nim_nip || '') : '',
           status_kampus_terverifikasi: isCampus ? (profile?.status_kampus_terverifikasi ?? false) : false,
+          avatar_url: avatar,
         });
       } catch (err) {
         console.error('Error loading profile card:', err);
@@ -59,6 +62,32 @@ export default function ProfileVerificationCard() {
     }
 
     loadProfile();
+
+    const handleProfileUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                nama_lengkap: customEvent.detail.nama_lengkap ?? prev.nama_lengkap,
+                avatar_url: customEvent.detail.avatar_url ?? null,
+              }
+            : prev
+        );
+      }
+      loadProfile();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('findly:profile_updated', handleProfileUpdated);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('findly:profile_updated', handleProfileUpdated);
+      }
+    };
   }, []);
 
   const getInitials = (name: string) => {
@@ -174,11 +203,24 @@ export default function ProfileVerificationCard() {
         {/* Profile Details */}
         <div className="flex items-start gap-3.5">
           {/* Avatar */}
-          <div className={`w-12 h-12 rounded-2xl text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0 ${user.tipe_akun === 'admin'
-              ? 'bg-gradient-to-tr from-amber-500 to-orange-500'
-              : 'bg-gradient-to-tr from-[#30AFFF] to-[#5ec2ff]'
-            }`}>
-            {getInitials(user.nama_lengkap)}
+          <div
+            className={`w-12 h-12 rounded-2xl overflow-hidden text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0 ${
+              user.avatar_url
+                ? 'bg-gray-100 border border-gray-200'
+                : user.tipe_akun === 'admin'
+                  ? 'bg-gradient-to-tr from-amber-500 to-orange-500'
+                  : 'bg-gradient-to-tr from-[#30AFFF] to-[#5ec2ff]'
+            }`}
+          >
+            {user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.nama_lengkap}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              getInitials(user.nama_lengkap)
+            )}
           </div>
 
           <div className="space-y-1 min-w-0 flex-1">

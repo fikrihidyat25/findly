@@ -27,6 +27,7 @@ interface PenggunaItem {
   role_kampus?: string | null;
   nim_nip?: string | null;
   status_kampus_terverifikasi?: boolean;
+  avatar_url?: string | null;
   dibuat_pada?: string;
 }
 
@@ -322,8 +323,16 @@ export default function AdminPenggunaPage() {
                     {/* Column 1: User info */}
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-sky-400 text-white font-bold flex items-center justify-center text-xs shrink-0">
-                          {getInitials(item.nama_lengkap)}
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-tr from-blue-500 to-sky-400 text-white font-bold flex items-center justify-center text-xs shrink-0">
+                          {item.avatar_url ? (
+                            <img
+                              src={item.avatar_url}
+                              alt={item.nama_lengkap}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            getInitials(item.nama_lengkap)
+                          )}
                         </div>
                         <div className="min-w-0">
                           <p className="font-bold text-gray-900 truncate max-w-[150px]">

@@ -210,10 +210,12 @@ export default function ItemDetailPage() {
             year: 'numeric',
           }),
           description: cleanDescription(data.deskripsi) || 'Tidak ada deskripsi tambahan.',
-          finderName: pelapor?.nama_lengkap || 'Civitas Kampus',
+          finderName: pelapor?.nama_lengkap || 'Pengguna Findly',
           finderRole: pelapor?.role_kampus
             ? pelapor.role_kampus.charAt(0).toUpperCase() + pelapor.role_kampus.slice(1)
-            : 'Warga Kampus',
+            : pelapor?.tipe_akun === 'community'
+            ? 'Masyarakat Umum'
+            : 'Pengguna',
           isVerifiedCivitas: pelapor?.status_kampus_terverifikasi ?? false,
           safePoint: matchedSafe ? matchedSafe.nama_lokasi : 'Pos Satpam Utama Gerbang Barat',
           safePointObj: matchedSafe || safePoints[0],
@@ -666,7 +668,7 @@ export default function ItemDetailPage() {
                     <span className="text-gray-600 text-[11px] sm:text-xs">
                       {item.type === 'found'
                         ? 'Anda tidak dapat mengklaim barang temuan yang Anda laporkan sendiri. Menunggu pemilik sah mengajukan klaim verifikasi.'
-                        : 'Anda tidak dapat melaporkan penemuan pada laporan kehilangan milik Anda sendiri. Menunggu civitas kampus yang menemukan memberikan respon.'}
+                        : 'Anda tidak dapat melaporkan penemuan pada laporan kehilangan milik Anda sendiri. Menunggu pihak yang menemukan memberikan respon.'}
                     </span>
                   </div>
                 </div>
