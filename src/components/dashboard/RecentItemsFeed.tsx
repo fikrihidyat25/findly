@@ -7,9 +7,11 @@ import {
   MapPin,
   Clock,
   PackageSearch,
+  ArrowRight,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 import { detectCategory, getCategoryIcon } from '@/src/lib/categories';
+import ProtectedItemImage from '@/src/components/common/ProtectedItemImage';
 
 export interface RecentItem {
   id: string;
@@ -24,8 +26,9 @@ export interface RecentItem {
     border: string;
   };
   icon: any;
+  foto_url?: string | null;
+  pelapor_id?: string | null;
 }
-
 
 function getColorScheme(type: 'lost' | 'found') {
   if (type === 'found') {
@@ -42,7 +45,7 @@ function formatRelativeTime(dateString: string) {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     if (diffHours < 1) {
       const diffMins = Math.max(1, Math.floor(diffMs / (1000 * 60)));
-      return `${diffMins} menit lalu`;
+      return `${diffMins} mnt lalu`;
     }
     if (diffHours < 24) {
       return `${diffHours} jam lalu`;
@@ -59,6 +62,8 @@ export default function RecentItemsFeed() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'lost' | 'found'>('all');
   const [savedItems, setSavedItems] = useState<string[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     try {
@@ -72,9 +77,27 @@ export default function RecentItemsFeed() {
       setLoading(true);
       try {
         const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          setCurrentUserId(user.id);
+          if (user.user_metadata?.tipe_akun === 'admin') {
+            setIsAdmin(true);
+          } else {
+            const { data: profile } = await supabase
+              .from('profil_pengguna')
+              .select('tipe_akun, role_kampus')
+              .eq('id', user.id)
+              .single();
+            if (profile?.tipe_akun === 'admin' || profile?.role_kampus === 'admin') {
+              setIsAdmin(true);
+            }
+          }
+        }
+
         const { data, error } = await supabase
           .from('laporan_barang')
-          .select('*')
+          .select('id, nama_barang, jenis_laporan, deskripsi, lokasi_terakhir, foto_url, pelapor_id, dibuat_pada')
           .order('dibuat_pada', { ascending: false })
           .limit(8);
 
@@ -93,6 +116,8 @@ export default function RecentItemsFeed() {
               timeAgo: formatRelativeTime(row.dibuat_pada),
               colorScheme: getColorScheme(isFound ? 'found' : 'lost'),
               icon: getCategoryIcon(cat),
+              foto_url: row.foto_url,
+              pelapor_id: row.pelapor_id,
             };
           });
           setItems(mapped);
@@ -133,38 +158,41 @@ export default function RecentItemsFeed() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-gray-100">
         <div>
           <h3 className="font-bold text-base sm:text-lg text-gray-900 tracking-tight">
-            Barang terbaru di sekitarmu
+            Barang Terbaru di Kampus
           </h3>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Laporan barang hilang dan temuan terkini di lingkungan kampus
+          <p className="text-xs text-gray-500 mt-0.5">
+            Laporan barang hilang dan temuan terkini dari civitas akademika
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-gray-100/80 p-1 rounded-xl shrink-0 self-start sm:self-auto">
+        <div className="flex items-center gap-1.5 bg-gray-100/90 p-1 rounded-xl shrink-0 self-start sm:self-auto">
           <button
             onClick={() => setActiveTab('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeTab === 'all'
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'all'
                 ? 'bg-white text-gray-900 shadow-2xs'
                 : 'text-gray-600 hover:text-gray-900'
-              }`}
+            }`}
           >
             Semua ({items.length})
           </button>
           <button
             onClick={() => setActiveTab('lost')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeTab === 'lost'
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'lost'
                 ? 'bg-white text-rose-600 shadow-2xs'
                 : 'text-gray-600 hover:text-gray-900'
-              }`}
+            }`}
           >
             Hilang
           </button>
           <button
             onClick={() => setActiveTab('found')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeTab === 'found'
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'found'
                 ? 'bg-white text-emerald-600 shadow-2xs'
                 : 'text-gray-600 hover:text-gray-900'
-              }`}
+            }`}
           >
             Ditemukan
           </button>
@@ -175,7 +203,7 @@ export default function RecentItemsFeed() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3 animate-pulse">
-              <div className="h-28 bg-gray-100 rounded-xl" />
+              <div className="h-36 bg-gray-100 rounded-xl" />
               <div className="h-4 bg-gray-100 rounded w-2/3" />
               <div className="h-3 bg-gray-100 rounded w-1/2" />
             </div>
@@ -208,29 +236,43 @@ export default function RecentItemsFeed() {
           </div>
         </div>
       ) : (
-        /* Items Cards Horizontal / Grid */
+        /* Items Cards Grid */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
           {filteredItems.map((item) => {
             const isSaved = savedItems.includes(item.id);
             const Icon = item.icon;
             const isLost = item.type === 'lost';
+            const userIsOwnerOrAdmin = currentUserId
+              ? currentUserId === item.pelapor_id || isAdmin
+              : false;
 
             return (
               <div
                 key={item.id}
-                className="bg-white rounded-2xl border border-gray-100 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden group"
+                className="bg-white rounded-2xl border border-gray-100 shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between overflow-hidden group"
               >
-                {/* Card Visual / Thumbnail Header */}
-                <div
-                  className={`relative w-full h-32 ${item.colorScheme.bg} border-b ${item.colorScheme.border} flex items-center justify-center transition-colors group-hover:bg-opacity-90`}
-                >
+                {/* Thumbnail Header with ProtectedItemImage */}
+                <div className="relative w-full h-36 sm:h-40 bg-gray-50 overflow-hidden flex items-center justify-center">
+                  <ProtectedItemImage
+                    src={item.foto_url}
+                    alt={item.title}
+                    type={item.type}
+                    category={item.category}
+                    isOwnerOrAdmin={userIsOwnerOrAdmin}
+                    variant="thumbnail"
+                    Icon={Icon}
+                    colorScheme={item.colorScheme}
+                    className="w-full h-full object-cover"
+                  />
+
                   {/* Status Badge */}
                   <div className="absolute top-2.5 left-2.5 z-10">
                     <span
-                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-2xs ${isLost
+                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${
+                        isLost
                           ? 'bg-rose-500 text-white border-rose-600'
-                          : 'bg-emerald-500 text-white border-emerald-600'
-                        }`}
+                          : 'bg-emerald-600 text-white border-emerald-700'
+                      }`}
                     >
                       {isLost ? 'Hilang' : 'Ditemukan'}
                     </span>
@@ -241,27 +283,21 @@ export default function RecentItemsFeed() {
                     type="button"
                     onClick={(e) => toggleSave(item.id, e)}
                     aria-label="Simpan barang"
-                    className={`absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center shadow-2xs transition-all hover:scale-110 cursor-pointer ${isSaved ? 'text-[#30AFFF]' : 'text-gray-400 hover:text-gray-700'
-                      }`}
+                    className={`absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center shadow-xs transition-all hover:scale-110 cursor-pointer ${
+                      isSaved ? 'text-[#30AFFF]' : 'text-gray-400 hover:text-gray-700'
+                    }`}
                   >
                     <Bookmark
-                      size={14}
+                      size={13}
                       className={isSaved ? 'fill-[#30AFFF] stroke-[#30AFFF]' : 'stroke-[2]'}
                     />
                   </button>
-
-                  {/* Item Category Icon Illustration */}
-                  <div
-                    className={`w-14 h-14 rounded-2xl bg-white/90 shadow-2xs flex items-center justify-center ${item.colorScheme.text} group-hover:scale-110 transition-transform duration-300`}
-                  >
-                    <Icon size={28} className="stroke-[1.75]" />
-                  </div>
                 </div>
 
                 {/* Card Body Info */}
                 <div className="p-3.5 space-y-2 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       {item.category}
                     </span>
                     <Link href={`/find/${item.id}`}>
@@ -292,9 +328,10 @@ export default function RecentItemsFeed() {
       <div className="text-center pt-2">
         <Link
           href="/find"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8] py-1.5 px-3 rounded-lg hover:bg-blue-50/50 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#30AFFF] hover:text-[#2196E8] py-2 px-4 rounded-xl hover:bg-blue-50/60 transition-colors"
         >
-          Jelajahi seluruh laporan di Cari Barang
+          <span>Jelajahi seluruh laporan di Cari Barang</span>
+          <ArrowRight size={13} />
         </Link>
       </div>
     </div>

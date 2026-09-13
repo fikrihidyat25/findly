@@ -74,6 +74,7 @@ export async function updateSession(request: NextRequest) {
     // Public routes allowed for unauthenticated guests
     const isPublicRoute =
         pathname === "/" ||
+        pathname === "/dashboard" ||
         pathname.startsWith("/find") ||
         pathname.startsWith("/cari-barang") ||
         pathname.startsWith("/safe-zones") ||

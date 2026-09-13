@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { PackageOpen, CheckCircle2, Bookmark, FileText } from 'lucide-react';
+import { PackageOpen, CheckCircle2, Bookmark, FileText, ArrowRight } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 
 export default function QuickStats() {
@@ -24,7 +24,6 @@ export default function QuickStats() {
         }
 
         if (!user) {
-          // Guest mode: 0 across all
           setActiveClaimsCount(0);
           setReturnedCount(0);
           setTotalReportsCount(0);
@@ -63,13 +62,12 @@ export default function QuickStats() {
 
   const stats = [
     {
-      label: 'Klaim aktif',
+      label: 'Klaim Aktif',
       value: activeClaimsCount,
       href: '/claims',
       icon: PackageOpen,
       iconColor: 'text-amber-600',
-      bgColor: 'bg-amber-50/80',
-      borderColor: 'border-amber-100/70',
+      bgColor: 'bg-amber-50',
     },
     {
       label: 'Barang Dikembalikan',
@@ -77,63 +75,60 @@ export default function QuickStats() {
       href: '/claims',
       icon: CheckCircle2,
       iconColor: 'text-emerald-600',
-      bgColor: 'bg-emerald-50/80',
-      borderColor: 'border-emerald-100/70',
+      bgColor: 'bg-emerald-50',
     },
     {
-      label: 'Disimpan',
+      label: 'Barang Disimpan',
       value: savedCount,
       href: '/saved',
       icon: Bookmark,
       iconColor: 'text-[#30AFFF]',
-      bgColor: 'bg-blue-50/80',
-      borderColor: 'border-blue-100/70',
+      bgColor: 'bg-blue-50',
     },
     {
-      label: 'Total Laporan',
+      label: 'Laporan Saya',
       value: totalReportsCount,
       href: '/my-reports',
       icon: FileText,
       iconColor: 'text-purple-600',
-      bgColor: 'bg-purple-50/80',
-      borderColor: 'border-purple-100/70',
+      bgColor: 'bg-purple-50',
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-      {stats.map((stat) => {
-        const Icon = stat.icon;
-        return (
-          <div
-            key={stat.label}
-            className="bg-white p-4 sm:p-4.5 rounded-2xl border border-gray-100 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div
-                className={`w-10 h-10 rounded-xl ${stat.bgColor} ${stat.iconColor} ${stat.borderColor} border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200`}
-              >
-                <Icon size={20} className="stroke-[1.8]" />
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-2xs overflow-hidden">
+      <div className="grid grid-cols-2 lg:grid-cols-4 divide-y divide-gray-100 lg:divide-y-0 lg:divide-x">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Link
+              key={stat.label}
+              href={stat.href}
+              className="p-3.5 sm:p-4 flex items-center justify-between gap-3 hover:bg-gray-50/70 transition-colors group"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className={`w-10 h-10 rounded-xl ${stat.bgColor} ${stat.iconColor} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200`}
+                >
+                  <Icon size={19} className="stroke-[1.9]" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight leading-none">
+                    {stat.value}
+                  </div>
+                  <div className="text-xs text-gray-500 font-medium truncate mt-1">
+                    {stat.label}
+                  </div>
+                </div>
               </div>
-              <span className="font-extrabold text-2xl sm:text-3xl text-gray-900 tracking-tight">
-                {stat.value}
-              </span>
-            </div>
-
-            <div className="mt-3 pt-2 border-t border-gray-50 flex items-center justify-between text-xs">
-              <span className="font-medium text-gray-600 text-[11px] sm:text-xs truncate">
-                {stat.label}
-              </span>
-              <Link
-                href={stat.href}
-                className="text-[#30AFFF] font-semibold hover:underline text-[11px] shrink-0"
-              >
-                Lihat semua
-              </Link>
-            </div>
-          </div>
-        );
-      })}
+              <ArrowRight
+                size={14}
+                className="text-gray-300 group-hover:text-gray-600 group-hover:translate-x-0.5 transition-all shrink-0 mr-1"
+              />
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }

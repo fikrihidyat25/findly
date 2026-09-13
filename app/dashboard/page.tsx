@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Plus, PackageMinus } from 'lucide-react';
 import AppLayout from '@/src/components/layout/AppLayout';
-import QuickActions from '@/src/components/dashboard/QuickActions';
-import ProfileVerificationCard from '@/src/components/dashboard/ProfileVerificationCard';
 import QuickStats from '@/src/components/dashboard/QuickStats';
 import RecentItemsFeed from '@/src/components/dashboard/RecentItemsFeed';
 import SafetyTipBanner from '@/src/components/dashboard/SafetyTipBanner';
@@ -47,37 +47,48 @@ export default function DashboardPage() {
 
   return (
     <AppLayout searchQuery={searchQuery} onSearchChange={setSearchQuery}>
-      <div className="space-y-6 sm:space-y-8">
-        {/* Welcome Greeting Banner */}
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-            {displayName ? `Selamat datang kembali, ${displayName}!` : 'Selamat datang di Findly!'}
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 font-normal">
-            Mari bersama ciptakan lingkungan kampus yang aman, transparan, dan peduli sesama.
-          </p>
-        </div>
-
-        {/* Quick Actions & Profile Widget Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-          {/* Left: Quick Actions (Saya Kehilangan & Saya Menemukan) */}
-          <div className="lg:col-span-8 flex flex-col justify-between">
-            <QuickActions />
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* Crisp Hero Header with Direct Action CTAs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-100">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100/80 text-[11px] font-semibold text-[#0284C7]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#30AFFF]" />
+              <span>Portal Kehilangan & Temuan Kampus</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+              {displayName ? `Halo, ${displayName} 👋` : 'Selamat datang di Findly 👋'}
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 font-normal">
+              Cari barang yang hilang atau laporkan temuan Anda untuk membantu sesama civitas kampus.
+            </p>
           </div>
 
-          {/* Right: Profile & University Verification Card */}
-          <div className="lg:col-span-4">
-            <ProfileVerificationCard />
+          {/* Quick Action CTAs */}
+          <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
+            <Link
+              href="/lost/new"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50/80 hover:border-rose-300 text-xs sm:text-sm font-semibold transition-all shadow-2xs cursor-pointer group"
+            >
+              <PackageMinus size={16} className="stroke-[2] text-rose-500 group-hover:scale-110 transition-transform" />
+              <span>Saya Kehilangan</span>
+            </Link>
+            <Link
+              href="/found/new"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#30AFFF] hover:bg-[#209be6] text-white text-xs sm:text-sm font-semibold transition-all shadow-2xs hover:shadow cursor-pointer group"
+            >
+              <Plus size={16} className="stroke-[2.2] group-hover:rotate-90 transition-transform duration-200" />
+              <span>Saya Menemukan</span>
+            </Link>
           </div>
         </div>
 
-        {/* Quick Metrics Statistics */}
+        {/* Streamlined Metrics Status Ribbon */}
         <QuickStats />
 
-        {/* Recent Items Feed */}
+        {/* Primary Content: Live Campus Items Feed with Real Photos & Anti-Fraud Shield */}
         <RecentItemsFeed />
 
-        {/* Safety Tip Banner */}
+        {/* Safety Tips Banner */}
         <SafetyTipBanner />
       </div>
     </AppLayout>
