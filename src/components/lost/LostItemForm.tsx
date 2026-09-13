@@ -17,7 +17,6 @@ import {
   MapPin,
   FileText,
   ShieldCheck,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
@@ -435,90 +434,58 @@ export default function LostItemForm() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
-                    {/* Drag & Drop Box */}
-                    <div className="md:col-span-7">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/png, image/jpeg, image/jpg"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png, image/jpeg, image/jpg"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
 
-                      {photoPreview ? (
-                        <div className="relative rounded-2xl border border-gray-200 overflow-hidden h-44 bg-gray-50 flex items-center justify-center group">
-                          <img
-                            src={photoPreview}
-                            alt="Pratinjau Foto Barang"
-                            className="w-full h-full object-contain"
-                          />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => fileInputRef.current?.click()}
-                              className="px-3 py-1.5 bg-white text-xs font-semibold text-gray-800 rounded-lg shadow-sm hover:bg-gray-100"
-                            >
-                              Ganti Foto
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPhotoPreview(null)}
-                              className="p-1.5 bg-red-600 text-white rounded-lg shadow-sm hover:bg-red-700"
-                              aria-label="Hapus Foto"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
+                    {photoPreview ? (
+                      <div className="relative rounded-2xl border border-gray-200 overflow-hidden h-48 bg-gray-50 flex items-center justify-center group">
+                        <img
+                          src={photoPreview}
+                          alt="Pratinjau Foto Barang"
+                          className="w-full h-full object-contain"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="px-3 py-1.5 bg-white text-xs font-semibold text-gray-800 rounded-lg shadow-sm hover:bg-gray-100 cursor-pointer"
+                          >
+                            Ganti Foto
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPhotoPreview(null)}
+                            className="p-1.5 bg-red-600 text-white rounded-lg shadow-sm hover:bg-red-700 cursor-pointer"
+                            aria-label="Hapus Foto"
+                          >
+                            <X size={16} />
+                          </button>
                         </div>
-                      ) : (
-                        <div
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={handleDrop}
-                          onClick={() => fileInputRef.current?.click()}
-                          className="h-44 border-2 border-dashed border-gray-200 hover:border-[#30AFFF] rounded-2xl flex flex-col items-center justify-center p-4 text-center cursor-pointer transition-colors bg-gray-50/50 hover:bg-[#EFF8FF]/30 group"
-                        >
-                          <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#30AFFF] flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
-                            <UploadCloud size={22} />
-                          </div>
-                          <p className="font-bold text-xs text-gray-800">
-                            Klik Untuk Upload Foto
-                          </p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">
-                            Atau seret & lepas file di sini
-                          </p>
-                          <span className="text-[10px] text-gray-400 mt-2 bg-white px-2 py-0.5 rounded border border-gray-200">
-                            PNG, JPG, JPEG Maksimal 5MB
-                          </span>
+                      </div>
+                    ) : (
+                      <div
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="h-44 border-2 border-dashed border-gray-200 hover:border-[#30AFFF] rounded-2xl flex flex-col items-center justify-center p-4 text-center cursor-pointer transition-colors bg-gray-50/50 hover:bg-[#EFF8FF]/30 group"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#30AFFF] flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                          <UploadCloud size={22} />
                         </div>
-                      )}
-                    </div>
-
-                    {/* Green Helper Box: Tips Foto */}
-                    <div className="md:col-span-5 bg-emerald-50/70 border border-emerald-200/60 rounded-2xl p-4 flex flex-col justify-center text-emerald-950 space-y-2">
-                      <p className="text-xs font-bold flex items-center gap-1.5 text-emerald-800">
-                        <Sparkles size={13} className="text-emerald-600" />
-                        <span>Tips foto yang baik:</span>
-                      </p>
-                      <ul className="text-[11px] text-emerald-800/90 space-y-1.5 leading-tight">
-                        <li className="flex items-center gap-1.5">
-                          <Check size={12} className="text-emerald-600 shrink-0 stroke-[2.5]" />
-                          <span>Foto barang dengan jelas</span>
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <Check size={12} className="text-emerald-600 shrink-0 stroke-[2.5]" />
-                          <span>Ambil dari beberapa sudut</span>
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <Check size={12} className="text-emerald-600 shrink-0 stroke-[2.5]" />
-                          <span>Pastikan pencahayaan cukup</span>
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <Check size={12} className="text-emerald-600 shrink-0 stroke-[2.5]" />
-                          <span>Hindari blur atau tertutup objek lain</span>
-                        </li>
-                      </ul>
-                    </div>
+                        <p className="font-bold text-xs sm:text-sm text-gray-800">
+                          Klik untuk Unggah Foto Barang
+                        </p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          Atau seret & lepas file foto di sini (PNG, JPG, JPEG maks 5MB)
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
