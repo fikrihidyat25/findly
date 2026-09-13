@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import AppLayout from '@/src/components/layout/AppLayout';
 import {
   MessageSquare,
@@ -26,6 +26,7 @@ import SafePointModal from '@/src/components/chat/SafePointModal';
 import ImageLightbox from '@/src/components/chat/ImageLightbox';
 
 function MessagesContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const targetClaimId = searchParams.get('id');
   const [emptyNotice, setEmptyNotice] = useState<{ claimTitle: string; claimId: string } | null>(null);
@@ -97,36 +98,69 @@ function MessagesContent() {
   // Load real user conversations from Supabase klaim_barang
   useEffect(() => {
     let isMounted = true;
+    const supabase = createClient();
+
     async function loadUserConversations() {
       setLoading(true);
       try {
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        // 1. Coba ambil session aktif dari local/cookie terlebih dahulu
+        const { data: sessionData } = await supabase.auth.getSession();
+        let user = sessionData?.session?.user ?? null;
+
+        // 2. Jika session belum siap, panggil getUser
+        if (!user) {
+          const { data: userData } = await supabase.auth.getUser();
+          user = userData?.user ?? null;
+        }
+
+        // 3. Dukung mode login admin (.env / cookie)
+        const isAdminSession = typeof window !== 'undefined' && (
+          document.cookie.includes('findly_admin_session=true') ||
+          localStorage.getItem('findly_admin_session') === 'true'
+        );
+
+        if (!user && isAdminSession) {
+          const adminEmail = (typeof localStorage !== 'undefined' && localStorage.getItem('findly_admin_email')) || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@findly.com';
+          user = {
+            id: 'admin-mediator-id',
+            email: adminEmail,
+            user_metadata: { tipe_akun: 'admin' },
+          } as any;
+        }
 
         if (!user) {
-          setIsGuest(true);
-          setLoading(false);
+          if (isMounted) {
+            setIsGuest(true);
+            setLoading(false);
+          }
           return;
         }
 
-        setCurrentUserId(user.id);
+        if (isMounted) {
+          setIsGuest(false);
+          setCurrentUserId(user.id);
+        }
 
-        const { data: profile } = await supabase
-          .from('profil_pengguna')
-          .select('tipe_akun, role_kampus, nama_lengkap')
-          .eq('id', user.id)
-          .single();
+        let profile: any = null;
+        if (user.id !== 'admin-mediator-id') {
+          const { data: p } = await supabase
+            .from('profil_pengguna')
+            .select('tipe_akun, role_kampus, nama_lengkap')
+            .eq('id', user.id)
+            .maybeSingle();
+          profile = p;
+        }
 
         const userIsAdmin = Boolean(
+          isAdminSession ||
+          user.id === 'admin-mediator-id' ||
           profile?.tipe_akun === 'admin' ||
           profile?.role_kampus === 'admin' ||
           user.user_metadata?.tipe_akun === 'admin' ||
           user.email?.toLowerCase().includes('admin')
         );
 
-        setIsAdmin(userIsAdmin);
+        if (isMounted) setIsAdmin(userIsAdmin);
 
         const loadedConversations: ChatConversation[] = [];
 
@@ -392,8 +426,17 @@ function MessagesContent() {
     }
 
     loadUserConversations();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user && isMounted) {
+        setIsGuest(false);
+        loadUserConversations();
+      }
+    });
+
     return () => {
       isMounted = false;
+      authListener?.subscription?.unsubscribe();
     };
   }, [targetClaimId]);
 
