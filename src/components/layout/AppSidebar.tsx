@@ -23,6 +23,7 @@ import {
   Users,
   MapPin,
   Sliders,
+  Pin,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 
@@ -31,6 +32,10 @@ interface SidebarProps {
   onCloseMobile?: () => void;
   unreadNotifs?: number;
   unreadMessages?: number;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
+  isHovered?: boolean;
+  onHoverChange?: (hovered: boolean) => void;
 }
 
 export default function AppSidebar({
@@ -38,10 +43,17 @@ export default function AppSidebar({
   onCloseMobile,
   unreadNotifs = 0,
   unreadMessages = 0,
+  isPinned = false,
+  onTogglePin,
+  isHovered = false,
+  onHoverChange,
 }: SidebarProps) {
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
+
+  // Expanded if user pinned it or cursor is currently hovering over it
+  const isExpanded = Boolean(isPinned || isHovered);
 
   useEffect(() => {
     async function checkRole() {
@@ -186,24 +198,58 @@ export default function AppSidebar({
     return pathname.startsWith(href);
   };
 
-  const sidebarContent = (
-    <div className="flex flex-col h-full bg-white border-r border-gray-100/90 select-none">
+  const renderSidebarContent = (expanded: boolean) => (
+    <div className="flex flex-col h-full bg-white border-r border-gray-100/90 select-none overflow-hidden">
       {/* Brand Logo Header */}
-      <div className="px-6 py-5 flex items-center justify-between border-b border-gray-50 h-[68px]">
+      <div
+        className={`py-4 flex items-center border-b border-gray-50 h-[68px] shrink-0 transition-all duration-300 ${
+          expanded ? 'px-5 justify-between' : 'px-2 justify-center'
+        }`}
+      >
         <Link
           href={isAdmin ? '/admin' : '/dashboard'}
-          className="flex items-center gap-2 group"
+          className="flex items-center gap-2.5 group overflow-hidden"
           title="Findly Campus"
         >
-          <span className="text-2xl font-black tracking-tight text-[#30AFFF] group-hover:opacity-85 transition-opacity">
-            Findly.
-          </span>
-          {isAdmin && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#30AFFF] border border-blue-200 uppercase tracking-wider">
-              Admin
-            </span>
+          {expanded ? (
+            <div className="flex items-center gap-2 min-w-0 transition-all duration-200">
+              <span className="text-2xl font-black tracking-tight text-[#30AFFF] group-hover:opacity-85 transition-opacity">
+                Findly.
+              </span>
+              {isAdmin && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#30AFFF] border border-blue-200 uppercase tracking-wider shrink-0">
+                  Admin
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#30AFFF] to-[#2196E8] flex items-center justify-center text-white font-black text-xl shadow-xs group-hover:scale-105 transition-transform shrink-0">
+              F<span className="text-white/80 text-sm leading-none">.</span>
+            </div>
           )}
         </Link>
+
+        {/* Pin / Lock button on desktop when expanded */}
+        {expanded && onTogglePin && (
+          <button
+            type="button"
+            onClick={onTogglePin}
+            className={`hidden md:flex p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
+              isPinned
+                ? 'text-[#30AFFF] bg-blue-50 hover:bg-blue-100'
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            }`}
+            title={
+              isPinned
+                ? 'Lepas sematan (Otomatis mengecil saat mouse keluar)'
+                : 'Sematkan sidebar (Tetap terbuka)'
+            }
+          >
+            <Pin size={15} className={isPinned ? 'fill-[#30AFFF]' : ''} />
+          </button>
+        )}
+
+        {/* Close button on mobile */}
         {onCloseMobile && (
           <button
             onClick={onCloseMobile}
@@ -216,18 +262,29 @@ export default function AppSidebar({
       </div>
 
       {/* Navigation Scrollable Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200">
+      <div
+        className={`flex-1 overflow-y-auto py-3 space-y-5 scrollbar-thin scrollbar-thumb-gray-200 ${
+          expanded ? 'px-3.5' : 'px-2'
+        }`}
+      >
         {/* Main Nav Items */}
         <nav className="space-y-1">
           {roleLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl">
+              <div
+                key={i}
+                className={`flex items-center rounded-xl p-2.5 ${
+                  expanded ? 'gap-3' : 'justify-center'
+                }`}
+              >
                 <div className="w-[18px] h-[18px] rounded bg-gray-100 animate-pulse shrink-0" />
-                <div
-                  className={`h-3.5 rounded bg-gray-100 animate-pulse ${
-                    i % 2 === 0 ? 'w-24' : 'w-20'
-                  }`}
-                />
+                {expanded && (
+                  <div
+                    className={`h-3.5 rounded bg-gray-100 animate-pulse ${
+                      i % 2 === 0 ? 'w-24' : 'w-20'
+                    }`}
+                  />
+                )}
               </div>
             ))
           ) : (
@@ -239,22 +296,35 @@ export default function AppSidebar({
                   key={item.label}
                   href={item.href}
                   onClick={onCloseMobile}
-                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
+                  title={!expanded ? item.label : undefined}
+                  className={`relative flex items-center rounded-xl text-xs sm:text-sm font-medium transition-all ${
+                    expanded
+                      ? 'justify-between px-3 py-2.5'
+                      : 'justify-center w-10 h-10 mx-auto'
+                  } ${
                     active
                       ? 'bg-[#EFF8FF] text-[#30AFFF] font-semibold shadow-2xs'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div
+                    className={`flex items-center ${
+                      expanded ? 'gap-3 min-w-0' : 'justify-center'
+                    }`}
+                  >
                     <Icon
                       size={18}
                       className={`shrink-0 ${
-                        active ? 'text-[#30AFFF] stroke-[2.2]' : 'text-gray-400 stroke-[1.75]'
+                        active
+                          ? 'text-[#30AFFF] stroke-[2.2]'
+                          : 'text-gray-400 stroke-[1.75]'
                       }`}
                     />
-                    <span>{item.label}</span>
+                    {expanded && <span className="truncate">{item.label}</span>}
                   </div>
-                  {item.badge && (
+
+                  {/* Badge when expanded: full pill */}
+                  {expanded && item.badge && (
                     <span
                       className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-2xs shrink-0 ${
                         item.label === 'Notifikasi' ? 'bg-rose-500' : 'bg-[#30AFFF]'
@@ -262,6 +332,15 @@ export default function AppSidebar({
                     >
                       {item.badge}
                     </span>
+                  )}
+
+                  {/* Badge when collapsed: compact dot */}
+                  {!expanded && item.badge && (
+                    <span
+                      className={`absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-white ${
+                        item.label === 'Notifikasi' ? 'bg-rose-500' : 'bg-[#30AFFF]'
+                      }`}
+                    />
                   )}
                 </Link>
               );
@@ -271,9 +350,13 @@ export default function AppSidebar({
 
         {/* Divider & Secondary Nav Items */}
         <div className="border-t border-gray-100 pt-3">
-          <p className="px-3 text-[10px] font-semibold tracking-wider uppercase text-gray-400 mb-2">
-            {isAdmin ? 'Pengaturan Admin' : 'Pengaturan Akun'}
-          </p>
+          {expanded ? (
+            <p className="px-3 text-[10px] font-semibold tracking-wider uppercase text-gray-400 mb-2 truncate">
+              {isAdmin ? 'Pengaturan Admin' : 'Pengaturan Akun'}
+            </p>
+          ) : (
+            <div className="w-6 mx-auto border-t border-gray-200/80 mb-2" />
+          )}
           <nav className="space-y-1">
             {currentSecondaryNavItems.map((item) => {
               const active = isItemActive(item.href);
@@ -283,7 +366,12 @@ export default function AppSidebar({
                   key={item.label}
                   href={item.href}
                   onClick={onCloseMobile}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
+                  title={!expanded ? item.label : undefined}
+                  className={`flex items-center rounded-xl text-xs sm:text-sm font-medium transition-all ${
+                    expanded
+                      ? 'gap-3 px-3 py-2.5'
+                      : 'justify-center w-10 h-10 mx-auto'
+                  } ${
                     active
                       ? 'bg-[#EFF8FF] text-[#30AFFF] font-semibold'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -295,52 +383,64 @@ export default function AppSidebar({
                       active ? 'text-[#30AFFF]' : 'text-gray-400 stroke-[1.75]'
                     }`}
                   />
-                  <span>{item.label}</span>
+                  {expanded && <span className="truncate">{item.label}</span>}
                 </Link>
               );
             })}
           </nav>
         </div>
 
-        {/* Promo / Action Card (Only on dashboard for regular users) */}
-        {!isAdmin && (pathname === '/dashboard' || pathname === '/beranda') && (
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#EBF7FF] to-[#E0F2FE] p-4 border border-[#BAE6FD]/60 shadow-2xs">
-            <div className="relative z-10 space-y-2">
-              <div className="flex items-center gap-1.5 text-[#0369A1] text-xs font-semibold">
-                <Sparkles size={14} className="text-[#0284C7]" />
-                <span>Aksi Positif</span>
+        {/* Promo / Action Card (Only when expanded on dashboard for regular users) */}
+        {expanded &&
+          !isAdmin &&
+          (pathname === '/dashboard' || pathname === '/beranda') && (
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#EBF7FF] to-[#E0F2FE] p-4 border border-[#BAE6FD]/60 shadow-2xs">
+              <div className="relative z-10 space-y-2">
+                <div className="flex items-center gap-1.5 text-[#0369A1] text-xs font-semibold">
+                  <Sparkles size={14} className="text-[#0284C7]" />
+                  <span>Aksi Positif</span>
+                </div>
+                <h4 className="font-bold text-xs text-gray-900 leading-snug">
+                  Laporkan barang yang Anda temukan.
+                </h4>
+                <p className="text-[11px] text-gray-600 leading-relaxed">
+                  Bantu teman kampus mendapatkan kembali barang berharganya.
+                </p>
+                <Link
+                  href="/found/new"
+                  onClick={onCloseMobile}
+                  className="inline-flex items-center justify-center gap-1.5 w-full mt-2 bg-[#10B981] hover:bg-[#059669] active:scale-[0.98] text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm transition-all"
+                >
+                  <PlusCircle size={14} />
+                  <span>Laporkan Sekarang</span>
+                </Link>
               </div>
-              <h4 className="font-bold text-xs text-gray-900 leading-snug">
-                Laporkan barang yang Anda temukan.
-              </h4>
-              <p className="text-[11px] text-gray-600 leading-relaxed">
-                Bantu teman kampus mendapatkan kembali barang berharganya.
-              </p>
-              <Link
-                href="/found/new"
-                onClick={onCloseMobile}
-                className="inline-flex items-center justify-center gap-1.5 w-full mt-2 bg-[#10B981] hover:bg-[#059669] active:scale-[0.98] text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm transition-all"
-              >
-                <PlusCircle size={14} />
-                <span>Laporkan Sekarang</span>
-              </Link>
             </div>
-          </div>
-        )}
+          )}
       </div>
 
       {/* Sidebar Footer Copyright */}
-      <div className="px-6 py-4 border-t border-gray-50 text-[11px] text-gray-400">
-        © 2026 Findly Inc. Hak Cipta Dilindungi.
-      </div>
+      {expanded && (
+        <div className="px-5 py-3.5 border-t border-gray-50 text-[10.5px] text-gray-400 truncate">
+          © 2026 Findly Inc.
+        </div>
+      )}
     </div>
   );
 
   return (
     <>
-      {/* Desktop Sidebar (Fixed Left, solid docked with no overlay collision) */}
-      <aside className="hidden md:flex w-64 lg:w-72 flex-col fixed inset-y-0 left-0 z-30 shadow-xs border-r border-slate-100">
-        {sidebarContent}
+      {/* Desktop Sidebar (Fixed Left with Motion & Hover Expand) */}
+      <aside
+        onMouseEnter={() => onHoverChange?.(true)}
+        onMouseLeave={() => onHoverChange?.(false)}
+        className={`hidden md:flex flex-col fixed inset-y-0 left-0 z-30 transition-all duration-300 ease-in-out ${
+          isExpanded
+            ? 'w-64 lg:w-72 shadow-xl border-r border-slate-200/90'
+            : 'w-[72px] shadow-xs border-r border-slate-100'
+        }`}
+      >
+        {renderSidebarContent(isExpanded)}
       </aside>
 
       {/* Mobile Drawer Backdrop */}
@@ -357,7 +457,7 @@ export default function AppSidebar({
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {sidebarContent}
+        {renderSidebarContent(true)}
       </div>
     </>
   );
