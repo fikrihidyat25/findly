@@ -525,7 +525,7 @@ export default function LostItemForm() {
                 {/* Ciri-ciri Khusus */}
                 <div className="border-t border-gray-100 pt-5 space-y-2">
                   <label className="block text-xs font-semibold text-gray-700">
-                    Ciri-ciri Khusus <span className="text-gray-400 font-normal">(opsional)</span>
+                    Ciri-ciri Khusus
                   </label>
                   <p className="text-[11px] text-gray-400">
                     Tambahkan ciri-ciri khusus yang membedakan barang Anda dengan barang lainnya.

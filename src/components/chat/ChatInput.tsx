@@ -88,7 +88,7 @@ export default function ChatInput({
           onChange={(e) => setInputMessage(e.target.value)}
           placeholder={
             selectedImage
-              ? 'Tambah keterangan foto (opsional)...'
+              ? 'Tambah keterangan foto...'
               : 'Ketik pesan...'
           }
           className="flex-1 bg-slate-50 hover:bg-white focus:bg-white px-4 py-2.5 rounded-[6px] text-xs sm:text-sm text-slate-800 border border-slate-300 focus:border-[#0284C7] focus:ring-2 focus:ring-[#0284C7]/20 focus:outline-none transition-all shadow-2xs"

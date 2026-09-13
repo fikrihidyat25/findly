@@ -613,7 +613,7 @@ export default function ClaimSubmissionForm({ initialItem }: ClaimSubmissionForm
                 {/* Upload Foto Bukti */}
                 <div className="space-y-2">
                   <label className="block text-xs font-semibold text-gray-700">
-                    Foto Bukti Kepemilikan <span className="text-gray-400 font-normal">(opsional tapi dianjurkan)</span>
+                    Foto Bukti Kepemilikan
                   </label>
                   <p className="text-[11px] text-gray-400">
                     Bisa berupa foto saat menggunakan barang, nota/struk, nomor seri, kartu garansi, atau foto identitas pendukung.
