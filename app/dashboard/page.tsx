@@ -54,7 +54,7 @@ export default function DashboardPage() {
               {displayName ? `Halo, ${displayName} 👋` : 'Selamat datang di Findly 👋'}
             </h1>
             <p className="text-xs sm:text-sm text-gray-500 font-normal">
-              Cari barang yang hilang atau laporkan temuan Anda untuk membantu sesama civitas kampus.
+              Cari barang yang hilang atau laporkan temuan Anda untuk membantu sesama di sekitar kampus.
             </p>
           </div>
 

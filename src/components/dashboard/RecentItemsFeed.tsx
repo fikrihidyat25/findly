@@ -161,7 +161,7 @@ export default function RecentItemsFeed() {
             Barang Terbaru di Kampus
           </h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            Laporan barang hilang dan temuan terkini dari civitas akademika
+            Laporan barang hilang dan temuan terkini di lingkungan kampus
           </p>
         </div>
 
