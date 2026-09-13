@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ShieldCheck, Lock } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export interface ProtectedItemImageProps {
   src?: string | null;
@@ -30,7 +30,7 @@ export default function ProtectedItemImage({
   const isValid = Boolean(src && !src.startsWith('blob:') && !error);
 
   const isFound = type === 'found';
-  // Jika barang temuan dan yang melihat bukan pelapor/admin, foto disamarkan demi keamanan
+  // Jika barang temuan dan yang melihat bukan pelapor/admin, foto disamarkan dengan blur & watermark
   const shouldMask = isFound && !isOwnerOrAdmin;
 
   // Jika tidak ada foto valid, tampilkan ikon representasi kategori
@@ -50,7 +50,7 @@ export default function ProtectedItemImage({
               {category || 'Representasi Barang'}
             </span>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Foto belum diunggah atau dirahasiakan oleh pelapor.
+              Foto belum diunggah oleh pelapor.
             </p>
           </div>
         </div>
@@ -78,29 +78,17 @@ export default function ProtectedItemImage({
             src={src!}
             alt={alt}
             onError={() => setError(true)}
-            className="w-full h-auto max-h-96 object-cover filter blur-xl md:blur-2xl scale-110 opacity-40 select-none pointer-events-none"
+            className="w-full h-auto max-h-96 object-cover filter blur-2xl scale-110 opacity-50 select-none pointer-events-none"
           />
 
           {/* Watermark diagonal anti-screenshot/fraud */}
-          <div className="absolute inset-0 pointer-events-none opacity-10 flex items-center justify-center rotate-[-16deg] select-none text-white font-black text-xl sm:text-2xl tracking-[0.25em] uppercase text-center leading-loose">
-            FINDLY KAMPUS • ANTI-MODUS • PRIVASI RESMI
+          <div className="absolute inset-0 pointer-events-none opacity-20 flex items-center justify-center rotate-[-15deg] select-none text-white font-black text-xl sm:text-2xl tracking-[0.3em] uppercase text-center">
+            FINDLY • PROTECTED
           </div>
 
-          {/* Kotak proteksi keamanan di tengah */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950/60 backdrop-blur-[2px]">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center mb-3 shadow-lg">
-              <ShieldCheck size={26} className="stroke-[2]" />
-            </div>
-            <h4 className="text-white font-bold text-base sm:text-lg tracking-tight">
-              Foto Disamarkan Demi Keamanan
-            </h4>
-            <p className="text-xs sm:text-sm text-slate-300 mt-1.5 max-w-md leading-relaxed">
-              Ciri detail barang temuan dirahasiakan untuk mencegah pihak yang mengaku-ngaku. Pemilik sah wajib mendeskripsikan ciri-ciri khusus saat mengajukan klaim.
-            </p>
-            <div className="mt-4 inline-flex items-center gap-2 text-[11px] font-semibold text-emerald-300 bg-emerald-950/70 border border-emerald-500/30 px-3.5 py-1.5 rounded-full shadow-xs">
-              <Lock size={12} className="text-emerald-400" />
-              <span>Proteksi Anti-Klaim Palsu Aktif</span>
-            </div>
+          {/* Watermark label kecil di pojok */}
+          <div className="absolute bottom-3 right-3 pointer-events-none px-2.5 py-1 rounded-[6px] bg-slate-900/70 backdrop-blur-md text-[10px] font-medium text-white/80 border border-white/10 select-none shadow-xs">
+            FINDLY • PRIVASI DILINDUNGI
           </div>
         </div>
       );
@@ -134,7 +122,7 @@ export default function ProtectedItemImage({
     );
   }
 
-  // Tampilan Thumbnail di Kartu Katalog (/find atau /saved)
+  // Tampilan Thumbnail di Kartu Katalog (/find, /dashboard, atau /saved)
   if (shouldMask) {
     return (
       <div className={`relative w-full h-full overflow-hidden bg-slate-950 flex items-center justify-center ${className}`}>
@@ -143,23 +131,19 @@ export default function ProtectedItemImage({
           src={src!}
           alt={alt}
           onError={() => setError(true)}
-          className="w-full h-full object-cover filter blur-lg scale-110 opacity-50 select-none pointer-events-none"
+          className="w-full h-full object-cover filter blur-xl scale-110 opacity-70 select-none pointer-events-none"
         />
 
-        {/* Watermark tipis */}
-        <div className="absolute inset-0 pointer-events-none opacity-15 flex items-center justify-center rotate-[-20deg] select-none text-white font-extrabold text-[10px] tracking-widest uppercase">
-          FINDLY PROTECTED
+        {/* Watermark (WM) tebal / tegas di tengah */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center select-none">
+          <span className="text-white/40 font-black tracking-[0.25em] text-xs sm:text-sm uppercase rotate-[-15deg] select-none">
+            FINDLY • PROTECTED
+          </span>
         </div>
 
-        {/* Lencana Privasi */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-2.5 text-center bg-slate-950/40 backdrop-blur-[1px]">
-          <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900/85 backdrop-blur-md border border-emerald-500/30 text-white shadow-xs">
-            <ShieldCheck size={13} className="text-emerald-400 shrink-0" />
-            <span className="text-[10px] font-bold tracking-tight">Foto Disamarkan</span>
-          </div>
-          <span className="text-[9.5px] text-slate-200 font-medium mt-1 leading-tight max-w-[170px] drop-shadow-xs">
-            Ciri dirahasiakan untuk cegah modus klaim
-          </span>
+        {/* Watermark kecil di pojok bawah */}
+        <div className="absolute bottom-2 right-2 pointer-events-none px-1.5 py-0.5 rounded-[4px] bg-black/40 backdrop-blur-xs text-[9px] font-medium text-white/80 select-none">
+          FINDLY
         </div>
       </div>
     );
