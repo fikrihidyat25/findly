@@ -7,7 +7,6 @@ import { Plus, PackageMinus } from 'lucide-react';
 import AppLayout from '@/src/components/layout/AppLayout';
 import QuickStats from '@/src/components/dashboard/QuickStats';
 import RecentItemsFeed from '@/src/components/dashboard/RecentItemsFeed';
-import SafetyTipBanner from '@/src/components/dashboard/SafetyTipBanner';
 import { createClient } from '@/src/lib/supabase/client';
 
 export default function DashboardPage() {
@@ -51,10 +50,6 @@ export default function DashboardPage() {
         {/* Crisp Hero Header with Direct Action CTAs */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-100">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100/80 text-[11px] font-semibold text-[#0284C7]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#30AFFF]" />
-              <span>Portal Kehilangan & Temuan Kampus</span>
-            </div>
             <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
               {displayName ? `Halo, ${displayName} 👋` : 'Selamat datang di Findly 👋'}
             </h1>
@@ -87,9 +82,6 @@ export default function DashboardPage() {
 
         {/* Primary Content: Live Campus Items Feed with Real Photos & Anti-Fraud Shield */}
         <RecentItemsFeed />
-
-        {/* Safety Tips Banner */}
-        <SafetyTipBanner />
       </div>
     </AppLayout>
   );
