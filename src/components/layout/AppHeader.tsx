@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Search,
   Bell,
   MessageSquare,
   Menu,
@@ -159,30 +158,15 @@ export default function AppHeader({
 
   return (
     <header className="sticky top-0 z-20 w-full bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4">
-      {/* Left: Mobile Menu Toggle & Global Search */}
-      <div className="flex items-center gap-3 flex-1 max-w-xl">
+      {/* Left: Mobile Menu Toggle */}
+      <div className="flex items-center gap-3">
         <button
           onClick={onOpenMobileMenu}
-          className="md:hidden p-2 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
+          className="md:hidden p-2 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
           aria-label="Open menu"
         >
           <Menu size={20} />
         </button>
-
-        {/* Global Search Input */}
-        <div className="relative w-full">
-          <Search
-            size={17}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-          />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            placeholder="Cari barang hilang atau ditemukan..."
-            className="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white pl-10 pr-4 py-2 rounded-xl text-xs sm:text-sm text-gray-800 placeholder-gray-400 border border-gray-200/80 focus:border-[#30AFFF] focus:ring-2 focus:ring-[#30AFFF]/20 focus:outline-none transition-all shadow-2xs"
-          />
-        </div>
       </div>
 
       {/* Right: Notifications, Messages, and Profile */}

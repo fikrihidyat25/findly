@@ -10,7 +10,6 @@ import {
   Clock,
   Bookmark,
   PackageSearch,
-  ShieldCheck,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
 import { CATEGORIES, detectCategory, getCategoryIcon, cleanDescription } from '@/src/lib/categories';
@@ -193,15 +192,9 @@ export default function FindItemsPage() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-                Cari Barang
-              </h1>
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                <ShieldCheck size={12} className="text-emerald-600" />
-                Anti-Modus Protection
-              </span>
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              Cari Barang
+            </h1>
             <p className="text-xs sm:text-sm text-gray-500">
               Jelajahi laporan barang hilang dan temuan di seluruh lingkungan universitas.
             </p>
