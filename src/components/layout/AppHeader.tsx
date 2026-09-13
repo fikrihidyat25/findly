@@ -17,6 +17,8 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { createClient } from '@/src/lib/supabase/client';
+import { AppNotification } from '@/src/lib/notifications';
+import NotificationDropdown from '@/src/components/notifications/NotificationDropdown';
 
 interface AppHeaderProps {
   onOpenMobileMenu?: () => void;
@@ -24,6 +26,9 @@ interface AppHeaderProps {
   onSearchChange?: (query: string) => void;
   unreadNotifs?: number;
   unreadMessages?: number;
+  notifications?: AppNotification[];
+  onMarkAllAsRead?: () => void;
+  onReadNotification?: (id: string) => void;
 }
 
 interface UserProfile {
@@ -42,10 +47,14 @@ export default function AppHeader({
   onSearchChange,
   unreadNotifs = 0,
   unreadMessages = 0,
+  notifications = [],
+  onMarkAllAsRead,
+  onReadNotification,
 }: AppHeaderProps) {
   const router = useRouter();
   const supabase = createClient();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -199,19 +208,34 @@ export default function AppHeader({
         ) : (
           /* Authenticated User State */
           <>
-            {/* Notification Bell */}
-            <Link
-              href="/notifications"
-              className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
-              aria-label="Notifications"
-            >
-              <Bell size={19} className="stroke-[1.75]" />
-              {unreadNotifs > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-rose-500 rounded-full border-2 border-white leading-none shadow-xs">
-                  {unreadNotifs > 9 ? '9+' : unreadNotifs}
-                </span>
-              )}
-            </Link>
+            {/* Notification Bell with Real-time Dropdown Popover */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setNotifDropdownOpen(!notifDropdownOpen);
+                  setProfileDropdownOpen(false);
+                }}
+                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+                aria-label="Notifications"
+              >
+                <Bell size={19} className="stroke-[1.75]" />
+                {unreadNotifs > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-rose-500 rounded-full border-2 border-white leading-none shadow-xs animate-in zoom-in-50">
+                    {unreadNotifs > 9 ? '9+' : unreadNotifs}
+                  </span>
+                )}
+              </button>
+
+              <NotificationDropdown
+                isOpen={notifDropdownOpen}
+                onClose={() => setNotifDropdownOpen(false)}
+                notifications={notifications}
+                unreadCount={unreadNotifs}
+                onMarkAllAsRead={() => onMarkAllAsRead?.()}
+                onReadItem={(id) => onReadNotification?.(id)}
+              />
+            </div>
 
             {/* Messages */}
             <Link

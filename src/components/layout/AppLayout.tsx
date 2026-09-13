@@ -1,10 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import AppSidebar from './AppSidebar';
 import AppHeader from './AppHeader';
 import { createClient } from '@/src/lib/supabase/client';
-import { fetchUnreadCounts } from '@/src/lib/notifications';
+import {
+  AppNotification,
+  fetchUserNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+} from '@/src/lib/notifications';
+import { playNotificationSound } from '@/src/lib/audioNotification';
+import NotificationToast from '@/src/components/notifications/NotificationToast';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -22,50 +29,118 @@ export default function AppLayout({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [activeToast, setActiveToast] = useState<AppNotification | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  const loadCounts = useCallback(async () => {
+  const prevLatestNotifIdRef = useRef<string | null>(null);
+  const isInitialMountRef = useRef(true);
+
+  const loadNotifications = useCallback(async () => {
     try {
       const supabase = createClient();
+      const isAdminSession =
+        typeof document !== 'undefined' && document.cookie.includes('findly_admin_session=true');
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
 
-      const counts = await fetchUnreadCounts(user.id);
-      setUnreadNotifs(counts.unreadNotifs);
-      setUnreadMessages(counts.unreadMessages);
+      const userId = user?.id || (isAdminSession ? 'admin-env-user' : null);
+      if (!userId) return;
+
+      setCurrentUserId(userId);
+
+      const notifs = await fetchUserNotifications(userId);
+      setNotifications(notifs);
+
+      const unreadN = notifs.filter((n) => n.unread && n.type !== 'chat').length;
+      const unreadM = notifs.filter((n) => n.unread && n.type === 'chat').length;
+      setUnreadNotifs(unreadN);
+      setUnreadMessages(unreadM);
+
+      // Check for incoming new unread notification to trigger toast & sound
+      if (notifs.length > 0) {
+        const newest = notifs[0];
+        if (
+          !isInitialMountRef.current &&
+          newest.unread &&
+          newest.id !== prevLatestNotifIdRef.current
+        ) {
+          setActiveToast(newest);
+          playNotificationSound();
+        }
+        prevLatestNotifIdRef.current = newest.id;
+      }
+      isInitialMountRef.current = false;
     } catch {
       // silently ignore
     }
   }, []);
 
+  const handleMarkAllAsRead = useCallback(() => {
+    if (!currentUserId) return;
+    const ids = notifications.map((n) => n.id);
+    markAllNotificationsAsRead(currentUserId, ids);
+    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    setUnreadNotifs(0);
+    setUnreadMessages(0);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('findly:counts_updated'));
+    }
+  }, [currentUserId, notifications]);
+
+  const handleReadNotification = useCallback(
+    (id: string) => {
+      if (!currentUserId) return;
+      markNotificationAsRead(currentUserId, id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
+      );
+      setUnreadNotifs((prev) => Math.max(0, prev - 1));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('findly:counts_updated'));
+      }
+    },
+    [currentUserId]
+  );
+
   useEffect(() => {
-    loadCounts();
+    loadNotifications();
 
     const handleStorageOrFocus = () => {
-      loadCounts();
+      loadNotifications();
     };
 
     window.addEventListener('focus', handleStorageOrFocus);
     window.addEventListener('storage', handleStorageOrFocus);
     window.addEventListener('findly:counts_updated', handleStorageOrFocus);
 
+    // Heartbeat polling: every 5 seconds for instant updates without reload
+    const interval = setInterval(loadNotifications, 5000);
+
     // Setup Supabase realtime subscriptions
     const supabase = createClient();
     const channel = supabase
-      .channel('app_layout_realtime_counts')
+      .channel('app_layout_realtime_channel')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'klaim_barang' },
         () => {
-          loadCounts();
+          loadNotifications();
         }
       )
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'pesan_chat' },
+        { event: '*', schema: 'public', table: 'pesan_chat' },
         () => {
-          loadCounts();
+          loadNotifications();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'laporan_barang' },
+        () => {
+          loadNotifications();
         }
       )
       .subscribe();
@@ -74,9 +149,10 @@ export default function AppLayout({
       window.removeEventListener('focus', handleStorageOrFocus);
       window.removeEventListener('storage', handleStorageOrFocus);
       window.removeEventListener('findly:counts_updated', handleStorageOrFocus);
+      clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [loadCounts]);
+  }, [loadNotifications]);
 
   return (
     <div
@@ -84,6 +160,13 @@ export default function AppLayout({
         fullHeight ? 'h-screen overflow-hidden' : 'min-h-screen'
       }`}
     >
+      {/* Floating In-App Toast Notification */}
+      <NotificationToast
+        notification={activeToast}
+        onClose={() => setActiveToast(null)}
+        onRead={handleReadNotification}
+      />
+
       {/* Sidebar (Desktop Fixed & Mobile Drawer) */}
       <AppSidebar
         mobileOpen={mobileSidebarOpen}
@@ -105,6 +188,9 @@ export default function AppLayout({
           onSearchChange={onSearchChange}
           unreadNotifs={unreadNotifs}
           unreadMessages={unreadMessages}
+          notifications={notifications}
+          onMarkAllAsRead={handleMarkAllAsRead}
+          onReadNotification={handleReadNotification}
         />
 
         {/* Content Viewport */}

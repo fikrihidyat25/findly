@@ -212,6 +212,74 @@ export async function fetchUserNotifications(userId: string): Promise<AppNotific
       });
     }
 
+    // 4. Jika user adalah Admin, muat notifikasi moderasi laporan & klaim kampus
+    const isEnvAdmin =
+      typeof document !== 'undefined' && document.cookie.includes('findly_admin_session=true');
+    const { data: profile } = await supabase
+      .from('profil_pengguna')
+      .select('tipe_akun, role_kampus')
+      .eq('id', userId)
+      .maybeSingle();
+
+    const isAdmin =
+      isEnvAdmin ||
+      profile?.tipe_akun === 'admin' ||
+      profile?.role_kampus === 'admin' ||
+      userId === 'admin-env-user';
+
+    if (isAdmin) {
+      // a. Klaim yang menunggu verifikasi
+      const { data: adminClaims } = await supabase
+        .from('klaim_barang')
+        .select('*, laporan_barang(nama_barang), profil_pengguna:pengklaim_id(nama_lengkap)')
+        .eq('status', 'MENUNGGU')
+        .order('dibuat_pada', { ascending: false })
+        .limit(10);
+
+      (adminClaims || []).forEach((ac: any) => {
+        const notifId = `admin-claim-${ac.id}`;
+        const itemTitle = ac.laporan_barang?.nama_barang || 'Barang';
+        const claimantName = ac.profil_pengguna?.nama_lengkap || 'Warga Kampus';
+        const createdMs = ac.dibuat_pada ? new Date(ac.dibuat_pada).getTime() : Date.now();
+
+        notifs.push({
+          id: notifId,
+          title: 'Klaim Menunggu Verifikasi',
+          desc: `${claimantName} mengajukan klaim untuk "${itemTitle}". Memerlukan peninjauan administrator.`,
+          timeAgo: formatRelativeTime(ac.dibuat_pada),
+          timestamp: createdMs,
+          type: 'claim',
+          unread: !readIds.includes(notifId),
+          link: `/admin/klaim`,
+          itemTitle,
+        });
+      });
+
+      // b. Laporan baru yang baru saja masuk
+      const { data: adminReports } = await supabase
+        .from('laporan_barang')
+        .select('id, nama_barang, jenis_laporan, dibuat_pada')
+        .order('dibuat_pada', { ascending: false })
+        .limit(10);
+
+      (adminReports || []).forEach((ar: any) => {
+        const notifId = `admin-rep-${ar.id}`;
+        const createdMs = ar.dibuat_pada ? new Date(ar.dibuat_pada).getTime() : Date.now();
+
+        notifs.push({
+          id: notifId,
+          title: ar.jenis_laporan === 'KEHILANGAN' ? 'Laporan Kehilangan Baru' : 'Laporan Temuan Baru',
+          desc: `Laporan ${ar.jenis_laporan.toLowerCase()} baru: "${ar.nama_barang}". Periksa moderasi laporan.`,
+          timeAgo: formatRelativeTime(ar.dibuat_pada),
+          timestamp: createdMs,
+          type: 'system',
+          unread: !readIds.includes(notifId),
+          link: `/admin/laporan`,
+          itemTitle: ar.nama_barang,
+        });
+      });
+    }
+
     // Sort descending by timestamp
     notifs.sort((a, b) => b.timestamp - a.timestamp);
 
