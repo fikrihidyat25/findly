@@ -158,6 +158,44 @@ export default function AdminTitikTemuPage() {
     }
   };
 
+  const [isSearchingLoc, setIsSearchingLoc] = useState(false);
+
+  const handleCariLokasi = async () => {
+    if (!formData.nama_lokasi || formData.nama_lokasi.length < 3) {
+      alert('Ketik nama lokasi minimal 3 karakter dulu.');
+      return;
+    }
+    
+    setIsSearchingLoc(true);
+    try {
+      const query = encodeURIComponent(formData.nama_lokasi);
+      // Tambahkan countrycodes=id agar fokus di Indonesia
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&countrycodes=id&limit=1`, {
+        headers: {
+          'Accept-Language': 'id-ID,id;q=0.9',
+        }
+      });
+      
+      if (!res.ok) throw new Error('API Error');
+      
+      const data = await res.json();
+      if (data && data.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          latitude: parseFloat(data[0].lat),
+          longitude: parseFloat(data[0].lon),
+        }));
+      } else {
+        alert('Lokasi tidak ditemukan di peta.');
+      }
+    } catch (err) {
+      console.error('Gagal mencari lokasi:', err);
+      alert('Gagal menghubungi server peta (mungkin diblokir browser).');
+    } finally {
+      setIsSearchingLoc(false);
+    }
+  };
+
   const submitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading(true);
@@ -361,15 +399,27 @@ export default function AdminTitikTemuPage() {
                 {/* Kiri */}
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Lokasi</label>
-                    <input
-                      type="text"
-                      name="nama_lokasi"
-                      value={formData.nama_lokasi}
-                      onChange={handleFormChange}
-                      required
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#30AFFF] transition-all"
-                    />
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Nama Lokasi
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        name="nama_lokasi"
+                        value={formData.nama_lokasi}
+                        onChange={handleFormChange}
+                        required
+                        className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#30AFFF] transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCariLokasi}
+                        disabled={isSearchingLoc}
+                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 transition-colors flex items-center justify-center min-w-[70px]"
+                      >
+                        {isSearchingLoc ? <Loader2 size={14} className="animate-spin text-[#30AFFF]" /> : 'Cari'}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Alamat Lengkap</label>
@@ -392,7 +442,7 @@ export default function AdminTitikTemuPage() {
                       className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#30AFFF] transition-all"
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Jam Buka</label>

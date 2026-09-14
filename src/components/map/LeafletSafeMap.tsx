@@ -43,11 +43,7 @@ export default function LeafletSafeMap({
     import('leaflet').then((L) => {
       if (!isMounted || !mapContainerRef.current) return;
 
-      // Clean up previous map if exists
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
+      if (mapInstanceRef.current) return; // Map already initialized
 
       // Configure default Leaflet icons for Next.js bundler
       delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -91,12 +87,12 @@ export default function LeafletSafeMap({
 
       const map = L.map(mapContainerRef.current, {
         zoomControl: true,
-        scrollWheelZoom: false, // Prevent accidental scrolling on mobile
+        scrollWheelZoom: false,
       }).setView([centerLat, centerLng], isPicker ? 17 : 16);
 
       mapInstanceRef.current = map;
 
-      // Add OpenStreetMap tile layer (Free & Community driven)
+      // Add OpenStreetMap tile layer
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19,
@@ -139,6 +135,7 @@ export default function LeafletSafeMap({
           icon: safeIcon,
           draggable: isPicker,
         }).addTo(map);
+        markersRef.current = [marker]; // Store single marker
 
         if (locationName || address) {
           const popupContent = `
@@ -164,7 +161,6 @@ export default function LeafletSafeMap({
         }
       }
 
-      // Invalidate size after mount to handle dynamic tab or flex layouts
       setTimeout(() => {
         if (mapInstanceRef.current) {
           mapInstanceRef.current.invalidateSize();
@@ -174,12 +170,25 @@ export default function LeafletSafeMap({
 
     return () => {
       isMounted = false;
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
+      // We don't destroy the map on unmount of this effect anymore, 
+      // only on component unmount if needed, but Next.js hot reload might need it.
+      // Actually let's keep the map alive.
     };
-  }, [lat, lng, points, selectedPointId, isPicker]);
+  }, []); // Run ONCE on mount
+
+  // Effect to update map view and marker when lat/lng change externally
+  useEffect(() => {
+    if (mapInstanceRef.current && markersRef.current.length > 0 && isPicker) {
+      const map = mapInstanceRef.current;
+      const marker = markersRef.current[0];
+      
+      const currentPos = marker.getLatLng();
+      if (currentPos.lat !== lat || currentPos.lng !== lng) {
+        marker.setLatLng([lat, lng]);
+        map.flyTo([lat, lng], 17, { animate: true, duration: 1.5 });
+      }
+    }
+  }, [lat, lng, isPicker]);
 
   return (
     <div className={`relative w-full ${heightClass} rounded-2xl overflow-hidden border border-gray-200/80 shadow-xs z-0`}>
