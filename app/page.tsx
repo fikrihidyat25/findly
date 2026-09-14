@@ -325,8 +325,8 @@ export default function LandingPage() {
                       <div className="absolute top-3 left-3 z-10">
                         <span
                           className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${isLost
-                              ? 'bg-rose-500 text-white border-rose-600'
-                              : 'bg-emerald-500 text-white border-emerald-600'
+                            ? 'bg-rose-500 text-white border-rose-600'
+                            : 'bg-emerald-500 text-white border-emerald-600'
                             }`}
                         >
                           {isLost ? 'Hilang' : 'Ditemukan'}
@@ -441,7 +441,7 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-gray-100 bg-white">
+      <footer className="w-full bg-[#0A1930] text-white">
         <div className="max-w-[1300px] mx-auto px-6 sm:px-10 lg:px-12 pt-14 pb-10">
           <div className="flex flex-col md:flex-row justify-between gap-10 mb-14">
             <div className="max-w-xs">
@@ -450,37 +450,37 @@ export default function LandingPage() {
                   Findly.
                 </span>
               </div>
-              <p className="text-gray-500 text-sm leading-relaxed">
+              <p className="text-blue-100/70 text-sm leading-relaxed">
                 Membantu mengembalikan barang berharga yang hilang ke pemiliknya dengan verifikasi yang terpercaya dan aman.
               </p>
             </div>
 
             <div className="flex gap-16 md:gap-24">
               <div>
-                <h4 className="font-bold text-gray-900 mb-4 text-sm">Layanan</h4>
-                <ul className="space-y-3 text-sm text-gray-500">
-                  <li><Link href="/login?redirect=/find" className="hover:text-[#30AFFF] transition-colors">Cari Barang</Link></li>
-                  <li><Link href="/login?redirect=/lost/new" className="hover:text-[#30AFFF] transition-colors">Laporkan Barang</Link></li>
-                  <li><Link href="/login?redirect=/claim/new" className="hover:text-[#30AFFF] transition-colors">Klaim Kepemilikan</Link></li>
+                <h4 className="font-bold text-white mb-4 text-sm">Layanan</h4>
+                <ul className="space-y-3 text-sm text-blue-100/70">
+                  <li><Link href="/login?redirect=/find" className="hover:text-white transition-colors">Cari Barang</Link></li>
+                  <li><Link href="/login?redirect=/lost/new" className="hover:text-white transition-colors">Laporkan Barang</Link></li>
+                  <li><Link href="/login?redirect=/claim/new" className="hover:text-white transition-colors">Klaim Kepemilikan</Link></li>
                 </ul>
               </div>
 
               <div>
-                <h4 className="font-bold text-gray-900 mb-4 text-sm">Perusahaan</h4>
-                <ul className="space-y-3 text-sm text-gray-500">
-                  <li><Link href="/about" className="hover:text-[#30AFFF] transition-colors">Tentang Kami</Link></li>
-                  <li><Link href="/contact" className="hover:text-[#30AFFF] transition-colors">Hubungi Kami</Link></li>
-                  <li><Link href="/terms" className="hover:text-[#30AFFF] transition-colors">Syarat & Ketentuan</Link></li>
+                <h4 className="font-bold text-white mb-4 text-sm">Perusahaan</h4>
+                <ul className="space-y-3 text-sm text-blue-100/70">
+                  <li><Link href="/about" className="hover:text-white transition-colors">Tentang Kami</Link></li>
+                  <li><Link href="/contact" className="hover:text-white transition-colors">Hubungi Kami</Link></li>
+                  <li><Link href="/terms" className="hover:text-white transition-colors">Syarat & Ketentuan</Link></li>
                 </ul>
               </div>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gray-400">
-            <div>Â© 2026 Findly Inc. Hak Cipta Dilindungi.</div>
+          <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-blue-100/50">
+            <div>@ 2026 Findly Inc.</div>
             <div className="flex items-center gap-6">
-              <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy Policy</Link>
-              <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
             </div>
           </div>
         </div>
